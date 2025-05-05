@@ -1,0 +1,33 @@
+# autotools outputs
+autom4te.cache
+aclocal.m4
+build-aux
+config.h
+config.h.in
+config.log
+config.status
+configure
+stamp-h1
+Makefile.in
+Makefile
+
+*/Makefile.in
+*/Makefile
+
+# build outputs
+.deps
+.dirstamp
+asdf
+*/*.o
+
+# test outputs
+tests/*.log
+tests/*.unit
+tests/*.unit.log
+tests/*.unit.trs
+
+# dist outputs
+*.tar.gz
+
+# distcheck outputs
+libasdf-*/
