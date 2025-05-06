@@ -2,7 +2,7 @@ libasdf
 #######
 
 C library for reading (and eventually writing) `ASDF
-<https://www.asdf-format.org/en/latest/>` files
+<https://www.asdf-format.org/en/latest/>`__ files
 
 
 Introduction
