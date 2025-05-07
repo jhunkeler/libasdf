@@ -1,9 +1,10 @@
-#ifndef ASDF_INFO_H
-#define ASDF_INFO_H
+#pragma once
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
-int asdf_info(void);
-#endif /* ASDF_INFO_H */
+#include <stdio.h>
+
+
+int asdf_info(FILE *, FILE *);
