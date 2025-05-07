@@ -23,7 +23,7 @@ typedef struct tree_node {
 
 /** TODO: Maybe rewrite to avoid recursion in deeply nested trees **/
 
-void print_indent(FILE *file, tree_node_t *tree) {
+static void print_indent(FILE *file, tree_node_t *tree) {
     if (!tree)
         return;
 
@@ -38,7 +38,7 @@ void print_indent(FILE *file, tree_node_t *tree) {
 }
 
 
-void print_scalar_value(FILE *file, struct fy_node *node) {
+static void print_scalar_value(FILE *file, struct fy_node *node) {
     const char *str;
     size_t len;
     if (str = fy_node_get_scalar(node, &len)) {
@@ -47,7 +47,7 @@ void print_scalar_value(FILE *file, struct fy_node *node) {
 }
 
 
-const char* get_node_type_display_name(struct fy_node *node, size_t *lenp) {
+static const char* get_node_type_display_name(struct fy_node *node, size_t *lenp) {
     size_t tag_len;
     const char *tag = fy_node_get_tag(node, &tag_len);
     if (tag && tag_len > 0) {
@@ -76,10 +76,10 @@ const char* get_node_type_display_name(struct fy_node *node, size_t *lenp) {
 }
 
 /* Forward declaration */
-void print_node(FILE *, struct fy_node *, tree_node_t *, const char *, bool);
+static void print_node(FILE *, struct fy_node *, tree_node_t *, const char *, bool);
 
 
-void print_mapping_node(FILE *file, struct fy_node *node, tree_node_t *tree) {
+static void print_mapping_node(FILE *file, struct fy_node *node, tree_node_t *tree) {
     struct fy_node *key;
     struct fy_node *value;
     const char *key_str;
@@ -108,7 +108,7 @@ void print_mapping_node(FILE *file, struct fy_node *node, tree_node_t *tree) {
 }
 
 
-void print_sequence_node(FILE *file, struct fy_node *node, tree_node_t *tree) {
+static void print_sequence_node(FILE *file, struct fy_node *node, tree_node_t *tree) {
     int index = 0;
     char label_buf[16];
     void *iter = NULL;
@@ -128,8 +128,8 @@ void print_sequence_node(FILE *file, struct fy_node *node, tree_node_t *tree) {
 }
 
 
-void print_node(FILE *file, struct fy_node *node, tree_node_t *tree,
-                const char *key_label, bool is_mapping_key) {
+static void print_node(FILE *file, struct fy_node *node, tree_node_t *tree,
+                       const char *key_label, bool is_mapping_key) {
     if (!key_label)
         return;
 
