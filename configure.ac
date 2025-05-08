@@ -45,4 +45,18 @@ AX_VALGRIND_CHECK
 # http://www.gnu.org/software/autoconf-archive/ax_code_coverage.html#ax_code_coverage
 # - make check-code-coverage generates coverage report
 AX_CODE_COVERAGE
+
+# Additional enable flags
+AC_ARG_ENABLE([debug],
+  [AS_HELP_STRING([--enable-debug], [Enable debug build (-g -O0)])],
+  [enable_debug=yes],
+  [enable_debug=no]
+)
+
+if test "x$enable_debug" = "xyes"; then
+  CFLAGS="$CFLAGS -g -O0"
+  AC_DEFINE([DEBUG], [1], [Define if debugging is enabled])
+fi
+
+
 AC_OUTPUT
