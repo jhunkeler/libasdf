@@ -83,7 +83,9 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
             fprintf(file, "  Allocated size: %" PRIu64 "\n", header.allocated_size);
             fprintf(file, "  Used size: %" PRIu64 "\n", header.used_size);
             fprintf(file, "  Data size: %" PRIu64 "\n", header.data_size);
-            fprintf(file, "  Compression: %.4s\n", header.compression);
+
+            if (header.compression[0] != '\0')
+                fprintf(file, "  Compression: %.4s\n", header.compression);
             break;
         }
     }

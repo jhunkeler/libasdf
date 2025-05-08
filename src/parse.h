@@ -58,7 +58,9 @@ typedef struct asdf_parser {
     char asdf_version[ASDF_ASDF_VERSION_BUFFER_SIZE];
     char standard_version[ASDF_STANDARD_VERSION_BUFFER_SIZE];
     struct fy_parser *yaml_parser;
-    bool found_blocks;
+    off_t yaml_start;
+    off_t yaml_end;
+    size_t found_blocks;
     uint8_t read_buffer[ASDF_PARSER_READ_BUFFER_SIZE];
 } asdf_parser_t;
 

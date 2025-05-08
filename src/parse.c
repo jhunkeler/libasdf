@@ -144,6 +144,7 @@ static int parse_standard_version(asdf_parser_t *parser, asdf_event_t *event) {
     event->payload.version = malloc(sizeof(asdf_version_t));
     event->payload.version->version = strdup(parser->standard_version);
     parser->state = ASDF_PARSER_STATE_YAML;
+    parser->yaml_start = ftello(parser->file);
     return 0;
 }
 
@@ -158,12 +159,24 @@ static int parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
     event->type = ASDF_YAML_EVENT;
     event->payload.yaml = yaml;
 
-    if (!yaml || yaml->type == FYET_DOCUMENT_END) {
+    if (!yaml || yaml->type == FYET_STREAM_END) {
         // We have reached the end of the YAML stream, maybe with an error
         // but per TODO above no error handling yet so just move to the next
         // state
         // TODO: What if there are more documents?  Currently not allowed by ASDF
         // but is being discussed for ASDF 2.0.0
+        const struct fy_mark *mark = fy_event_end_mark(yaml);
+        if (mark) {
+            // libfyaml's input_pos starts at 0, whatever the actual offset
+            // was in the file stream we handed it
+            parser->yaml_end = parser->yaml_start + mark->input_pos;
+        } else {
+            parser->yaml_end = parser->yaml_start;
+        }
+        // Make sure to put the file back where we left off.
+        // This is obviously broken for streams, where we may need to take a more
+        // careful approach to this / more sophisticated input handling.
+        fseek(parser->file, parser->yaml_end, SEEK_SET);
         parser->state = ASDF_PARSER_STATE_BLOCK;
     }
 
@@ -261,7 +274,7 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
         return 1;
     }
 
-    parser->found_blocks = true;
+    parser->found_blocks += 1;
     return 0;
 }
 
