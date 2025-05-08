@@ -52,6 +52,10 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
 
         case ASDF_YAML_EVENT: {
             struct fy_event *yaml = event->payload.yaml;
+
+            if (!yaml)
+                break;
+
             enum fy_event_type event_type = yaml->type;
             fprintf(file, "  Type: %s\n", fy_event_type_get_text(event_type));
             // Safe to call even on events that don't produce tags; just returns NULL
