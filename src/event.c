@@ -6,6 +6,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include <libfyaml.h>
+
 #include "event.h"
 #include "parse.h"
 
@@ -48,11 +50,30 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
             fprintf(file, "  Standard Version: %s\n", event->payload.version->version);
             break;
 
-        case ASDF_YAML_EVENT:
-            // TODO: Provide a lookup table for this, or maybe even wrapper
-            // around FYAML event types
-            fprintf(file, "  YAML event type: %d\n", event->payload.yaml->type);
+        case ASDF_YAML_EVENT: {
+            struct fy_event *yaml = event->payload.yaml;
+            enum fy_event_type event_type = yaml->type;
+            fprintf(file, "  Type: %s\n", fy_event_type_get_text(event_type));
+            // Safe to call even on events that don't produce tags; just returns NULL
+            struct fy_token *token = fy_event_get_tag_token(yaml);
+            size_t token_len;
+            const char *token_text;
+
+            // Print the tag if it exists
+            if (token) {
+                token_text = fy_token_get_text(token, &token_len);
+                if (token_text)
+                    fprintf(file, "  Tag: %.*s\n", (int)token_len, token_text);
+            }
+
+            if (event_type == FYET_SCALAR && (token = yaml->scalar.value)) {
+                token_text = fy_token_get_text(token, &token_len);
+                if (token_text) {
+                    fprintf(file, "  Value: %.*s\n", (int)token_len, token_text);
+                }
+            }
             break;
+        }
 
         case ASDF_BLOCK_EVENT: {
             const asdf_block_info_t *block = event->payload.block;
@@ -77,7 +98,9 @@ void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event) {
             break;
         case ASDF_ASDF_VERSION_EVENT:
         case ASDF_STANDARD_VERSION_EVENT:
-            free(event->payload.version->version);
+            if (event->payload.version)
+                free(event->payload.version->version);
+
             free(event->payload.version);
             break;
         case ASDF_BLOCK_EVENT:

@@ -30,6 +30,13 @@ static const char * const parser_error_messages[] = {
     set_static_error(parser, ASDF_ERR(code))
 
 
+static void set_oom_error(asdf_parser_t *parser) {
+    parser->error = ASDF_ERR(ASDF_ERR_OUT_OF_MEMORY);
+    parser->error_type = ASDF_ERROR_STATIC;
+    return;
+}
+
+
 static void set_error(asdf_parser_t *parser, const char *fmt, ...) {
     va_list args;
     int size;
@@ -52,8 +59,7 @@ static void set_error(asdf_parser_t *parser, const char *fmt, ...) {
     char *error = malloc(size + 1);
 
     if (!error) {
-        parser->error = ASDF_ERR(ASDF_ERR_OUT_OF_MEMORY);
-        parser->error_type = ASDF_ERROR_STATIC;
+        set_oom_error(parser);
         return;
     }
 
@@ -148,11 +154,11 @@ static int parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
     // precise about it; but it seems to involve checking
     // fy_parser_get_stream_error() then rummaging around the diagnostic object
     // (which is part of the parser config)
-    struct fy_event *yaml_event = fy_parser_parse(parser->yaml_parser);
+    struct fy_event *yaml = fy_parser_parse(parser->yaml_parser);
     event->type = ASDF_YAML_EVENT;
-    event->payload.yaml = yaml_event;
+    event->payload.yaml = yaml;
 
-    if (!yaml_event || yaml_event->type == FYET_DOCUMENT_END) {
+    if (!yaml || yaml->type == FYET_DOCUMENT_END) {
         // We have reached the end of the YAML stream, maybe with an error
         // but per TODO above no error handling yet so just move to the next
         // state
@@ -193,6 +199,12 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     size_t n;
     // Go ahead and allocate storage for the block info
     asdf_block_info_t *block = calloc(1, sizeof(asdf_block_info_t));
+
+    if (!block) {
+        set_oom_error(parser);
+        return 1;
+    }
+
     event->type = ASDF_BLOCK_EVENT;
     event->payload.block = block;
 
