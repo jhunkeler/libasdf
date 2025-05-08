@@ -8,6 +8,7 @@
 
 #include <libfyaml.h>
 
+#include "block.h"
 #include "event.h"
 #include "parse.h"
 
@@ -90,6 +91,12 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
 
             if (header.compression[0] != '\0')
                 fprintf(file, "  Compression: %.4s\n", header.compression);
+
+            fprintf(file, "  Checksum: ");
+            for (int idx = 0; idx < ASDF_BLOCK_CHECKSUM_FIELD_SIZE; idx++) {
+                printf("%02x", header.checksum[idx]);
+            }
+            fprintf(file, "\n");
             break;
         }
     }

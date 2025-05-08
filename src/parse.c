@@ -184,9 +184,8 @@ static int parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
 
 static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     off_t pos = ftello(parser->file);
-    char *r = read_next(parser);
 
-    if (!r) {
+    if (!read_next(parser)) {
         // EOF; we are done now
         // TODO: This is wrong though, there might be a block index
         // check if we've reached it.
@@ -230,15 +229,15 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
         return 1;
     }
 
-    asdf_block_header_t header = block->header;
-    header.header_size = (buf[0] << 8) | buf[1];
-    if (header.header_size < 48) {
+    asdf_block_header_t *header = &block->header;
+    header->header_size = (buf[0] << 8) | buf[1];
+    if (header->header_size < 48) {
         set_static_error(parser, "Invalid block header size");
         return 1;
     }
 
-    n = fread(buf, 1, header.header_size, parser->file);
-    if (n != header.header_size) {
+    n = fread(buf, 1, header->header_size, parser->file);
+    if (n != header->header_size) {
         set_static_error(parser, "Failed to read full block header");
         return 1;
     }
@@ -250,24 +249,24 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
         | ((uint32_t)buf[2] << 8)
         | buf[3]
     );
-    strncpy(header.compression, (char *)buf + 4, 4);
+    strncpy(header->compression, (char *)buf + 4, 4);
 
     uint64_t allocated_size = 0, used_size = 0, data_size = 0;
     memcpy(&allocated_size, buf + 8, 8);
     memcpy(&used_size, buf + 16, 8);
     memcpy(&data_size, buf + 24, 8);
 
-    header.flags = flags;
-    header.allocated_size = be64toh(allocated_size);
-    header.used_size = be64toh(used_size);
-    header.data_size = be64toh(data_size);
-    memcpy(header.checksum, buf + 32, 16);
+    header->flags = flags;
+    header->allocated_size = be64toh(allocated_size);
+    header->used_size = be64toh(used_size);
+    header->data_size = be64toh(data_size);
+    memcpy(header->checksum, buf + 32, 16);
 
     block->header_pos = pos;
     block->data_pos = ftello(parser->file);
 
     // Seek to end of the block (hopefully?)
-    if (fseeko(parser->file, header.allocated_size, SEEK_CUR)) {
+    if (fseeko(parser->file, header->allocated_size, SEEK_CUR)) {
         set_static_error(parser, "Failed to seek past block data");
         return 1;
     }

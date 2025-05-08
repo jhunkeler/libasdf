@@ -11,6 +11,10 @@
 #include <stdint.h>
 
 
+#define ASDF_BLOCK_COMPRESSION_FIELD_SIZE 4
+#define ASDF_BLOCK_CHECKSUM_FIELD_SIZE 16
+
+
 extern const unsigned char ASDF_BLOCK_MAGIC[];
 
 
@@ -28,7 +32,7 @@ typedef struct asdf_block_header {
     uint32_t flags;
 
     //  4 COMPRESSION 4 char
-    char compression[4];
+    char compression[ASDF_BLOCK_COMPRESSION_FIELD_SIZE];
 
     //  8 ALLOCATED SIZE 64 bit unsigned int
     uint64_t allocated_size;
@@ -40,7 +44,7 @@ typedef struct asdf_block_header {
     uint64_t data_size;
 
     // 16 CHECKSUM 16 char MD5 checksum (optional)
-    char checksum[16];
+    uint8_t checksum[ASDF_BLOCK_CHECKSUM_FIELD_SIZE];
 } asdf_block_header_t;
 
 
