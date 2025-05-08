@@ -88,7 +88,6 @@ static char* read_next(asdf_parser_t *parser) {
 
 static int parse_version_comment(
     asdf_parser_t *parser,
-    asdf_event_t *event,
     const char *expected,
     char *out_buf
 ) {
@@ -117,7 +116,6 @@ static int parse_version_comment(
 static int parse_asdf_version(asdf_parser_t *parser, asdf_event_t *event) {
     if (parse_version_comment(
         parser,
-        event,
         ASDF_VERSION_COMMENT,
         parser->asdf_version
     ) != 0)
@@ -134,7 +132,6 @@ static int parse_asdf_version(asdf_parser_t *parser, asdf_event_t *event) {
 static int parse_standard_version(asdf_parser_t *parser, asdf_event_t *event) {
     if (parse_version_comment(
         parser,
-        event,
         ASDF_STANDARD_COMMENT,
         parser->standard_version
     ) != 0)
@@ -150,12 +147,13 @@ static int parse_standard_version(asdf_parser_t *parser, asdf_event_t *event) {
 
 
 static int parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
-    // TODO: YAML error handling
-    // still puzzling out how to do it; the fyaml documentation is not quite
-    // precise about it; but it seems to involve checking
-    // fy_parser_get_stream_error() then rummaging around the diagnostic object
-    // (which is part of the parser config)
     struct fy_event *yaml = fy_parser_parse(parser->yaml_parser);
+
+    if (fy_parser_get_stream_error(parser->yaml_parser)) {
+        ASDF_SET_STD_ERR(parser, ASDF_ERR_YAML_PARSE_FAILED);
+        return 1;
+    }
+
     event->type = ASDF_YAML_EVENT;
     event->payload.yaml = yaml;
 
