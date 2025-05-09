@@ -26,10 +26,12 @@
     X(ASDF_END_EVENT)
 
 typedef enum {
+// clang-format off
 #define X(member) member,
     ASDF_EVENT_TYPES(X)
 #undef X
     ASDF_EVENT_TYPE_COUNT
+// clang-format on
 } asdf_event_type_t;
 
 

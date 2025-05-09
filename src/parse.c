@@ -8,11 +8,11 @@
 #include "parse.h"
 
 
-const char * ASDF_STANDARD_COMMENT = "#ASDF_STANDARD ";
-const char * ASDF_VERSION_COMMENT = "#ASDF ";
+const char *ASDF_STANDARD_COMMENT = "#ASDF_STANDARD ";
+const char *ASDF_VERSION_COMMENT = "#ASDF ";
 
 
-static const char * const parser_error_messages[] = {
+static const char *const parser_error_messages[] = {
     [ASDF_ERR_NONE] = NULL,
     [ASDF_ERR_UNKNOWN_STATE] = "Unknown parser state",
     [ASDF_ERR_UNEXPECTED_EOF] = "Unexpected end of file",
@@ -26,8 +26,7 @@ static const char * const parser_error_messages[] = {
 
 
 #define ASDF_ERR(code) (parser_error_messages[(code)])
-#define ASDF_SET_STD_ERR(parser, code) \
-    set_static_error(parser, ASDF_ERR(code))
+#define ASDF_SET_STD_ERR(parser, code) set_static_error(parser, ASDF_ERR(code))
 
 
 static void set_oom_error(asdf_parser_t *parser) {
@@ -66,7 +65,7 @@ static void set_error(asdf_parser_t *parser, const char *fmt, ...) {
     va_start(args, fmt);
     vsnprintf(error, size + 1, fmt, args);
     va_end(args);
-    parser->error = error;  // implicit char* -> const char*; OK
+    parser->error = error; // implicit char* -> const char*; OK
     parser->error_type = ASDF_ERROR_HEAP;
 }
 
@@ -81,16 +80,12 @@ void set_static_error(asdf_parser_t *parser, const char *error) {
 }
 
 
-static char* read_next(asdf_parser_t *parser) {
+static char *read_next(asdf_parser_t *parser) {
     return fgets(parser->read_buffer, ASDF_PARSER_READ_BUFFER_SIZE, parser->file);
 }
 
 
-static int parse_version_comment(
-    asdf_parser_t *parser,
-    const char *expected,
-    char *out_buf
-) {
+static int parse_version_comment(asdf_parser_t *parser, const char *expected, char *out_buf) {
     char *r = read_next(parser);
     size_t len;
 
@@ -114,11 +109,7 @@ static int parse_version_comment(
 
 // TODO: These need to be more flexible for acccepting different ASDF versions
 static int parse_asdf_version(asdf_parser_t *parser, asdf_event_t *event) {
-    if (parse_version_comment(
-        parser,
-        ASDF_VERSION_COMMENT,
-        parser->asdf_version
-    ) != 0)
+    if (parse_version_comment(parser, ASDF_VERSION_COMMENT, parser->asdf_version) != 0)
         return 1;
 
     event->type = ASDF_ASDF_VERSION_EVENT;
@@ -130,11 +121,7 @@ static int parse_asdf_version(asdf_parser_t *parser, asdf_event_t *event) {
 
 
 static int parse_standard_version(asdf_parser_t *parser, asdf_event_t *event) {
-    if (parse_version_comment(
-        parser,
-        ASDF_STANDARD_COMMENT,
-        parser->standard_version
-    ) != 0)
+    if (parse_version_comment(parser, ASDF_STANDARD_COMMENT, parser->standard_version) != 0)
         return 1;
 
     event->type = ASDF_STANDARD_VERSION_EVENT;
@@ -196,7 +183,7 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
 
     if (strncmp(parser->read_buffer, ASDF_BLOCK_MAGIC, strlen(ASDF_BLOCK_MAGIC)) != 0) {
         parser->state = ASDF_PARSER_STATE_PADDING;
-        return asdf_parser_parse(parser, event);  // try padding parser
+        return asdf_parser_parse(parser, event); // try padding parser
     }
 
     // It's a block?
@@ -243,12 +230,8 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     }
 
     // Parse block fields
-    uint32_t flags = (
-        ((uint32_t)buf[0] << 24)
-        | ((uint32_t)buf[1] << 16)
-        | ((uint32_t)buf[2] << 8)
-        | buf[3]
-    );
+    uint32_t flags =
+        (((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | buf[3]);
     strncpy(header->compression, (char *)buf + 4, 4);
 
     uint64_t allocated_size = 0, used_size = 0, data_size = 0;
@@ -298,26 +281,26 @@ int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
     memset(event, 0, sizeof(asdf_event_t));
 
     switch (parser->state) {
-        case ASDF_PARSER_STATE_ASDF_VERSION:
-            return parse_asdf_version(parser, event);
-        case ASDF_PARSER_STATE_STANDARD_VERSION:
-            return parse_standard_version(parser, event);
-        case ASDF_PARSER_STATE_YAML:
-            return parse_yaml(parser, event);
-        case ASDF_PARSER_STATE_BLOCK:
-            return parse_block(parser, event);
-        case ASDF_PARSER_STATE_PADDING:
-            return parse_padding(parser, event);
-        case ASDF_PARSER_STATE_BLOCK_INDEX:
-            return parse_block_index(parser, event);
-        case ASDF_PARSER_STATE_END:
-            event->type = ASDF_END_EVENT;
-            return 1;
-        case ASDF_PARSER_STATE_ERROR:
-            return 1;
-        default:
-            ASDF_SET_STD_ERR(parser, ASDF_ERR_UNKNOWN_STATE);
-            return 1;
+    case ASDF_PARSER_STATE_ASDF_VERSION:
+        return parse_asdf_version(parser, event);
+    case ASDF_PARSER_STATE_STANDARD_VERSION:
+        return parse_standard_version(parser, event);
+    case ASDF_PARSER_STATE_YAML:
+        return parse_yaml(parser, event);
+    case ASDF_PARSER_STATE_BLOCK:
+        return parse_block(parser, event);
+    case ASDF_PARSER_STATE_PADDING:
+        return parse_padding(parser, event);
+    case ASDF_PARSER_STATE_BLOCK_INDEX:
+        return parse_block_index(parser, event);
+    case ASDF_PARSER_STATE_END:
+        event->type = ASDF_END_EVENT;
+        return 1;
+    case ASDF_PARSER_STATE_ERROR:
+        return 1;
+    default:
+        ASDF_SET_STD_ERR(parser, ASDF_ERR_UNKNOWN_STATE);
+        return 1;
     }
 }
 
@@ -328,9 +311,7 @@ int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
  * Later we will likely want some ASDF parser configuration, and this could include
  * the ability to pass through low-level YAML parser flags as well.  Could be useful.
  */
-static const struct fy_parse_cfg default_fy_parse_cfg = {
-    .flags = FYPCF_QUIET | FYPCF_COLLECT_DIAG
-};
+static const struct fy_parse_cfg default_fy_parse_cfg = {.flags = FYPCF_QUIET | FYPCF_COLLECT_DIAG};
 
 
 int asdf_parser_init(asdf_parser_t *parser) {
@@ -383,7 +364,8 @@ const char *asdf_parser_get_error(const asdf_parser_t *parser) {
 
 
 void asdf_parser_destroy(asdf_parser_t *parser) {
-    if (!parser) return;
+    if (!parser)
+        return;
 
     fy_parser_destroy(parser->yaml_parser);
 

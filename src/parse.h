@@ -7,8 +7,8 @@
 #include <libfyaml.h>
 
 
-extern const char * ASDF_STANDARD_COMMENT;
-extern const char * ASDF_VERSION_COMMENT;
+extern const char *ASDF_STANDARD_COMMENT;
+extern const char *ASDF_VERSION_COMMENT;
 
 
 #define ASDF_ASDF_VERSION_BUFFER_SIZE 16

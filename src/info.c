@@ -47,7 +47,7 @@ static void print_scalar_value(FILE *file, struct fy_node *node) {
 }
 
 
-static const char* get_node_type_display_name(struct fy_node *node, size_t *lenp) {
+static const char *get_node_type_display_name(struct fy_node *node, size_t *lenp) {
     size_t tag_len;
     const char *tag = fy_node_get_tag(node, &tag_len);
     if (tag && tag_len > 0) {
@@ -58,17 +58,17 @@ static const char* get_node_type_display_name(struct fy_node *node, size_t *lenp
     enum fy_node_type type = fy_node_get_type(node);
     const char *node_name;
     switch (type) {
-        case FYNT_SCALAR:
-            node_name = "scalar";
-            break;
-        case FYNT_SEQUENCE:
-            node_name = "sequence";
-            break;
-        case FYNT_MAPPING: 
-            node_name = "mapping";
-            break;
-        default:
-            node_name = "unknown";
+    case FYNT_SCALAR:
+        node_name = "scalar";
+        break;
+    case FYNT_SEQUENCE:
+        node_name = "sequence";
+        break;
+    case FYNT_MAPPING:
+        node_name = "mapping";
+        break;
+    default:
+        node_name = "unknown";
     }
 
     *lenp = strlen(node_name);
@@ -97,10 +97,7 @@ static void print_mapping_node(FILE *file, struct fy_node *node, tree_node_t *tr
 
         if (key_str = fy_node_get_scalar(key, &key_len)) {
             key_label = strndup(key_str, key_len);
-            tree_node_t child = {
-                .is_leaf = (next == NULL),
-                .parent = tree
-            };
+            tree_node_t child = {.is_leaf = (next == NULL), .parent = tree};
             print_node(file, value, &child, key_label, true);
             free(key_label);
         }
@@ -119,17 +116,19 @@ static void print_sequence_node(FILE *file, struct fy_node *node, tree_node_t *t
         curr = next;
         next = fy_node_sequence_iterate(node, &iter);
         snprintf(label_buf, sizeof(label_buf), "%d", index++);
-        tree_node_t child = {
-            .is_leaf = (next == NULL),
-            .parent = tree
-        };
+        tree_node_t child = {.is_leaf = (next == NULL), .parent = tree};
         print_node(file, curr, &child, label_buf, false);
     }
 }
 
 
-static void print_node(FILE *file, struct fy_node *node, tree_node_t *tree,
-                       const char *key_label, bool is_mapping_key) {
+static void print_node(
+    FILE *file,
+    struct fy_node *node,
+    tree_node_t *tree,
+    const char *key_label,
+    bool is_mapping_key
+) {
     if (!key_label)
         return;
 

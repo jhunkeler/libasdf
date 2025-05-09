@@ -20,7 +20,7 @@ extern const unsigned char ASDF_BLOCK_MAGIC[];
 
 typedef struct asdf_block_header {
     //  4 MAGIC 4 char == "\323BLK"
-    //char magic[4];
+    // char magic[4];
     // = {0xd3, "B", "L", "K"};
 
     //  2 HEADER SIZE 16 bit unsigned int
@@ -52,4 +52,4 @@ typedef struct asdf_block_info {
     asdf_block_header_t header;
     off_t header_pos;
     off_t data_pos;
-}  asdf_block_info_t;
+} asdf_block_info_t;
