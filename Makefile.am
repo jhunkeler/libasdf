@@ -3,8 +3,8 @@ AM_CPPFLAGS = -I$(top_srcdir)/src # so that tests also find header files
 
 SUBDIRS = tests
 
-src_files = src/block.c src/event.c src/info.c src/parse.c src/main.c
-src_headers = src/block.h src/event.h src/info.h src/parse.h
+src_files = src/block.c src/event.c src/info.c src/parse.c src/yaml.c src/main.c
+src_headers = src/block.h src/event.h src/info.h src/parse.h src/yaml.h
 
 # The asdf command line tool
 bin_PROGRAMS = asdf
