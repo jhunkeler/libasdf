@@ -31,11 +31,11 @@ typedef enum {
     ASDF_EVENT_TYPES(X)
 #undef X
     ASDF_EVENT_TYPE_COUNT
-// clang-format on
+    // clang-format on
 } asdf_event_type_t;
 
 
-static const char* const asdf_event_type_names[] = {
+static const char *const ASDF_EVENT_TYPE_NAMES[] = {
 #define X(name) #name,
     ASDF_EVENT_TYPES(X)
 #undef X
@@ -62,6 +62,6 @@ typedef struct asdf_event {
 
 /* Public API functions */
 int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event);
-const char* asdf_event_type_name(asdf_event_type_t event_type);
+const char *asdf_event_type_name(asdf_event_type_t event_type);
 void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose);
 void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event);

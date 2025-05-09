@@ -39,16 +39,16 @@ static void print_indent(FILE *file, tree_node_t *tree) {
 
 
 static void print_scalar_value(FILE *file, struct fy_node *node) {
-    const char *str;
-    size_t len;
-    if (str = fy_node_get_scalar(node, &len)) {
+    const char *str = NULL;
+    size_t len = 0;
+    if ((str = fy_node_get_scalar(node, &len))) {
         fprintf(file, ": %.*s", (int)len, str);
     }
 }
 
 
 static const char *get_node_type_display_name(struct fy_node *node, size_t *lenp) {
-    size_t tag_len;
+    size_t tag_len = 0;
     const char *tag = fy_node_get_tag(node, &tag_len);
     if (tag && tag_len > 0) {
         *lenp = tag_len;
@@ -56,7 +56,7 @@ static const char *get_node_type_display_name(struct fy_node *node, size_t *lenp
     }
 
     enum fy_node_type type = fy_node_get_type(node);
-    const char *node_name;
+    const char *node_name = NULL;
     switch (type) {
     case FYNT_SCALAR:
         node_name = "scalar";
@@ -76,15 +76,19 @@ static const char *get_node_type_display_name(struct fy_node *node, size_t *lenp
 }
 
 /* Forward declaration */
-static void print_node(FILE *, struct fy_node *, tree_node_t *, const char *, bool);
+static void print_node(FILE *file,
+    struct fy_node *node,
+    tree_node_t *tree,
+    const char *key_label,
+    bool is_mapping_key);
 
 
 static void print_mapping_node(FILE *file, struct fy_node *node, tree_node_t *tree) {
-    struct fy_node *key;
-    struct fy_node *value;
-    const char *key_str;
-    char *key_label;
-    size_t key_len;
+    struct fy_node *key = NULL;
+    struct fy_node *value = NULL;
+    const char *key_str = NULL;
+    char *key_label = NULL;
+    size_t key_len = 0;
     void *iter = NULL;
     struct fy_node_pair *curr = NULL;
     struct fy_node_pair *next = fy_node_mapping_iterate(node, &iter);
@@ -95,7 +99,7 @@ static void print_mapping_node(FILE *file, struct fy_node *node, tree_node_t *tr
         key = fy_node_pair_key(curr);
         value = fy_node_pair_value(curr);
 
-        if (key_str = fy_node_get_scalar(key, &key_len)) {
+        if ((key_str = fy_node_get_scalar(key, &key_len))) {
             key_label = strndup(key_str, key_len);
             tree_node_t child = {.is_leaf = (next == NULL), .parent = tree};
             print_node(file, value, &child, key_label, true);
@@ -107,7 +111,7 @@ static void print_mapping_node(FILE *file, struct fy_node *node, tree_node_t *tr
 
 static void print_sequence_node(FILE *file, struct fy_node *node, tree_node_t *tree) {
     int index = 0;
-    char label_buf[16];
+    char label_buf[16]; // NOLINT(readability-magic-numbers)
     void *iter = NULL;
     struct fy_node *curr = NULL;
     struct fy_node *next = fy_node_sequence_iterate(node, &iter);
@@ -122,13 +126,11 @@ static void print_sequence_node(FILE *file, struct fy_node *node, tree_node_t *t
 }
 
 
-static void print_node(
-    FILE *file,
+static void print_node(FILE *file,
     struct fy_node *node,
     tree_node_t *tree,
     const char *key_label,
-    bool is_mapping_key
-) {
+    bool is_mapping_key) {
     if (!key_label)
         return;
 

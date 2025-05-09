@@ -7,4 +7,4 @@
 #include <stdio.h>
 
 
-int asdf_info(FILE *, FILE *);
+int asdf_info(FILE *in_file, FILE *out_file);

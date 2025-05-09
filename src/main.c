@@ -87,6 +87,7 @@ struct info_args {
 };
 
 
+// NOLINTNEXTLINE(readability-non-const-parameter)
 static error_t parse_info_opt(int key, char *arg, struct argp_state *state) {
     struct info_args *args = state->input;
 
@@ -142,6 +143,7 @@ struct events_args {
 };
 
 
+// NOLINTNEXTLINE(readability-non-const-parameter)
 static error_t parse_events_opt(int key, char *arg, struct argp_state *state) {
     struct events_args *args = state->input;
 
@@ -235,6 +237,8 @@ int main(int argc, char *argv[]) {
 
         return events_main(events_args.filename, events_args.verbose);
     }
+    case ASDF_SUBCMD_NONE:
+        break;
     }
     return EXIT_FAILURE;
 }

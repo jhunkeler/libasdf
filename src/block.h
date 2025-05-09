@@ -13,6 +13,9 @@
 
 #define ASDF_BLOCK_COMPRESSION_FIELD_SIZE 4
 #define ASDF_BLOCK_CHECKSUM_FIELD_SIZE 16
+// Currently always 48, but may be expanded on different versions of the standard
+#define ASDF_BLOCK_HEADER_SIZE 48
+#define ASDF_BLOCK_MAGIC_SIZE 4
 
 
 extern const unsigned char ASDF_BLOCK_MAGIC[];

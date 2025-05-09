@@ -1,0 +1,29 @@
+# Maybe revisit DeprecatedOrUnsafeBufferHandling later
+Checks: >
+  readability-*, 
+  modernize-*,
+  bugprone-*,
+  performance-*,
+  misc-*,
+  -cppcoreguidelines-*,
+  -modernize-use-trailing-return-type, 
+  -modernize-avoid-c-arrays, 
+  -modernize-pass-by-value,
+  -readability-braces-around-statements,
+  -clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+
+WarningsAsErrors: ''
+HeaderFilterRegex: 'src/.*'
+CheckOptions:
+  - key: readability-identifier-naming.VariableCase
+    value: lower_case
+  - key: readability-identifier-naming.GlobalConstantCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.MacroDefinitionCase
+    value: UPPER_CASE
+  - key: readability-identifier-naming.FunctionCase
+    value: lower_case
+  - key: readability-identifier-naming.StructCase
+    value: lower_case
+  - key: readability-identifier-naming.EnumCase
+    value: lower_case

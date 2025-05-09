@@ -11,6 +11,7 @@
 #include "block.h"
 #include "event.h"
 #include "parse.h"
+#include "util.h"
 
 
 int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event) {
@@ -19,16 +20,16 @@ int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event) {
 
     // Clear previous event contents
     asdf_event_destroy(parser, event);
-    memset(event, 0, sizeof(asdf_event_t));
+    ZERO_MEMORY(event, sizeof(asdf_event_t));
     return asdf_parser_parse(parser, event);
 }
 
 
 const char *asdf_event_type_name(asdf_event_type_t event_type) {
     if (event_type >= 0 && event_type < ASDF_EVENT_TYPE_COUNT)
-        return asdf_event_type_names[event_type];
-    else
-        return "ASDF_UNKNOWN_EVENT";
+        return ASDF_EVENT_TYPE_NAMES[event_type];
+
+    return "ASDF_UNKNOWN_EVENT";
 }
 
 
@@ -60,8 +61,8 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
         fprintf(file, "  Type: %s\n", fy_event_type_get_text(event_type));
         // Safe to call even on events that don't produce tags; just returns NULL
         struct fy_token *token = fy_event_get_tag_token(yaml);
-        size_t token_len;
-        const char *token_text;
+        size_t token_len = 0;
+        const char *token_text = NULL;
 
         // Print the tag if it exists
         if (token) {
@@ -98,6 +99,9 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
         fprintf(file, "\n");
         break;
     }
+
+    default:
+        break;
     }
 }
 
@@ -121,5 +125,5 @@ void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event) {
     default:
         break;
     }
-    memset(event, 0, sizeof(asdf_event_t));
+    ZERO_MEMORY(event, sizeof(asdf_event_t));
 }

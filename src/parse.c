@@ -1,15 +1,17 @@
 #include <assert.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 #include "block.h"
 #include "event.h"
 #include "parse.h"
+#include "util.h"
 
 
-const char *ASDF_STANDARD_COMMENT = "#ASDF_STANDARD ";
-const char *ASDF_VERSION_COMMENT = "#ASDF ";
+const char *asdf_standard_comment = "#ASDF_STANDARD ";
+const char *asdf_version_comment = "#ASDF ";
 
 
 static const char *const parser_error_messages[] = {
@@ -32,7 +34,6 @@ static const char *const parser_error_messages[] = {
 static void set_oom_error(asdf_parser_t *parser) {
     parser->error = ASDF_ERR(ASDF_ERR_OUT_OF_MEMORY);
     parser->error_type = ASDF_ERROR_STATIC;
-    return;
 }
 
 
@@ -51,6 +52,9 @@ static void set_error(asdf_parser_t *parser, const char *fmt, ...) {
 
     va_start(args, fmt);
 
+    // Bug in clang-tidy: https://github.com/llvm/llvm-project/issues/40656
+    // Should be fixed in newer versions though...
+    // NOLINTNEXTLINE(clang-analyzer-valist.Uninitialized)
     size = vsnprintf(NULL, 0, fmt, args);
     va_end(args);
 
@@ -81,11 +85,12 @@ void set_static_error(asdf_parser_t *parser, const char *error) {
 
 
 static char *read_next(asdf_parser_t *parser) {
-    return fgets(parser->read_buffer, ASDF_PARSER_READ_BUFFER_SIZE, parser->file);
+    return fgets((char *)parser->read_buffer, ASDF_PARSER_READ_BUFFER_SIZE, parser->file);
 }
 
 
-static int parse_version_comment(asdf_parser_t *parser, const char *expected, char *out_buf) {
+static int parse_version_comment(
+    asdf_parser_t *parser, const char *expected, char *out_buf, size_t out_size) {
     char *r = read_next(parser);
     size_t len;
 
@@ -96,12 +101,12 @@ static int parse_version_comment(asdf_parser_t *parser, const char *expected, ch
 
     len = strlen(expected);
 
-    if (strncmp(parser->read_buffer, expected, len) != 0) {
+    if (strncmp((char *)parser->read_buffer, expected, len) != 0) {
         ASDF_SET_STD_ERR(parser, ASDF_ERR_INVALID_ASDF_HEADER);
         return 1;
     }
 
-    strcpy(out_buf, parser->read_buffer + len);
+    strncpy(out_buf, (char *)parser->read_buffer + len, out_size);
     out_buf[strcspn(out_buf, "\r\n")] = '\0';
     return 0;
 }
@@ -109,7 +114,8 @@ static int parse_version_comment(asdf_parser_t *parser, const char *expected, ch
 
 // TODO: These need to be more flexible for acccepting different ASDF versions
 static int parse_asdf_version(asdf_parser_t *parser, asdf_event_t *event) {
-    if (parse_version_comment(parser, ASDF_VERSION_COMMENT, parser->asdf_version) != 0)
+    if (parse_version_comment(
+            parser, asdf_version_comment, parser->asdf_version, ASDF_ASDF_VERSION_BUFFER_SIZE) != 0)
         return 1;
 
     event->type = ASDF_ASDF_VERSION_EVENT;
@@ -121,7 +127,10 @@ static int parse_asdf_version(asdf_parser_t *parser, asdf_event_t *event) {
 
 
 static int parse_standard_version(asdf_parser_t *parser, asdf_event_t *event) {
-    if (parse_version_comment(parser, ASDF_STANDARD_COMMENT, parser->standard_version) != 0)
+    if (parse_version_comment(parser,
+            asdf_standard_comment,
+            parser->standard_version,
+            ASDF_STANDARD_VERSION_BUFFER_SIZE) != 0)
         return 1;
 
     event->type = ASDF_STANDARD_VERSION_EVENT;
@@ -169,6 +178,10 @@ static int parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
 }
 
 
+#define ASDF_BLOCK_HEADER_OFFSET(field) \
+    offsetof(asdf_block_header_t, field) - offsetof(asdf_block_header_t, flags)
+
+
 static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     off_t pos = ftello(parser->file);
 
@@ -181,7 +194,7 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
         return asdf_parser_parse(parser, event);
     }
 
-    if (strncmp(parser->read_buffer, ASDF_BLOCK_MAGIC, strlen(ASDF_BLOCK_MAGIC)) != 0) {
+    if (memcmp((char *)parser->read_buffer, ASDF_BLOCK_MAGIC, ASDF_BLOCK_MAGIC_SIZE) != 0) {
         parser->state = ASDF_PARSER_STATE_PADDING;
         return asdf_parser_parse(parser, event); // try padding parser
     }
@@ -217,8 +230,9 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     }
 
     asdf_block_header_t *header = &block->header;
+    // NOLINTNEXTLINE(readability-magic-numbers)
     header->header_size = (buf[0] << 8) | buf[1];
-    if (header->header_size < 48) {
+    if (header->header_size < ASDF_BLOCK_HEADER_SIZE) {
         set_static_error(parser, "Invalid block header size");
         return 1;
     }
@@ -231,19 +245,24 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
 
     // Parse block fields
     uint32_t flags =
+        // NOLINTNEXTLINE(readability-magic-numbers)
         (((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | buf[3]);
-    strncpy(header->compression, (char *)buf + 4, 4);
+    strncpy(header->compression,
+        (char *)buf + ASDF_BLOCK_HEADER_OFFSET(compression),
+        sizeof(header->compression));
 
-    uint64_t allocated_size = 0, used_size = 0, data_size = 0;
-    memcpy(&allocated_size, buf + 8, 8);
-    memcpy(&used_size, buf + 16, 8);
-    memcpy(&data_size, buf + 24, 8);
+    uint64_t allocated_size = 0;
+    uint64_t used_size = 0;
+    uint64_t data_size = 0;
+    memcpy(&allocated_size, buf + ASDF_BLOCK_HEADER_OFFSET(allocated_size), sizeof(allocated_size));
+    memcpy(&used_size, buf + ASDF_BLOCK_HEADER_OFFSET(used_size), sizeof(used_size));
+    memcpy(&data_size, buf + ASDF_BLOCK_HEADER_OFFSET(data_size), sizeof(data_size));
 
     header->flags = flags;
     header->allocated_size = be64toh(allocated_size);
     header->used_size = be64toh(used_size);
     header->data_size = be64toh(data_size);
-    memcpy(header->checksum, buf + 32, 16);
+    memcpy(header->checksum, buf + ASDF_BLOCK_HEADER_OFFSET(checksum), sizeof(header->checksum));
 
     block->header_pos = pos;
     block->data_pos = ftello(parser->file);
@@ -278,7 +297,7 @@ int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
     assert(parser->file);
     assert(event);
 
-    memset(event, 0, sizeof(asdf_event_t));
+    ZERO_MEMORY(event, sizeof(asdf_event_t));
 
     switch (parser->state) {
     case ASDF_PARSER_STATE_ASDF_VERSION:
@@ -311,23 +330,23 @@ int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
  * Later we will likely want some ASDF parser configuration, and this could include
  * the ability to pass through low-level YAML parser flags as well.  Could be useful.
  */
-static const struct fy_parse_cfg default_fy_parse_cfg = {.flags = FYPCF_QUIET | FYPCF_COLLECT_DIAG};
+static const struct fy_parse_cfg DEFAULT_FY_PARSE_CFG = {.flags = FYPCF_QUIET | FYPCF_COLLECT_DIAG};
 
 
 int asdf_parser_init(asdf_parser_t *parser) {
     assert(parser);
-    memset(parser, 0, sizeof(asdf_parser_t));
+    ZERO_MEMORY(parser, sizeof(asdf_parser_t));
 
     parser->file = NULL;
     parser->state = ASDF_PARSER_STATE_INITIAL;
     parser->error = NULL;
     parser->error_type = ASDF_ERROR_NONE;
     parser->found_blocks = false;
-    memset(parser->asdf_version, 0, sizeof(parser->asdf_version));
-    memset(parser->standard_version, 0, sizeof(parser->standard_version));
-    memset(parser->read_buffer, 0, sizeof(parser->read_buffer));
+    ZERO_MEMORY(parser->asdf_version, sizeof(parser->asdf_version));
+    ZERO_MEMORY(parser->standard_version, sizeof(parser->standard_version));
+    ZERO_MEMORY(parser->read_buffer, sizeof(parser->read_buffer));
 
-    if (!(parser->yaml_parser = fy_parser_create(&default_fy_parse_cfg))) {
+    if (!(parser->yaml_parser = fy_parser_create(&DEFAULT_FY_PARSE_CFG))) {
         ASDF_SET_STD_ERR(parser, ASDF_ERR_YAML_PARSER_INIT_FAILED);
         return 1;
     }
@@ -373,5 +392,5 @@ void asdf_parser_destroy(asdf_parser_t *parser) {
         free((void *)parser->error);
     // Leave no trace behind, leaving things clean for accidental
     // API calls on an already destroyed parser
-    memset(parser, 0, sizeof(asdf_parser_t));
+    ZERO_MEMORY(parser, sizeof(asdf_parser_t));
 }
