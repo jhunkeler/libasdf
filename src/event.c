@@ -12,6 +12,15 @@
 #include "event.h"
 #include "parse.h"
 #include "util.h"
+#include "yaml.h"
+
+
+asdf_event_type_t asdf_event_type(asdf_event_t *event) {
+    if (!event)
+        return ASDF_NONE_EVENT;
+
+    return event->type;
+}
 
 
 int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event) {
@@ -20,7 +29,6 @@ int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event) {
 
     // Clear previous event contents
     asdf_event_destroy(parser, event);
-    ZERO_MEMORY(event, sizeof(asdf_event_t));
     return asdf_parser_parse(parser, event);
 }
 
@@ -52,31 +60,20 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
         break;
 
     case ASDF_YAML_EVENT: {
-        struct fy_event *yaml = event->payload.yaml;
+        fprintf(file, "  Type: %s\n", asdf_yaml_event_type_text(event));
 
-        if (!yaml)
-            break;
-
-        enum fy_event_type event_type = yaml->type;
-        fprintf(file, "  Type: %s\n", fy_event_type_get_text(event_type));
-        // Safe to call even on events that don't produce tags; just returns NULL
-        struct fy_token *token = fy_event_get_tag_token(yaml);
-        size_t token_len = 0;
-        const char *token_text = NULL;
+        size_t len = 0;
+        const char *text = asdf_yaml_event_tag(event, &len);
 
         // Print the tag if it exists
-        if (token) {
-            token_text = fy_token_get_text(token, &token_len);
-            if (token_text)
-                fprintf(file, "  Tag: %.*s\n", (int)token_len, token_text);
-        }
+        if (len)
+            fprintf(file, "  Tag: %.*s\n", (int)len, text);
 
-        if (event_type == FYET_SCALAR && (token = yaml->scalar.value)) {
-            token_text = fy_token_get_text(token, &token_len);
-            if (token_text) {
-                fprintf(file, "  Value: %.*s\n", (int)token_len, token_text);
-            }
-        }
+        text = asdf_yaml_event_scalar_value(event, &len);
+
+        if (len)
+            fprintf(file, "  Value: %.*s\n", (int)len, text);
+
         break;
     }
 
