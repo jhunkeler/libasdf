@@ -18,11 +18,13 @@
 #define DIM(str) ANSI_DIM str ANSI_RESET
 
 
+// clang-format off
 typedef enum {
     TREE_SCALAR,
     TREE_MAPPING,
     TREE_SEQUENCE
 } tree_node_type_t;
+// clang-format on
 
 
 typedef struct tree_node {
@@ -121,7 +123,8 @@ static void stack_push(tree_node_stack_t **stack, tree_node_t *node) {
 
 static tree_node_t *stack_pop(tree_node_stack_t **stack) {
     tree_node_stack_t *top = *stack;
-    if (!top) return NULL;
+    if (!top)
+        return NULL;
     tree_node_t *node = top->node;
     *stack = top->next;
     free(top);
@@ -134,8 +137,7 @@ static tree_node_t *stack_peek(tree_node_stack_t *stack) {
 }
 
 
-tree_node_t *build_tree(asdf_parser_t *parser)
-{
+tree_node_t *build_tree(asdf_parser_t *parser) {
     asdf_event_t event = {0};
     tree_node_t *root = NULL;
     tree_node_stack_t *stack = NULL;
@@ -151,7 +153,8 @@ tree_node_t *build_tree(asdf_parser_t *parser)
         /* TODO: Handle anchor events */
         case ASDF_YAML_MAPPING_START_EVENT:
         case ASDF_YAML_SEQUENCE_START_EVENT: {
-            tree_node_type_t node_type = (type == ASDF_YAML_MAPPING_START_EVENT) ? TREE_MAPPING : TREE_SEQUENCE;
+            tree_node_type_t node_type =
+                (type == ASDF_YAML_MAPPING_START_EVENT) ? TREE_MAPPING : TREE_SEQUENCE;
             const char *key = NULL;
             size_t index = 0;
 
