@@ -23,6 +23,14 @@ asdf_event_type_t asdf_event_type(asdf_event_t *event) {
 }
 
 
+const asdf_block_info_t *asdf_event_block_info(const asdf_event_t *event) {
+    if (!(event && event->type == ASDF_BLOCK_EVENT))
+        return NULL;
+
+    return event->payload.block;
+}
+
+
 int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event) {
     assert(parser);
     assert(event);
@@ -91,7 +99,7 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
 
         fprintf(file, "  Checksum: ");
         for (int idx = 0; idx < ASDF_BLOCK_CHECKSUM_FIELD_SIZE; idx++) {
-            printf("%02x", header.checksum[idx]);
+            fprintf(file, "%02x", header.checksum[idx]);
         }
         fprintf(file, "\n");
         break;

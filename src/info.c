@@ -1,4 +1,6 @@
 #include <assert.h>
+#include <ctype.h>
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,7 +8,9 @@
 
 #include <libfyaml.h>
 
+#include "block.h"
 #include "event.h"
+#include "info.h"
 #include "parse.h"
 #include "yaml.h"
 
@@ -150,6 +154,9 @@ tree_node_t *build_tree(asdf_parser_t *parser) {
         asdf_yaml_event_type_t type = asdf_yaml_event_type(&event);
         tree_node_t *parent = stack_peek(stack);
         tree_node_t *node = NULL;
+
+        if (type == ASDF_YAML_STREAM_END_EVENT)
+            break;
 
         switch (type) {
         /* TODO: Handle anchor events */
@@ -312,20 +319,162 @@ void print_tree(FILE *file, const tree_node_t *node) {
 }
 
 
-int asdf_info(FILE *in_file, FILE *out_file, const char *filename) {
+// clang-format off
+typedef enum {
+    TOP,
+    MIDDLE,
+    BOTTOM
+} field_border_t;
+
+
+typedef enum {
+    LEFT,
+    CENTER,
+} field_align_t;
+// clang-format on
+
+
+#define BOX_WIDTH 50
+
+
+void print_border(FILE *file, field_border_t border) {
+    fprintf(file, ANSI_DIM);
+    for (int idx = 0; idx < BOX_WIDTH; idx++) {
+        switch (border) {
+        case TOP:
+            if (idx == 0)
+                fprintf(file, "┌");
+            else if (idx == BOX_WIDTH - 1)
+                fprintf(file, "┐\n");
+            else
+                fprintf(file, "─");
+            break;
+        case MIDDLE:
+            if (idx == 0)
+                fprintf(file, "├");
+            else if (idx == BOX_WIDTH - 1)
+                fprintf(file, "┤\n");
+            else
+                fprintf(file, "─");
+            break;
+        case BOTTOM:
+            if (idx == 0)
+                fprintf(file, "└");
+            else if (idx == BOX_WIDTH - 1)
+                fprintf(file, "┘\n");
+            else
+                fprintf(file, "─");
+            break;
+        }
+    }
+    fprintf(file, ANSI_RESET);
+}
+
+
+void print_field(FILE *file, field_align_t align, const char *fmt, ...) {
+    va_list args;
+    char field_buf[BOX_WIDTH - 2] = {0};
+    va_start(args, fmt);
+    vsnprintf(field_buf, sizeof(field_buf), fmt, args);
+    fprintf(file, DIM("│"));
+    switch (align) {
+    case LEFT: {
+        int pad = BOX_WIDTH - strlen(field_buf) - 3;
+        fprintf(file, " %s%*s", field_buf, pad, "");
+        break;
+    }
+    case CENTER: {
+        int pad = (BOX_WIDTH - strlen(field_buf)) / 2 - 1;
+        fprintf(file, "%*s%s%*s", pad, "", field_buf, pad, "");
+        break;
+    }
+    }
+    fprintf(file, DIM("│") "\n");
+}
+
+
+void print_block(FILE *file, const asdf_event_t *event, size_t block_idx) {
+    const asdf_block_info_t *block = asdf_event_block_info(event);
+
+    if (!block)
+        return;
+
+    char field_buf[BOX_WIDTH - 2] = {0};
+    asdf_block_header_t header = block->header;
+
+    // Print the block header with the block number
+    print_border(file, TOP);
+    print_field(file, CENTER, "Block #%zu", block_idx);
+    print_border(file, MIDDLE);
+    print_field(file, LEFT, "flags: 0x%08x", header.flags);
+    print_border(file, MIDDLE);
+    print_field(
+        file, LEFT, "compression: \"%.*s\"", sizeof(header.compression), header.compression);
+    print_border(file, MIDDLE);
+    print_field(file, LEFT, "allocated_size: %" PRIu64, header.allocated_size);
+    print_border(file, MIDDLE);
+    print_field(file, LEFT, "used_size: %" PRIu64, header.used_size);
+    print_border(file, MIDDLE);
+    print_field(file, LEFT, "data_size: %" PRIu64, header.data_size);
+    print_border(file, MIDDLE);
+
+    char checksum[ASDF_BLOCK_CHECKSUM_FIELD_SIZE * 2 + 1] = {0};
+    char *p = checksum;
+    for (int idx = 0; idx < ASDF_BLOCK_CHECKSUM_FIELD_SIZE; idx++) {
+        p += sprintf(p, "%02x", header.checksum[idx]);
+    }
+    print_field(file, LEFT, "checksum: %s", checksum);
+    print_border(file, BOTTOM);
+}
+
+
+static const asdf_info_cfg_t ASDF_INFO_DEFAULT_CFG = {
+    .filename = NULL, .print_tree = true, .print_blocks = false};
+
+
+int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
     asdf_parser_t parser = {0};
+
+    if (!cfg)
+        cfg = &ASDF_INFO_DEFAULT_CFG;
 
     if (asdf_parser_init(&parser) != 0)
         return 1;
 
-    if (asdf_parser_set_input_file(&parser, in_file, filename) != 0) {
+    if (asdf_parser_set_input_file(&parser, in_file, cfg->filename) != 0) {
         asdf_parser_destroy(&parser);
         return 1;
     }
 
-    tree_node_t *root = build_tree(&parser);
-    print_tree(out_file, root);
-    tree_node_free(root);
+    asdf_event_t event = {0};
+    size_t block_count = 0;
+
+    while (asdf_event_iterate(&parser, &event) == 0) {
+        // Iterate events--if we hit a YAML event start building the tree (
+        // build_tree takes over iteration from there) otherwise for block
+        // events just show the block header details immediately, if the option
+        // is enabled.
+        asdf_event_type_t type = asdf_event_type(&event);
+        switch (type) {
+        case ASDF_YAML_EVENT:
+            if (cfg->print_tree) {
+                tree_node_t *root = build_tree(&parser);
+                print_tree(out_file, root);
+                tree_node_free(root);
+            }
+            break;
+        case ASDF_BLOCK_EVENT:
+            if (cfg->print_blocks)
+                print_block(out_file, &event, block_count);
+
+            block_count++;
+            break;
+        default:
+            break;
+        }
+        asdf_event_destroy(&parser, &event);
+    }
+
     asdf_parser_destroy(&parser);
     return 0;
 }

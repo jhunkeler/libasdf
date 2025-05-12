@@ -59,6 +59,7 @@ typedef struct asdf_event {
 
 /* Public API functions */
 asdf_event_type_t asdf_event_type(asdf_event_t *event);
+const asdf_block_info_t *asdf_event_block_info(const asdf_event_t *event);
 int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event);
 const char *asdf_event_type_name(asdf_event_type_t event_type);
 void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose);

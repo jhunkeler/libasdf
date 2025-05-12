@@ -7,4 +7,14 @@
 #include <stdio.h>
 
 
-int asdf_info(FILE *in_file, FILE *out_file);
+/**
+ * Optional configuration options for the `asdf_info` function
+ */
+typedef struct {
+    const char *filename;
+    bool print_tree;
+    bool print_blocks;
+} asdf_info_cfg_t;
+
+
+int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg);
