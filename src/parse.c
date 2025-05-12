@@ -178,10 +178,6 @@ static int parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
 }
 
 
-#define ASDF_BLOCK_HEADER_OFFSET(field) \
-    offsetof(asdf_block_header_t, field) - offsetof(asdf_block_header_t, flags)
-
-
 static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     off_t pos = ftello(parser->file);
 
@@ -223,7 +219,7 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
         return 1;
     }
 
-    n = fread(buf, 1, 2, parser->file);
+    n = fread(buf, 1, FIELD_SIZEOF(asdf_block_header_t, header_size), parser->file);
     if (n != 2) {
         set_static_error(parser, "Failed to read block header size");
         return 1;
@@ -248,21 +244,21 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
         // NOLINTNEXTLINE(readability-magic-numbers)
         (((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | buf[3]);
     strncpy(header->compression,
-        (char *)buf + ASDF_BLOCK_HEADER_OFFSET(compression),
+        (char *)buf + ASDF_BLOCK_COMPRESSION_OFFSET,
         sizeof(header->compression));
 
     uint64_t allocated_size = 0;
     uint64_t used_size = 0;
     uint64_t data_size = 0;
-    memcpy(&allocated_size, buf + ASDF_BLOCK_HEADER_OFFSET(allocated_size), sizeof(allocated_size));
-    memcpy(&used_size, buf + ASDF_BLOCK_HEADER_OFFSET(used_size), sizeof(used_size));
-    memcpy(&data_size, buf + ASDF_BLOCK_HEADER_OFFSET(data_size), sizeof(data_size));
+    memcpy(&allocated_size, buf + ASDF_BLOCK_ALLOCATED_SIZE_OFFSET, sizeof(allocated_size));
+    memcpy(&used_size, buf + ASDF_BLOCK_USED_SIZE_OFFSET, sizeof(used_size));
+    memcpy(&data_size, buf + ASDF_BLOCK_DATA_SIZE_OFFSET, sizeof(data_size));
 
     header->flags = flags;
     header->allocated_size = be64toh(allocated_size);
     header->used_size = be64toh(used_size);
     header->data_size = be64toh(data_size);
-    memcpy(header->checksum, buf + ASDF_BLOCK_HEADER_OFFSET(checksum), sizeof(header->checksum));
+    memcpy(header->checksum, buf + ASDF_BLOCK_CHECKSUM_OFFSET, sizeof(header->checksum));
 
     block->header_pos = pos;
     block->data_pos = ftello(parser->file);
