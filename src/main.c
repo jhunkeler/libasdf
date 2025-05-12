@@ -79,11 +79,18 @@ static char info_doc[] = "Print a rendering of an ASDF tree.";
 static char info_args_doc[] = "FILENAME";
 
 
-static struct argp_option info_options[] = {{0}};
+#define INFO_OPT_NO_TREE_KEY 0x100
 
+
+static struct argp_option info_options[] = {
+    {"no-tree", INFO_OPT_NO_TREE_KEY, 0, 0, "Do not show the tree", 0},
+    {"blocks", 'b', 0, 0, "Show information about blocks", 0},
+    {0}};
 
 struct info_args {
     const char *filename;
+    bool print_tree;
+    bool print_blocks;
 };
 
 
@@ -92,6 +99,12 @@ static error_t parse_info_opt(int key, char *arg, struct argp_state *state) {
     struct info_args *args = state->input;
 
     switch (key) {
+    case INFO_OPT_NO_TREE_KEY:
+        args->print_tree = false;
+        break;
+    case 'b':
+        args->print_blocks = true;
+        break;
     case ARGP_KEY_ARG:
         if (!args->filename)
             args->filename = arg;
@@ -113,7 +126,7 @@ static error_t parse_info_opt(int key, char *arg, struct argp_state *state) {
 static struct argp info_argp = {info_options, parse_info_opt, info_args_doc, info_doc};
 
 
-static int info_main(const char *filename) {
+static int info_main(const char *filename, bool print_tree, bool print_blocks) {
     FILE *file = fopen(filename, "r");
 
     if (!file) {
@@ -121,7 +134,12 @@ static int info_main(const char *filename) {
         return EXIT_FAILURE;
     }
 
-    int status = asdf_info(file, stdout);
+    asdf_info_cfg_t cfg = {
+        .filename = filename,
+        .print_tree = print_tree,
+        .print_blocks = print_blocks,
+    };
+    int status = asdf_info(file, stdout, &cfg);
     fclose(file);
     return status ? EXIT_FAILURE : EXIT_SUCCESS;
 }
@@ -224,11 +242,11 @@ int main(int argc, char *argv[]) {
 
     switch (global_args.subcmd) {
     case ASDF_SUBCMD_INFO: {
-        struct info_args info_args = {0};
+        struct info_args info_args = {.print_tree = true};
         argp_parse(
             &info_argp, global_args.subcmd_argc, global_args.subcmd_argv, 0, NULL, &info_args);
 
-        return info_main(info_args.filename);
+        return info_main(info_args.filename, info_args.print_tree, info_args.print_blocks);
     }
     case ASDF_SUBCMD_EVENTS: {
         struct events_args events_args = {0};
