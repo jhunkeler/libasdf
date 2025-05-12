@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -5,7 +6,9 @@
 
 #include <libfyaml.h>
 
-#include "info.h"
+#include "event.h"
+#include "parse.h"
+#include "yaml.h"
 
 
 #define ANSI_RESET "\033[0m"
@@ -15,166 +18,297 @@
 #define DIM(str) ANSI_DIM str ANSI_RESET
 
 
+typedef enum {
+    TREE_SCALAR,
+    TREE_MAPPING,
+    TREE_SEQUENCE
+} tree_node_type_t;
+
+
 typedef struct tree_node {
-    bool is_leaf;
+    tree_node_type_t type;
+
+    union {
+        char *key;
+        size_t index;
+    } index;
+    char *tag;
+    char *value;
+
     struct tree_node *parent;
+    struct tree_node *first_child;
+    struct tree_node *last_child;
+    struct tree_node *next_sibling;
+
+    union {
+        struct {
+            char *pending_key;
+        } mapping;
+
+        struct {
+            size_t index;
+        } sequence;
+    } state;
 } tree_node_t;
 
 
-/** TODO: Maybe rewrite to avoid recursion in deeply nested trees **/
-
-static void print_indent(FILE *file, tree_node_t *tree) {
-    if (!tree)
-        return;
-
-    print_indent(file, tree->parent);
-
-    if (tree->parent) {
-        if (tree->parent->is_leaf)
-            fprintf(file, "  ");
-        else
-            fprintf(file, DIM("│") " ");
-    }
-}
+typedef struct tree_node_stack {
+    tree_node_t *node;
+    struct tree_node_stack *next;
+} tree_node_stack_t;
 
 
-static void print_scalar_value(FILE *file, struct fy_node *node) {
-    const char *str = NULL;
-    size_t len = 0;
-    if ((str = fy_node_get_scalar(node, &len))) {
-        fprintf(file, ": %.*s", (int)len, str);
-    }
-}
+tree_node_t *tree_node_new(tree_node_type_t type, const char *key, size_t index) {
+    tree_node_t *node = calloc(1, sizeof(tree_node_t));
+    node->type = type;
 
-
-static const char *get_node_type_display_name(struct fy_node *node, size_t *lenp) {
-    size_t tag_len = 0;
-    const char *tag = fy_node_get_tag(node, &tag_len);
-    if (tag && tag_len > 0) {
-        *lenp = tag_len;
-        return tag;
+    if (key) {
+        node->index.key = strdup(key);
+    } else {
+        node->index.index = index;
     }
 
-    enum fy_node_type type = fy_node_get_type(node);
-    const char *node_name = NULL;
     switch (type) {
-    case FYNT_SCALAR:
-        node_name = "scalar";
+    case TREE_MAPPING:
+        node->state.mapping.pending_key = NULL;
         break;
-    case FYNT_SEQUENCE:
-        node_name = "sequence";
-        break;
-    case FYNT_MAPPING:
-        node_name = "mapping";
+    case TREE_SEQUENCE:
+        node->state.sequence.index = 0;
         break;
     default:
-        node_name = "unknown";
+        break;
     }
 
-    *lenp = strlen(node_name);
-    return node_name;
+    return node;
 }
 
-/* Forward declaration */
-static void print_node(FILE *file,
-    struct fy_node *node,
-    tree_node_t *tree,
-    const char *key_label,
-    bool is_mapping_key);
+
+void tree_node_add_child(tree_node_t *parent, tree_node_t *child) {
+    child->parent = parent;
+    if (!parent->first_child) {
+        parent->first_child = parent->last_child = child;
+    } else {
+        parent->last_child->next_sibling = child;
+        parent->last_child = child;
+    }
+}
 
 
-static void print_mapping_node(FILE *file, struct fy_node *node, tree_node_t *tree) {
-    struct fy_node *key = NULL;
-    struct fy_node *value = NULL;
-    const char *key_str = NULL;
-    char *key_label = NULL;
-    size_t key_len = 0;
-    void *iter = NULL;
-    struct fy_node_pair *curr = NULL;
-    struct fy_node_pair *next = fy_node_mapping_iterate(node, &iter);
+void tree_node_free(tree_node_t *node) {
+    tree_node_t *child = node->first_child;
+    while (child) {
+        tree_node_t *next = child->next_sibling;
+        tree_node_free(child);
+        child = next;
+    }
 
-    while (next != NULL) {
-        curr = next;
-        next = fy_node_mapping_iterate(node, &iter);
-        key = fy_node_pair_key(curr);
-        value = fy_node_pair_value(curr);
+    if (node->parent && node->parent->type == TREE_MAPPING)
+        free(node->index.key);
 
-        if ((key_str = fy_node_get_scalar(key, &key_len))) {
-            key_label = strndup(key_str, key_len);
-            tree_node_t child = {.is_leaf = (next == NULL), .parent = tree};
-            print_node(file, value, &child, key_label, true);
-            free(key_label);
+    free(node->tag);
+    free(node->value);
+    free(node);
+}
+
+
+static void stack_push(tree_node_stack_t **stack, tree_node_t *node) {
+    tree_node_stack_t *new_item = malloc(sizeof(tree_node_stack_t));
+    new_item->node = node;
+    new_item->next = *stack;
+    *stack = new_item;
+}
+
+
+static tree_node_t *stack_pop(tree_node_stack_t **stack) {
+    tree_node_stack_t *top = *stack;
+    if (!top) return NULL;
+    tree_node_t *node = top->node;
+    *stack = top->next;
+    free(top);
+    return node;
+}
+
+
+static tree_node_t *stack_peek(tree_node_stack_t *stack) {
+    return stack ? stack->node : NULL;
+}
+
+
+tree_node_t *build_tree(asdf_parser_t *parser)
+{
+    asdf_event_t event = {0};
+    tree_node_t *root = NULL;
+    tree_node_stack_t *stack = NULL;
+    const char *tag = NULL;
+    size_t tag_len = 0;
+
+    while (asdf_event_iterate(parser, &event) == 0) {
+        asdf_yaml_event_type_t type = asdf_yaml_event_type(&event);
+        tree_node_t *parent = stack_peek(stack);
+        tree_node_t *node = NULL;
+
+        switch (type) {
+        /* TODO: Handle anchor events */
+        case ASDF_YAML_MAPPING_START_EVENT:
+        case ASDF_YAML_SEQUENCE_START_EVENT: {
+            tree_node_type_t node_type = (type == ASDF_YAML_MAPPING_START_EVENT) ? TREE_MAPPING : TREE_SEQUENCE;
+            const char *key = NULL;
+            size_t index = 0;
+
+            if (parent == NULL) {
+                root = tree_node_new(node_type, NULL, 0);
+                node = root;
+            } else {
+                switch (parent->type) {
+                case TREE_MAPPING:
+                    key = parent->state.mapping.pending_key;
+                    parent->state.mapping.pending_key = NULL;
+                    break;
+                case TREE_SEQUENCE:
+                    index = parent->state.sequence.index++;
+                default:
+                    break;
+                }
+                node = tree_node_new(node_type, key, index);
+                tree_node_add_child(parent, node);
+            }
+
+            tag = asdf_yaml_event_tag(&event, &tag_len);
+
+            if (tag && tag_len > 0) {
+                node->tag = strndup(tag, tag_len);
+            }
+
+            stack_push(&stack, node);
+            break;
         }
+
+        case ASDF_YAML_MAPPING_END_EVENT:
+        case ASDF_YAML_SEQUENCE_END_EVENT:
+            stack_pop(&stack);
+            break;
+
+        case ASDF_YAML_SCALAR_EVENT: {
+            if (!parent)
+                continue;
+
+            const char *key = NULL;
+            size_t index = 0;
+            size_t val_len = 0;
+            const char *value = asdf_yaml_event_scalar_value(&event, &val_len);
+            tag = asdf_yaml_event_tag(&event, &tag_len);
+
+            if (parent->type == TREE_MAPPING && !parent->state.mapping.pending_key) {
+                parent->state.mapping.pending_key = strndup(value, val_len);
+                continue;
+            }
+
+            switch (parent->type) {
+            case TREE_MAPPING:
+                key = parent->state.mapping.pending_key;
+                parent->state.mapping.pending_key = NULL;
+                break;
+            case TREE_SEQUENCE:
+                index = parent->state.sequence.index++;
+                break;
+            }
+
+            node = tree_node_new(TREE_SCALAR, key, index);
+            node->value = strndup(value, val_len);
+            if (tag && tag_len > 0)
+                node->tag = strndup(tag, tag_len);
+            tree_node_add_child(parent, node);
+            break;
+        }
+
+        default:
+            // ignore other ASDF event types for now
+            break;
+        }
+
+        asdf_event_destroy(parser, &event);
     }
+
+    return root;
 }
 
 
-static void print_sequence_node(FILE *file, struct fy_node *node, tree_node_t *tree) {
-    int index = 0;
-    char label_buf[16]; // NOLINT(readability-magic-numbers)
-    void *iter = NULL;
-    struct fy_node *curr = NULL;
-    struct fy_node *next = fy_node_sequence_iterate(node, &iter);
-
-    while (next != NULL) {
-        curr = next;
-        next = fy_node_sequence_iterate(node, &iter);
-        snprintf(label_buf, sizeof(label_buf), "%d", index++);
-        tree_node_t child = {.is_leaf = (next == NULL), .parent = tree};
-        print_node(file, curr, &child, label_buf, false);
-    }
-}
-
-
-static void print_node(FILE *file,
-    struct fy_node *node,
-    tree_node_t *tree,
-    const char *key_label,
-    bool is_mapping_key) {
-    if (!key_label)
+static void print_indent(FILE *file, const tree_node_t *node) {
+    if (!node)
         return;
 
-    print_indent(file, tree);
+    print_indent(file, node->parent);
 
-    if (tree) {
-        if (tree->is_leaf)
-            fprintf(file, DIM("└─"));
+    if (node->parent && node->parent->parent) {
+        if (node->parent->next_sibling)
+            fprintf(file, DIM("│") " ");
         else
-            fprintf(file, DIM("├─"));
+            fprintf(file, "  ");
     }
+}
 
-    if (is_mapping_key) {
-        fprintf(file, BOLD("%s") " ", key_label);
+
+void print_tree(FILE *file, const tree_node_t *node) {
+    if (!node)
+        return;
+
+    print_indent(file, node);
+
+    if (node->parent) {
+        fprintf(file, node->next_sibling ? DIM("├─") : DIM("└─"));
+
+        switch (node->parent->type) {
+        case TREE_MAPPING:
+            fprintf(file, BOLD("%s") " ", node->index.key);
+            break;
+        case TREE_SEQUENCE:
+            fprintf(file, "[" BOLD("%zu") "] ", node->index.index);
+            break;
+        default:
+            break;
+        }
     } else {
-        fprintf(file, "[" BOLD("%s") "] ", key_label);
+        fprintf(file, BOLD("root") " ");
     }
 
-    size_t type_len;
-    const char *type_str = get_node_type_display_name(node, &type_len);
-    fprintf(file, "(%.*s)", (int)type_len, type_str);
+    if (node->tag) {
+        fprintf(file, "(%s)", node->tag);
+    } else {
+        if (node->type == TREE_SCALAR)
+            fprintf(file, "(scalar)");
+        else if (node->type == TREE_MAPPING)
+            fprintf(file, "(mapping)");
+        else if (node->type == TREE_SEQUENCE)
+            fprintf(file, "(sequence)");
+    }
 
-    if (fy_node_get_type(node) == FYNT_SCALAR)
-        print_scalar_value(file, node);
+    if (node->value)
+        fprintf(file, ": %s", node->value);
 
     fprintf(file, "\n");
 
-    if (fy_node_get_type(node) == FYNT_MAPPING)
-        print_mapping_node(file, node, tree);
-    else if (fy_node_get_type(node) == FYNT_SEQUENCE)
-        print_sequence_node(file, node, tree);
+    const tree_node_t *child = node->first_child;
+    while (child) {
+        print_tree(file, child);
+        child = child->next_sibling;
+    }
 }
 
 
-int asdf_info(FILE *in_file, FILE *out_file) {
-    struct fy_document *fydoc = fy_document_build_from_fp(NULL, in_file);
-    if (!fydoc) {
-        fprintf(stderr, "Failed to parse YAML document\n");
+int asdf_info(FILE *in_file, FILE *out_file, const char *filename) {
+    asdf_parser_t parser = {0};
+
+    if (asdf_parser_init(&parser) != 0)
+        return 1;
+
+    if (asdf_parser_set_input_file(&parser, in_file, filename) != 0) {
+        asdf_parser_destroy(&parser);
         return 1;
     }
 
-    struct fy_node *root = fy_document_root(fydoc);
-    print_node(out_file, root, NULL, "root", true);
-
-    fy_document_destroy(fydoc);
+    tree_node_t *root = build_tree(&parser);
+    print_tree(out_file, root);
+    tree_node_free(root);
+    asdf_parser_destroy(&parser);
     return 0;
 }
