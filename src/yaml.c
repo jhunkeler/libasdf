@@ -4,7 +4,7 @@
 #include "yaml.h"
 
 
-static const asdf_yaml_event_type_t _fyet_to_asdf_event[] = {
+static const asdf_yaml_event_type_t FYET_TO_ASDF_EVENT[] = {
     [FYET_STREAM_START] = ASDF_YAML_STREAM_START_EVENT,
     [FYET_STREAM_END] = ASDF_YAML_STREAM_END_EVENT,
     [FYET_DOCUMENT_START] = ASDF_YAML_DOCUMENT_START_EVENT,
@@ -18,7 +18,8 @@ static const asdf_yaml_event_type_t _fyet_to_asdf_event[] = {
 };
 
 
-#define ASDF_IS_YAML_EVENT(event) (event && event->type == ASDF_YAML_EVENT && event->payload.yaml)
+#define ASDF_IS_YAML_EVENT(event) \
+    ((event) && (event)->type == ASDF_YAML_EVENT && (event)->payload.yaml)
 
 
 asdf_yaml_event_type_t asdf_yaml_event_type(const asdf_event_t *event) {
@@ -26,10 +27,10 @@ asdf_yaml_event_type_t asdf_yaml_event_type(const asdf_event_t *event) {
         return ASDF_YAML_NONE_EVENT;
 
     enum fy_event_type type = event->payload.yaml->type;
-    if (type < 0 || type >= (int)(sizeof(_fyet_to_asdf_event) / sizeof(_fyet_to_asdf_event[0]))) {
+    if (type < 0 || type >= (int)(sizeof(FYET_TO_ASDF_EVENT) / sizeof(FYET_TO_ASDF_EVENT[0]))) {
         abort();
     }
-    return _fyet_to_asdf_event[type];
+    return FYET_TO_ASDF_EVENT[type];
 }
 
 /**

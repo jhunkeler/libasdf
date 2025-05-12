@@ -123,8 +123,10 @@ static void stack_push(tree_node_stack_t **stack, tree_node_t *node) {
 
 static tree_node_t *stack_pop(tree_node_stack_t **stack) {
     tree_node_stack_t *top = *stack;
+
     if (!top)
         return NULL;
+
     tree_node_t *node = top->node;
     *stack = top->next;
     free(top);
@@ -214,6 +216,8 @@ tree_node_t *build_tree(asdf_parser_t *parser) {
             case TREE_SEQUENCE:
                 index = parent->state.sequence.index++;
                 break;
+            default:
+                break;
             }
 
             node = tree_node_new(TREE_SCALAR, key, index);
@@ -231,6 +235,11 @@ tree_node_t *build_tree(asdf_parser_t *parser) {
 
         asdf_event_destroy(parser, &event);
     }
+
+    // Defensive cleanup of the stack; unlikely to be needed but possible in case of
+    // an error or malformed document
+    while (stack != NULL)
+        stack_pop(&stack);
 
     return root;
 }
@@ -277,12 +286,17 @@ void print_tree(FILE *file, const tree_node_t *node) {
     if (node->tag) {
         fprintf(file, "(%s)", node->tag);
     } else {
-        if (node->type == TREE_SCALAR)
+        switch (node->type) {
+        case TREE_SCALAR:
             fprintf(file, "(scalar)");
-        else if (node->type == TREE_MAPPING)
+            break;
+        case TREE_MAPPING:
             fprintf(file, "(mapping)");
-        else if (node->type == TREE_SEQUENCE)
+            break;
+        case TREE_SEQUENCE:
             fprintf(file, "(sequence)");
+            break;
+        }
     }
 
     if (node->value)
