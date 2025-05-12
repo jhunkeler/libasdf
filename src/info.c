@@ -375,16 +375,17 @@ void print_field(FILE *file, field_align_t align, const char *fmt, ...) {
     va_list args;
     char field_buf[BOX_WIDTH - 2] = {0};
     va_start(args, fmt);
+    // NOLINTNEXTLINE(clang-analyzer-valist.Uninitialized)
     vsnprintf(field_buf, sizeof(field_buf), fmt, args);
     fprintf(file, DIM("│"));
     switch (align) {
     case LEFT: {
-        int pad = BOX_WIDTH - strlen(field_buf) - 3;
+        int pad = BOX_WIDTH - (int)strlen(field_buf) - 3;
         fprintf(file, " %s%*s", field_buf, pad, "");
         break;
     }
     case CENTER: {
-        int pad = (BOX_WIDTH - strlen(field_buf)) / 2 - 1;
+        int pad = (BOX_WIDTH - (int)strlen(field_buf)) / 2 - 1;
         fprintf(file, "%*s%s%*s", pad, "", field_buf, pad, "");
         break;
     }
@@ -399,7 +400,6 @@ void print_block(FILE *file, const asdf_event_t *event, size_t block_idx) {
     if (!block)
         return;
 
-    char field_buf[BOX_WIDTH - 2] = {0};
     asdf_block_header_t header = block->header;
 
     // Print the block header with the block number
