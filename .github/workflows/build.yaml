@@ -8,9 +8,10 @@ on:
 
 jobs:
   build-and-test:
-    name: Build with Autotools and run `asdf`
+    name: Build and run `asdf`
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
 
