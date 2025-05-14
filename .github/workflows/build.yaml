@@ -36,7 +36,12 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew update
-          brew install autoconf automake libtool libfyaml
+          brew install \
+            autoconf \
+            automake \
+            libtool \
+            argp-standalone \
+            libfyaml
 
       - name: Bootstrap autotools
         run: ./autogen.sh
