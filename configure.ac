@@ -71,6 +71,8 @@ if test "x$enable_debug" = "xyes"; then
   AC_DEFINE([DEBUG], [1], [Define if debugging is enabled])
 fi
 
+# Check for homebrew packages in macOS
+ASDF_CHECK_HOMEBREW_PKG([argp-standalone])
 
 AC_CONFIG_HEADERS([config.h]) # use config.h instead of passing -D in the command line
 AC_CONFIG_FILES([Makefile tests/Makefile])
