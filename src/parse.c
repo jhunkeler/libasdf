@@ -8,6 +8,7 @@
 #include "event.h"
 #include "parse.h"
 #include "util.h"
+#include "compat/endian.h"
 
 
 const char *asdf_standard_comment = "#ASDF_STANDARD ";
