@@ -11,6 +11,6 @@
 #endif
 
 /* TODO: Provide fallback if be64toh is unavailable */
-#if !defined(HAVE_BE64TOH)
+#if !defined(HAVE_DECL_BE64TOH)
 #error be64toh not available
 #endif
