@@ -1,2 +1,2 @@
 #!/bin/sh
-autoreconf --install --make
+autoreconf --install
