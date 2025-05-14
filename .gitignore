@@ -16,10 +16,17 @@ Makefile
 */Makefile
 
 # build outputs
+*/*.o
+*/*.lo
 .deps
 .dirstamp
+.libs
 asdf
-*/*.o
+libasdf.la
+libtool
+m4/libtool.m4
+m4/lt*.m4
+src/.libs
 
 # test outputs
 tests/*.log

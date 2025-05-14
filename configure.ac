@@ -2,6 +2,7 @@ AC_PREREQ([2.69])
 AC_INIT([libasdf], [0.0.0], [https://github.com/asdf-format/libasdf/issues])
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
+LT_INIT([disable-static])
 
 # silent make https://autotools.io/automake/silent.html
 # silent rules enabled by default with 'yes'
@@ -20,7 +21,6 @@ AS_IF([test "x$ac_cv_prog_cc_c11" = "xno"],
 
 
 AC_PROG_INSTALL
-AC_PROG_RANLIB
 
 AC_HEADER_ASSERT # ./configure --disable-assert to define NDEBUG 
 
@@ -59,6 +59,13 @@ if test "x$enable_debug" = "xyes"; then
   CFLAGS="$CFLAGS -g -O0"
   AC_DEFINE([DEBUG], [1], [Define if debugging is enabled])
 fi
+
+AC_ARG_ENABLE([tool],
+  [AS_HELP_STRING([--disable-tool], [Do not build the asdf command-line tool])],
+  [asdf_build_tool=$enableval],
+  [asdf_build_tool=yes])
+
+AM_CONDITIONAL([ASDF_BUILD_TOOL], [test "x$asdf_build_tool" = xyes])
 
 # Check for homebrew packages in macOS
 ASDF_CHECK_HOMEBREW_PKG([argp-standalone])

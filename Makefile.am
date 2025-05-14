@@ -1,23 +1,31 @@
 AM_CFLAGS = # CFLAGS applicable to all executables (products)
 AM_CPPFLAGS = -I$(top_srcdir)/src # so that tests also find header files
+ACLOCAL_AMFLAGS = -Im4
 
 SUBDIRS = tests
 
-src_files = src/block.c src/event.c src/info.c src/parse.c src/yaml.c src/main.c
+src_files = src/block.c src/event.c src/info.c src/parse.c src/yaml.c
 src_headers = src/block.h src/event.h src/info.h src/parse.h src/yaml.h
 
-# The asdf command line tool
-bin_PROGRAMS = asdf
-
-#include .c and .h in SOURCES so that both appear in dist
-asdf_SOURCES = $(src_files)
 noinst_HEADERS = $(src_headers)
-asdf_LDADD = $(FYAML_LIBS)
 
-asdf_CFLAGS = $(AM_CFLAGS) $(FYAML_CFLAGS) $(CODE_COVERAGE_CFLAGS)
-asdf_LDFLAGS = $(CODE_COVERAGE_LDFLAGS) $(ARGP_LIB)
+# libasdf library
+#include .c and .h in SOURCES so that both appear in dist
+lib_LTLIBRARIES = libasdf.la
+libasdf_la_SOURCES = $(src_files)
+libasdf_la_CFLAGS = $(AM_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+libasdf_la_LDFLAGS = $(CODE_COVERAGE_LDFLAGS)
+libasdf_la_LIBADD = $(FYAML_LIBS)
+
+# The asdf command line tool
+if ASDF_BUILD_TOOL
+bin_PROGRAMS = asdf
+asdf_SOURCES = src/main.c
+asdf_LDADD = libasdf.la $(ARGP_LIB)
+endif # ASDF_BUILD_TOOL
 
 
+# Misc make targets
 format:
 	clang-format -i $(src_files) $(src_headers)
 
