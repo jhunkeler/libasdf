@@ -9,7 +9,6 @@ AM_INIT_AUTOMAKE([foreign subdir-objects])
 AM_SILENT_RULES([yes]) # less verbose make output 
 
 AC_CONFIG_SRCDIR([src/main.c])
-AC_CONFIG_HEADERS([config.h]) # use config.h instead of passing -D in the command line
 AC_CONFIG_MACRO_DIR([m4])
 
 AC_LANG([C])
@@ -23,21 +22,24 @@ AS_IF([test "x$ac_cv_prog_cc_c11" = "xno"],
 AC_PROG_INSTALL
 AC_PROG_RANLIB
 
-
-# Checks for libraries.
-# Preferably using pkg-config, could fall back on AC_SEARCH_LIBS if not
-AC_PATH_PROG([PKG_CONFIG], [pkg-config], [no])
-if test "$PKG_CONFIG" = "no"; then
-  AC_MSG_ERROR([pkg-config is required but was not found])
-fi
-
-PKG_CHECK_MODULES([FYAML], [libfyaml], [],
-  [AC_MSG_ERROR([libfyaml is required but was not found])])
-
 AC_HEADER_ASSERT # ./configure --disable-assert to define NDEBUG 
-AC_CHECK_HEADER([stdlib.h])
 
-AC_CONFIG_FILES([Makefile tests/Makefile])
+# Check headers
+AC_CHECK_HEADER([stdlib.h])
+AC_CHECK_HEADERS([endian.h machine/endian.h sys/endian.h])
+AC_CHECK_DECLS([be64toh], [], [], [[
+#ifdef HAVE_ENDIAN_H
+#  include <endian.h>
+#endif
+#ifdef HAVE_MACHINE_ENDIAN_H
+#  include <machine/endian.h>
+#endif
+#ifdef HAVE_SYS_ENDIAN_H
+#  include <sys/endian.h>
+#endif
+]])
+
+
 AC_REQUIRE_AUX_FILE([tap-driver.sh])
 # http://www.gnu.org/software/autoconf-archive/ax_valgrind_check.html
 # - make check-valgrind
@@ -58,5 +60,25 @@ if test "x$enable_debug" = "xyes"; then
   AC_DEFINE([DEBUG], [1], [Define if debugging is enabled])
 fi
 
+# Check for homebrew packages in macOS
+ASDF_CHECK_HOMEBREW_PKG([argp-standalone])
 
+# Checks for libraries.
+# Preferably using pkg-config, could fall back on AC_SEARCH_LIBS if not
+AC_PATH_PROG([PKG_CONFIG], [pkg-config], [no])
+if test "$PKG_CONFIG" = "no"; then
+  AC_MSG_ERROR([pkg-config is required but was not found])
+fi
+
+PKG_CHECK_MODULES([FYAML], [libfyaml], [], [
+  AC_MSG_ERROR([libfyaml is required but was not found])
+])
+
+# Shouldn't be needed with glibc but is if we're using the homebrew package, e.g.
+AC_CHECK_LIB([argp], [argp_parse], [
+  AC_SUBST([ARGP_LIB], [-largp])
+])
+
+AC_CONFIG_HEADERS([config.h]) # use config.h instead of passing -D in the command line
+AC_CONFIG_FILES([Makefile tests/Makefile])
 AC_OUTPUT

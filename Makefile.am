@@ -14,8 +14,8 @@ asdf_SOURCES = $(src_files)
 noinst_HEADERS = $(src_headers)
 asdf_LDADD = $(FYAML_LIBS)
 
-asdf_CFLAGS = $(AM_CFLAGS) $(CODE_COVERAGE_CFLAGS)
-asdf_LDFLAGS = $(CODE_COVERAGE_LDFLAGS)
+asdf_CFLAGS = $(AM_CFLAGS) $(FYAML_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+asdf_LDFLAGS = $(CODE_COVERAGE_LDFLAGS) $(ARGP_LIB)
 
 
 format:
