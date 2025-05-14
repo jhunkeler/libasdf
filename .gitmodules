@@ -1,0 +1,3 @@
+[submodule "asdf-standard"]
+	path = asdf-standard
+	url = https://github.com/asdf-format/asdf-standard.git
