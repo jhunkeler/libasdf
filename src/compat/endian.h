@@ -10,7 +10,12 @@
   #include <sys/endian.h>
 #endif
 
-/* TODO: Provide fallback if be64toh is unavailable */
-#if !defined(HAVE_DECL_BE64TOH)
-#error be64toh not available
+#if !HAVE_DECL_BE64TOH
+/* https://gist.github.com/yinyin/2027912 */
+  #ifdef __APPLE__
+    #include <libkern/OSByteOrder.h>
+    #define be64toh(x) OSSwapBigToHostInt64(x)
+  #else
+    #error be64toh not available
+  #endif
 #endif
