@@ -1,6 +1,6 @@
 AC_DEFUN([ASDF_CHECK_HOMEBREW], [
   AC_REQUIRE([AC_CANONICAL_HOST])
-  AS_IF([test "x$host_os" = xdarwin*], [
+  AS_CASE("$host_os", [*darwin*], [
     AC_PATH_PROG([ASDF_HOMEBREW], [brew], [no])
     AS_IF([test "x$ASDF_HOMEBREW" != xno], [
       AC_MSG_NOTICE([Homebrew found at $ASDF_HOMEBREW])
