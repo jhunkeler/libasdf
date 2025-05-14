@@ -47,18 +47,21 @@ on your system:
 - **C compiler** (e.g., ``gcc`` or ``clang``)
 - **Make** (e.g., ``GNU make``)
 - **pkg-config**
+- **libfyaml**
+- **argp** (this is a feature of glibc, but if compiling with a different libc you need a
+  standalone version of this)
 
 On **Debian/Ubuntu**::
 
-    sudo apt install build-essential autoconf automake libtool pkg-config
+    sudo apt install build-essential autoconf automake libtool pkg-config libfyaml-dev
 
 On **Fedora**::
 
-    sudo dnf install gcc make autoconf automake libtool pkgconf
+    sudo dnf install gcc make autoconf automake libtool pkgconf libfyaml-devel
 
 On **macOS** (with Homebrew)::
 
-    brew install autoconf automake libtool pkg-config
+    brew install autoconf automake libtool pkg-config libfyaml argp-standalone
 
 Building
 ^^^^^^^^
