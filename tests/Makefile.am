@@ -27,7 +27,7 @@ TESTS = $(check_PROGRAMS)
 test_event_unit_SOURCES = test-event.c util.c munit/munit.c
 test_event_unit_CPPFLAGS = \
     $(AM_CPPFLAGS) -DREFERENCE_FILES_DIR=\"$(asdf_standard_dir)/reference_files\"
-test_event_unit_CFLAGS = $(CODE_COVERAGE_CFLAGS)
+test_event_unit_CFLAGS = $(FYAML_CFLAGS) $(CODE_COVERAGE_CFLAGS)
 test_event_unit_LDFLAGS = $(CODE_COVERAGE_LDFLAGS)
 test_event_unit_LDADD = $(top_srcdir)/libasdf.la
 
