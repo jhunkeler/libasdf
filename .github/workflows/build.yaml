@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-test:
-    name: Build and run `asdf`
+    name: Build and run `make check`
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -52,7 +52,6 @@ jobs:
       - name: Build
         run: make
 
-      - name: Run asdf on test file
-        run: |
-          ./asdf info --blocks asdf-standard/reference_files/1.6.0/basic.asdf
+      - name: Check
+        run: make check
 
