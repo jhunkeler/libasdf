@@ -1,0 +1,159 @@
+#include <errno.h>
+#include <string.h>
+
+#include "munit.h"
+#include "util.h"
+
+#include "event.h"
+#include "parse.h"
+#include "yaml.h"
+
+
+/**
+ * Helper macros for checking ASDF and YAML events
+ */
+#define CHECK_NEXT_EVENT_TYPE(type) do { \
+    assert_int(asdf_event_iterate(&parser, &event), ==, 0); \
+    assert_int(asdf_event_type(&event), ==, (type)); \
+} while (0)
+
+
+#define __CHECK_NEXT_YAML_EVENT_1(type) do { \
+    CHECK_NEXT_EVENT_TYPE(ASDF_YAML_EVENT); \
+    assert_int(asdf_yaml_event_type(&event), ==, (type)); \
+} while (0)
+
+
+#define __CHECK_NEXT_YAML_EVENT_2(type, tag) do { \
+    __CHECK_NEXT_YAML_EVENT_1(type); \
+    size_t __len = 0; \
+    const char *__tag = asdf_yaml_event_tag(&event, &__len); \
+    if ((tag) == NULL) { \
+        assert_int(__len, ==, 0); \
+    } else { \
+        char __buf[__len + 1]; \
+        memcpy(__buf, __tag, __len); \
+        __buf[__len] = '\0'; \
+        assert_string_equal(__buf, (tag)); \
+    } \
+} while (0)
+
+
+#define __CHECK_NEXT_YAML_EVENT_3(type, tag, value) do { \
+    __CHECK_NEXT_YAML_EVENT_2(type, tag); \
+    assert_int(asdf_yaml_event_type(&event), ==, ASDF_YAML_SCALAR_EVENT); \
+    size_t __len = 0; \
+    const char *__value = asdf_yaml_event_scalar_value(&event, &__len); \
+    if ((value) == NULL) { \
+        assert_null(__value); \
+    } else { \
+        assert_int(__len, ==, strlen(value)); \
+        char __buf[__len + 1]; \
+        memcpy(__buf, __value, __len); \
+        __buf[__len] = '\0'; \
+        assert_string_equal(__buf, (value)); \
+    } \
+} while (0)
+
+
+#define __CHECK_NEXT_YAML_EVENT_DISPATCH(_1, _2, _3, NAME, ...) NAME
+
+#define CHECK_NEXT_YAML_EVENT(...) \
+    __CHECK_NEXT_YAML_EVENT_DISPATCH( \
+        __VA_ARGS__, \
+        __CHECK_NEXT_YAML_EVENT_3, \
+        __CHECK_NEXT_YAML_EVENT_2, \
+        __CHECK_NEXT_YAML_EVENT_1 \
+    )(__VA_ARGS__)
+
+
+MU_TEST(test_asdf_event_basic) {
+    const char *filename = get_reference_file_path("1.6.0/basic.asdf");
+    FILE *file = fopen(filename, "r");
+    assert_not_null(file);
+    asdf_parser_t parser = {0};
+    asdf_event_t event = {0};
+
+    if (asdf_parser_init(&parser) != 0)
+        munit_error("failed to initialize asdf parser");
+
+    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+        munit_error("failed to set asdf parser file");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
+    assert_string_equal(event.payload.version->version, "1.0.0");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
+    assert_string_equal(event.payload.version->version, "1.6.0");
+
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_START_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_START_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/asdf-1.1.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf_library");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/software-1.0.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "author");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "The ASDF Developers");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "homepage");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "http://github.com/asdf-format/asdf");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "name");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "version");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "4.1.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "history");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "extensions");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SEQUENCE_START_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/extension_metadata-1.0.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "extension_class");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf.extension._manifest.ManifestExtension");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "extension_uri");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf://asdf-format.org/core/extensions/core-1.6.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "manifest_software");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/software-1.0.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "name");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf_standard");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "version");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "1.1.1");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "software");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/software-1.0.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "name");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "version");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "4.1.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SEQUENCE_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "data");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/ndarray-1.1.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "source");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "datatype");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "int64");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "byteorder");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "little");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "shape");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SEQUENCE_START_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "8");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SEQUENCE_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_END_EVENT);
+
+    asdf_event_destroy(&parser, &event);
+    asdf_parser_destroy(&parser);
+    fclose(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST_SUITE(
+    test_asdf_event,
+    MU_RUN_TEST(test_asdf_event_basic)
+);
+
+
+MU_RUN_SUITE(test_asdf_event);

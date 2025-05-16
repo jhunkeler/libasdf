@@ -1,3 +1,6 @@
 [submodule "asdf-standard"]
 	path = asdf-standard
 	url = https://github.com/asdf-format/asdf-standard.git
+[submodule "tests/munit"]
+	path = tests/munit
+	url = https://github.com/nemequ/munit.git

@@ -9,6 +9,7 @@
 #endif
 
 #include <stdint.h>
+#include <sys/types.h>
 
 
 #define ASDF_BLOCK_COMPRESSION_FIELD_SIZE 4

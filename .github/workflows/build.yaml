@@ -5,10 +5,16 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      make_flags:
+        description: Extra flags to pass to make
+        required: false
+        default: ''
 
 jobs:
   build-and-test:
-    name: Build and run `asdf`
+    name: Build and run `make check`
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -50,9 +56,8 @@ jobs:
         run: ./configure
 
       - name: Build
-        run: make
+        run: make ${{ github.event.inputs.make_flags }}
 
-      - name: Run asdf on test file
-        run: |
-          ./asdf info --blocks asdf-standard/reference_files/1.6.0/basic.asdf
+      - name: Check
+        run: make check ${{ github.event.inputs.make_flags }}
 
