@@ -30,9 +30,8 @@ src/.libs
 
 # test outputs
 tests/*.log
-tests/*.unit
-tests/*.unit.log
-tests/*.unit.trs
+tests/*.trs
+tests/tmp
 
 # dist outputs
 *.tar.gz
