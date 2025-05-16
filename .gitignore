@@ -31,6 +31,7 @@ src/.libs
 # test outputs
 tests/*.log
 tests/*.trs
+tests/*.unit
 tests/tmp
 
 # dist outputs
