@@ -49,7 +49,7 @@ on your system:
 - **pkg-config**
 - **libfyaml**
 - **argp** (this is a feature of glibc, but if compiling with a different libc you need a
-  standalone version of this)
+  standalone version of this; also it is only needed if building the command-line tool)
 
 On **Debian/Ubuntu**::
 

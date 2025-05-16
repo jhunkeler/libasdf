@@ -67,9 +67,6 @@ AC_ARG_ENABLE([tool],
 
 AM_CONDITIONAL([ASDF_BUILD_TOOL], [test "x$asdf_build_tool" = xyes])
 
-# Check for homebrew packages in macOS
-ASDF_CHECK_HOMEBREW_PKG([argp-standalone])
-
 # Checks for libraries.
 # Preferably using pkg-config, could fall back on AC_SEARCH_LIBS if not
 AC_PATH_PROG([PKG_CONFIG], [pkg-config], [no])
@@ -81,9 +78,14 @@ PKG_CHECK_MODULES([FYAML], [libfyaml], [], [
   AC_MSG_ERROR([libfyaml is required but was not found])
 ])
 
+# Check for homebrew packages in macOS
+AS_IF([test "x$asdf_build_tool" = "xyes"], [
+  ASDF_CHECK_HOMEBREW_PKG([argp-standalone])
+
 # Shouldn't be needed with glibc but is if we're using the homebrew package, e.g.
-AC_CHECK_LIB([argp], [argp_parse], [
-  AC_SUBST([ARGP_LIB], [-largp])
+  AC_CHECK_LIB([argp], [argp_parse], [
+    AC_SUBST([ARGP_LIB], [-largp])
+  ])
 ])
 
 AC_CONFIG_HEADERS([config.h]) # use config.h instead of passing -D in the command line
