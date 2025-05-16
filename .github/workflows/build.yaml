@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      make_flags:
+        description: Extra flags to pass to make
+        required: false
+        default: ''
 
 jobs:
   build-and-test:
@@ -50,8 +56,8 @@ jobs:
         run: ./configure
 
       - name: Build
-        run: make
+        run: make ${{ github.event.inputs.make_flags }}
 
       - name: Check
-        run: make check
+        run: make check ${{ github.event.inputs.make_flags }}
 
