@@ -11,7 +11,7 @@ noinst_HEADERS = $(src_headers)
 #include .c and .h in SOURCES so that both appear in dist
 lib_LTLIBRARIES = libasdf.la
 libasdf_la_SOURCES = $(src_files)
-libasdf_la_CFLAGS = $(AM_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+libasdf_la_CFLAGS = $(AM_CFLAGS) $(FYAML_CFLAGS) $(CODE_COVERAGE_CFLAGS)
 libasdf_la_LDFLAGS = $(CODE_COVERAGE_LDFLAGS)
 libasdf_la_LIBADD = $(FYAML_LIBS)
 
@@ -19,6 +19,7 @@ libasdf_la_LIBADD = $(FYAML_LIBS)
 if ASDF_BUILD_TOOL
 bin_PROGRAMS = asdf
 asdf_SOURCES = src/main.c
+asdf_CFLAGS = $(AM_CFLAGS) $(FYAML_CFLAGS)
 asdf_LDADD = libasdf.la $(ARGP_LIB)
 endif # ASDF_BUILD_TOOL
 
