@@ -2,11 +2,14 @@
 # 'check' comes from 'make check'
 AM_CPPFLAGS = -I$(top_srcdir)/src
 
-asdf_standard_submodule = $(top_srcdir)/asdf-standard/.git
+asdf_standard_dir = $(top_srcdir)/asdf-standard
+asdf_standard_submodule = $(asdf_standard_dir)/.git
+munit_submodule = $(srcdir)/tests/munit.git
 
-$(asdf_standard_submodule):
-	echo "Initializing asdf-standard submodule with reference files..."
+$(asdf_standard_submodule) $(munit_submodule):
+	echo "Initializing submodules..."
 	git submodule update --init --recursive
+	git config submodule.tests/munit.ignore untracked
 
 
 @VALGRIND_CHECK_RULES@
@@ -15,9 +18,20 @@ $(asdf_standard_submodule):
 # See all code_coverage_* options in the Makefile or m4/ax_code_coverage.m4
 CODE_COVERAGE_IGNORE_PATTERN = tests/*
 
-TESTS_ENVIRONMENT = SRCDIR=$(top_srcdir)
-TESTS =
+check_PROGRAMS = test-event.unit
 
+TESTS_ENVIRONMENT = SRCDIR=$(top_srcdir)
+TESTS = $(check_PROGRAMS)
+
+# Unit tests
+test_event_unit_SOURCES = test-event.c util.c munit/munit.c
+test_event_unit_CPPFLAGS = \
+    $(AM_CPPFLAGS) -DREFERENCE_FILES_DIR=\"$(asdf_standard_dir)/reference_files\"
+test_event_unit_CFLAGS = $(CODE_COVERAGE_CFLAGS)
+test_event_unit_LDFLAGS = $(CODE_COVERAGE_LDFLAGS)
+test_event_unit_LDADD = $(top_srcdir)/libasdf.la
+
+# Shell tests
 TOOL_TESTS = test-info.sh
 
 if ASDF_BUILD_TOOL
