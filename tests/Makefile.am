@@ -2,6 +2,13 @@
 # 'check' comes from 'make check'
 AM_CPPFLAGS = -I$(top_srcdir)/src
 
+asdf_standard_submodule=$(top_srcdir)/asdf-standard/.git
+
+$(asdf_standard_submodule):
+	echo "Initializing asdf-standard submodule with reference files..."
+	git submodule update --init --recursive
+
+
 @VALGRIND_CHECK_RULES@
 @CODE_COVERAGE_RULES@
 
@@ -19,3 +26,6 @@ test_info_unit_CFLAGS = $(CODE_COVERAGE_CFLAGS)
 
 AUTOMAKE_OPTIONS = parallel-tests
 EXTRA_DIST = minunit.h
+
+# Bit of a hack to make syncing the submodule a prerequisite to make check
+check-am: $(asdf_standard_submodule)

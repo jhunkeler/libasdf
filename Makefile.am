@@ -2,8 +2,6 @@ AM_CFLAGS = # CFLAGS applicable to all executables (products)
 AM_CPPFLAGS = -I$(top_srcdir)/src # so that tests also find header files
 ACLOCAL_AMFLAGS = -Im4
 
-SUBDIRS = tests
-
 src_files = src/block.c src/event.c src/info.c src/parse.c src/yaml.c
 src_headers = src/block.h src/event.h src/info.h src/parse.h src/yaml.h
 
@@ -33,3 +31,6 @@ format:
 tidy:
 	clang-tidy $(src_files) -- \
 	    $(DEFS) $(DEFAULT_INCLUDES) $(AM_CPPLFAGS) $(CPPFLAGS) $(asdf_CFLAGS)
+
+
+SUBDIRS = tests
