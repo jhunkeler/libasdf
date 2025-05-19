@@ -47,6 +47,7 @@ AX_VALGRIND_CHECK
 AX_CODE_COVERAGE
 
 # Additional enable flags
+# --enable-debug
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug], [Enable debug build (-g -O0)])],
   [enable_debug=yes],
@@ -58,12 +59,25 @@ if test "x$enable_debug" = "xyes"; then
   AC_DEFINE([DEBUG], [1], [Define if debugging is enabled])
 fi
 
+# --disable-tool
 AC_ARG_ENABLE([tool],
   [AS_HELP_STRING([--disable-tool], [Do not build the asdf command-line tool])],
   [asdf_build_tool=$enableval],
   [asdf_build_tool=yes])
 
 AM_CONDITIONAL([ASDF_BUILD_TOOL], [test "x$asdf_build_tool" = xyes])
+
+# --with-asan
+AC_ARG_WITH([asan],
+  [AS_HELP_STRING([--with-asan], [Build with AddressSanitizer support])],
+  [with_asan=yes],
+  [with_asan=no])
+
+if test "x$with_asan" = "xyes"; then
+  CFLAGS="$CFLAGS -O1 -g -fsanitize=address -fno-omit-frame-pointer"
+  LDFLAGS="$LDFLAGS -fsanitize=address"
+  AC_DEFINE([WITH_ASAN], [1], [Defined if building with AddressSanitizer])
+fi
 
 # Checks for libraries.
 # Preferably using pkg-config, could fall back on AC_SEARCH_LIBS if not
