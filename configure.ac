@@ -40,7 +40,6 @@ AC_CHECK_DECLS([be64toh], [], [], [[
 ]])
 
 
-AC_REQUIRE_AUX_FILE([tap-driver.sh])
 # http://www.gnu.org/software/autoconf-archive/ax_valgrind_check.html
 # - make check-valgrind
 AX_VALGRIND_CHECK

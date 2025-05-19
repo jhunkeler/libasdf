@@ -13,10 +13,6 @@ $(asdf_standard_submodule) $(munit_submodule):
 
 
 @VALGRIND_CHECK_RULES@
-@CODE_COVERAGE_RULES@
-
-# See all code_coverage_* options in the Makefile or m4/ax_code_coverage.m4
-CODE_COVERAGE_IGNORE_PATTERN = tests/*
 
 check_PROGRAMS = test-event.unit
 
@@ -45,4 +41,4 @@ AUTOMAKE_OPTIONS = parallel-tests
 EXTRA_DIST = minunit.h
 
 # Bit of a hack to make syncing the submodule a prerequisite to make check
-check-am: $(asdf_standard_submodule) $(top_srcdir)/asdf
+check-am: $(asdf_standard_submodule)

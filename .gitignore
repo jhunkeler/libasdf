@@ -1,4 +1,5 @@
 # autotools outputs
+aminclude_static.am
 autom4te.cache
 aclocal.m4
 build-aux
@@ -33,6 +34,11 @@ tests/*.log
 tests/*.trs
 tests/*.unit
 tests/tmp
+
+# coverage outputs
+*-coverage.info
+*.gcda
+*.gcno
 
 # dist outputs
 *.tar.gz
