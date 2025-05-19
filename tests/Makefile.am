@@ -28,7 +28,7 @@ test_event_unit_LDFLAGS = $(CODE_COVERAGE_LDFLAGS)
 test_event_unit_LDADD = $(top_srcdir)/libasdf.la
 
 # Shell tests
-TOOL_TESTS = test-info.sh
+TOOL_TESTS = test-info.sh test-events.sh
 
 if ASDF_BUILD_TOOL
 TESTS += $(TOOL_TESTS)
