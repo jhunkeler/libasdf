@@ -164,7 +164,7 @@ static tree_node_t *stack_peek(tree_node_stack_t *stack) {
 }
 
 
-tree_node_t *build_tree(asdf_parser_t *parser) {
+static tree_node_t *build_tree(asdf_parser_t *parser) {
     asdf_event_t event = {0};
     tree_node_t *root = NULL;
     tree_node_stack_t *stack = NULL;
@@ -176,8 +176,10 @@ tree_node_t *build_tree(asdf_parser_t *parser) {
         tree_node_t *parent = stack_peek(stack);
         tree_node_t *node = NULL;
 
-        if (type == ASDF_YAML_STREAM_END_EVENT)
+        if (type == ASDF_YAML_STREAM_END_EVENT) {
+            asdf_event_destroy(parser, &event);
             break;
+        }
 
         switch (type) {
         /* TODO: Handle anchor events */
@@ -260,8 +262,6 @@ tree_node_t *build_tree(asdf_parser_t *parser) {
             // ignore other ASDF event types for now
             break;
         }
-
-        asdf_event_destroy(parser, &event);
     }
 
     // Defensive cleanup of the stack; unlikely to be needed but possible in case of
@@ -493,7 +493,6 @@ int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
         default:
             break;
         }
-        asdf_event_destroy(&parser, &event);
     }
 
     asdf_parser_destroy(&parser);
