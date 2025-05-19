@@ -64,7 +64,7 @@ typedef struct tree_node_stack {
 } tree_node_stack_t;
 
 
-tree_node_t *tree_node_new(tree_node_type_t type, const char *key, size_t index) {
+static tree_node_t *tree_node_new(tree_node_type_t type, const char *key, size_t index) {
     tree_node_t *node = calloc(1, sizeof(tree_node_t));
     node->type = type;
 
@@ -89,7 +89,7 @@ tree_node_t *tree_node_new(tree_node_type_t type, const char *key, size_t index)
 }
 
 
-void tree_node_add_child(tree_node_t *parent, tree_node_t *child) {
+static void tree_node_add_child(tree_node_t *parent, tree_node_t *child) {
     child->parent = parent;
     if (!parent->first_child) {
         parent->first_child = parent->last_child = child;
@@ -100,7 +100,7 @@ void tree_node_add_child(tree_node_t *parent, tree_node_t *child) {
 }
 
 
-void tree_node_free(tree_node_t *node) {
+static void tree_node_free(tree_node_t *node) {
     tree_node_t *child = node->first_child;
     while (child) {
         tree_node_t *next = child->next_sibling;
@@ -111,9 +111,30 @@ void tree_node_free(tree_node_t *node) {
     if (node->parent && node->parent->type == TREE_MAPPING)
         free(node->index.key);
 
+    if (node->type == TREE_MAPPING)
+        free(node->state.mapping.pending_key);
+
     free(node->tag);
     free(node->value);
     free(node);
+}
+
+
+static void tree_node_set_pending_key(tree_node_t *parent, const char *new_key, size_t len) {
+    if (!parent || parent->type != TREE_MAPPING)
+        return;
+
+    // Free old key if present
+    if (parent->state.mapping.pending_key) {
+        free(parent->state.mapping.pending_key);
+        parent->state.mapping.pending_key = NULL;
+    }
+
+    if (new_key && len > 0) {
+        parent->state.mapping.pending_key = strndup(new_key, len);
+    } else {
+        parent->state.mapping.pending_key = NULL;
+    }
 }
 
 
@@ -174,7 +195,6 @@ tree_node_t *build_tree(asdf_parser_t *parser) {
                 switch (parent->type) {
                 case TREE_MAPPING:
                     key = parent->state.mapping.pending_key;
-                    parent->state.mapping.pending_key = NULL;
                     break;
                 case TREE_SEQUENCE:
                     index = parent->state.sequence.index++;
@@ -182,6 +202,7 @@ tree_node_t *build_tree(asdf_parser_t *parser) {
                     break;
                 }
                 node = tree_node_new(node_type, key, index);
+                tree_node_set_pending_key(parent, NULL, 0);
                 tree_node_add_child(parent, node);
             }
 
@@ -211,14 +232,13 @@ tree_node_t *build_tree(asdf_parser_t *parser) {
             tag = asdf_yaml_event_tag(&event, &tag_len);
 
             if (parent->type == TREE_MAPPING && !parent->state.mapping.pending_key) {
-                parent->state.mapping.pending_key = strndup(value, val_len);
+                tree_node_set_pending_key(parent, value, val_len);
                 continue;
             }
 
             switch (parent->type) {
             case TREE_MAPPING:
                 key = parent->state.mapping.pending_key;
-                parent->state.mapping.pending_key = NULL;
                 break;
             case TREE_SEQUENCE:
                 index = parent->state.sequence.index++;
@@ -228,6 +248,7 @@ tree_node_t *build_tree(asdf_parser_t *parser) {
             }
 
             node = tree_node_new(TREE_SCALAR, key, index);
+            tree_node_set_pending_key(parent, NULL, 0);
             node->value = strndup(value, val_len);
             if (tag && tag_len > 0)
                 node->tag = strndup(tag, tag_len);
