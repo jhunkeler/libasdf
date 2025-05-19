@@ -199,8 +199,11 @@ int events_main(const char *filename, bool verbose) {
     }
 
     asdf_parser_t parser;
+    // Current implementation always outputs YAML events, so this is needed; later update
+    // to allow an option to skip YAML events (useful for testing)
+    asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_EMIT_YAML_EVENTS};
 
-    if (asdf_parser_init(&parser)) {
+    if (asdf_parser_init(&parser, &parser_cfg)) {
         fprintf(stderr, "error: %s\n", asdf_parser_get_error(&parser));
         fclose(file);
         return EXIT_FAILURE;

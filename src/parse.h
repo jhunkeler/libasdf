@@ -4,6 +4,8 @@
 #include "config.h"
 #endif
 
+#include <stdint.h>
+
 #include <libfyaml.h>
 
 
@@ -50,7 +52,33 @@ typedef enum {
 } asdf_parser_error_code_t;
 
 
+#define _ASDF_PARSER_OPTS(X) \
+    X(ASDF_PARSER_OPT_EMIT_YAML_EVENTS, 0) \
+    X(ASDF_PARSER_OPT_BUFFER_TREE, 1)
+
+
+typedef enum {
+// clang-format off
+#define X(flag, bit) flag = (1UL << bit),
+    _ASDF_PARSER_OPTS(X)
+#undef X
+// clang-format on
+} asdf_parser_opt_t;
+
+
+_Static_assert(ASDF_PARSER_OPT_BUFFER_TREE < (1UL << 63), "too many flags for 64-bit int");
+
+
+typedef uint64_t asdf_parser_optflags_t;
+
+
+typedef struct asdf_parser_cfg {
+    asdf_parser_optflags_t flags;
+} asdf_parser_cfg_t;
+
+
 typedef struct asdf_parser {
+    const asdf_parser_cfg_t *config;
     asdf_parser_state_t state;
     asdf_error_type_t error_type;
     const char *error;
@@ -70,7 +98,7 @@ typedef struct asdf_event asdf_event_t;
 
 
 /* Public API functions */
-int asdf_parser_init(asdf_parser_t *parser);
+int asdf_parser_init(asdf_parser_t *parser, asdf_parser_cfg_t *config);
 int asdf_parser_set_input_file(asdf_parser_t *parser, FILE *file, const char *name);
 int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event);
 void asdf_parser_destroy(asdf_parser_t *parser);

@@ -322,6 +322,11 @@ int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
 
 
 /**
+ * Default libasdf parser configuration
+ */
+static const asdf_parser_cfg_t DEFAULT_ASDF_PARSER_CFG = {.flags = 0};
+
+/**
  * Default libfyaml parser configuration
  *
  * Later we will likely want some ASDF parser configuration, and this could include
@@ -330,10 +335,11 @@ int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
 static const struct fy_parse_cfg DEFAULT_FY_PARSE_CFG = {.flags = FYPCF_QUIET | FYPCF_COLLECT_DIAG};
 
 
-int asdf_parser_init(asdf_parser_t *parser) {
+int asdf_parser_init(asdf_parser_t *parser, asdf_parser_cfg_t *config) {
     assert(parser);
     ZERO_MEMORY(parser, sizeof(asdf_parser_t));
 
+    parser->config = config ? config : &DEFAULT_ASDF_PARSER_CFG;
     parser->file = NULL;
     parser->state = ASDF_PARSER_STATE_INITIAL;
     parser->error = NULL;

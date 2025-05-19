@@ -73,8 +73,9 @@ MU_TEST(test_asdf_event_basic) {
     assert_not_null(file);
     asdf_parser_t parser = {0};
     asdf_event_t event = {0};
+    asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_EMIT_YAML_EVENTS};
 
-    if (asdf_parser_init(&parser) != 0)
+    if (asdf_parser_init(&parser, &parser_cfg) != 0)
         munit_error("failed to initialize asdf parser");
 
     if (asdf_parser_set_input_file(&parser, file, filename) != 0)
