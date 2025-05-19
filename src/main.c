@@ -212,7 +212,7 @@ int events_main(const char *filename, bool verbose) {
         return EXIT_FAILURE;
     }
 
-    asdf_event_t event;
+    asdf_event_t event = {0};
 
     while (asdf_event_iterate(&parser, &event) == 0) {
         asdf_event_print(&event, stdout, verbose);
