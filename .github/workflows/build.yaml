@@ -61,3 +61,9 @@ jobs:
       - name: Check
         run: make check ${{ github.event.inputs.make_flags }}
 
+      - name: Output test logs on failure
+        if: failure()
+        run: |
+          tail -n +1 tests/*.log
+          tail -n +1 tests/tmp/*.out.txt
+
