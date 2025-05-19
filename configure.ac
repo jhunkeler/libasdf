@@ -14,7 +14,6 @@ AC_CONFIG_MACRO_DIR([m4])
 
 AC_LANG([C])
 AC_PROG_CC
-AC_PROG_CC_STDC
 
 AS_IF([test "x$ac_cv_prog_cc_c11" = "xno"],
   [AC_MSG_ERROR([C11 support is required but not available])])
