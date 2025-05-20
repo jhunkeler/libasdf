@@ -12,16 +12,17 @@
 extern const char *asdf_standard_comment;
 extern const char *asdf_version_comment;
 
-
+#define ASDF_COMMENT_CHAR '#'
 #define ASDF_ASDF_VERSION_BUFFER_SIZE 16
 #define ASDF_STANDARD_VERSION_BUFFER_SIZE 16
-#define ASDF_PARSER_READ_BUFFER_SIZE 512
+#define ASDF_PARSER_READ_BUFFER_INIT_SIZE 512
 
 
 typedef enum {
     ASDF_PARSER_STATE_INITIAL,
     ASDF_PARSER_STATE_ASDF_VERSION,
     ASDF_PARSER_STATE_STANDARD_VERSION,
+    ASDF_PARSER_STATE_COMMENT,
     ASDF_PARSER_STATE_YAML,
     ASDF_PARSER_STATE_BLOCK,
     ASDF_PARSER_STATE_PADDING,
@@ -86,10 +87,14 @@ typedef struct asdf_parser {
     char asdf_version[ASDF_ASDF_VERSION_BUFFER_SIZE];
     char standard_version[ASDF_STANDARD_VERSION_BUFFER_SIZE];
     struct fy_parser *yaml_parser;
-    off_t yaml_start;
-    off_t yaml_end;
+    off_t tree_start;
+    off_t tree_end;
+    char *tree_buffer;
     size_t found_blocks;
-    uint8_t read_buffer[ASDF_PARSER_READ_BUFFER_SIZE];
+    uint8_t *read_buffer;
+    size_t read_buffer_size;
+    bool peek_last;
+    bool done;
 } asdf_parser_t;
 
 

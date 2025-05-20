@@ -1,0 +1,103 @@
+#include "munit.h"
+#include "util.h"
+
+#include "event.h"
+#include "parse.h"
+#include "yaml.h"
+
+
+#define CHECK_NEXT_EVENT_TYPE(type) do { \
+    assert_int(asdf_event_iterate(&parser, &event), ==, 0); \
+    assert_int(asdf_event_type(&event), ==, (type)); \
+} while (0)
+
+
+/**
+ * Test parsing the absolute bare minimum ASDF file that can be parsed without errors
+ *
+ * It just consists of the #ASDF and #ASDF_STANDARD comments, and nothing more
+ */
+MU_TEST(test_asdf_parse_minimal) {
+    const char *filename = get_fixture_file_path("parse-minimal.asdf");
+    FILE *file = fopen(filename, "r");
+    assert_not_null(file);
+    asdf_parser_t parser = {0};
+    asdf_event_t event = {0};
+
+    if (asdf_parser_init(&parser, NULL) != 0)
+        munit_error("failed to initialize asdf parser");
+
+    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+        munit_error("failed to set asdf parser file");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
+    assert_string_equal(event.payload.version->version, "1.0.0");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
+    assert_string_equal(event.payload.version->version, "1.6.0");
+
+    // YAML stream start and stop events
+    // TODO: These probably shouldn't be output at all by the time
+    // issue #15 is done; it's just that for now we always at least
+    // start the YAML stream even if there's nothing left in the file
+    // to read.
+    CHECK_NEXT_EVENT_TYPE(ASDF_YAML_EVENT);
+    CHECK_NEXT_EVENT_TYPE(ASDF_YAML_EVENT);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
+
+    // If we try to get further events asdf_event_iterate returns 1
+    assert_int(asdf_event_iterate(&parser, &event), ==, 1);
+    return MUNIT_OK;
+}
+
+
+/**
+ * Like `test_asdf_parse_minimal` but with an additional non-standard comment event
+ */
+MU_TEST(test_asdf_parse_minimal_extra_comment) {
+    const char *filename = get_fixture_file_path("parse-minimal-extra-comment.asdf");
+    FILE *file = fopen(filename, "r");
+    assert_not_null(file);
+    asdf_parser_t parser = {0};
+    asdf_event_t event = {0};
+
+    if (asdf_parser_init(&parser, NULL) != 0)
+        munit_error("failed to initialize asdf parser");
+
+    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+        munit_error("failed to set asdf parser file");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
+    assert_string_equal(event.payload.version->version, "1.0.0");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
+    assert_string_equal(event.payload.version->version, "1.6.0");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_COMMENT_EVENT);
+    assert_string_equal(asdf_event_comment(&event), "NONSTANDARD HEADER COMMENT");
+
+    // YAML stream start and stop events
+    // TODO: These probably shouldn't be output at all by the time
+    // issue #15 is done; it's just that for now we always at least
+    // start the YAML stream even if there's nothing left in the file
+    // to read.
+    CHECK_NEXT_EVENT_TYPE(ASDF_YAML_EVENT);
+    CHECK_NEXT_EVENT_TYPE(ASDF_YAML_EVENT);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
+
+    // If we try to get further events asdf_event_iterate returns 1
+    assert_int(asdf_event_iterate(&parser, &event), ==, 1);
+    return MUNIT_OK;
+}
+
+
+MU_TEST_SUITE(
+    test_asdf_parse,
+    MU_RUN_TEST(test_asdf_parse_minimal),
+    MU_RUN_TEST(test_asdf_parse_minimal_extra_comment)
+);
+
+
+MU_RUN_SUITE(test_asdf_parse);

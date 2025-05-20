@@ -85,14 +85,27 @@ void set_static_error(asdf_parser_t *parser, const char *error) {
 }
 
 
-static char *read_next(asdf_parser_t *parser) {
-    return fgets((char *)parser->read_buffer, ASDF_PARSER_READ_BUFFER_SIZE, parser->file);
+static char *read_next_line(asdf_parser_t *parser) {
+    if (!parser->peek_last) {
+        ssize_t size = getline((char **)&parser->read_buffer, &parser->read_buffer_size, parser->file);
+        parser->peek_last = false;
+
+        if (size < 0)
+            return NULL;
+    }
+
+    return (char *)parser->read_buffer;
+}
+
+
+static char *read_next_chunk(asdf_parser_t *parser) {
+    return fgets((char *)parser->read_buffer, parser->read_buffer_size, parser->file);
 }
 
 
 static int parse_version_comment(
     asdf_parser_t *parser, const char *expected, char *out_buf, size_t out_size) {
-    char *r = read_next(parser);
+    char *r = read_next_line(parser);
     size_t len;
 
     if (!r) {
@@ -114,6 +127,7 @@ static int parse_version_comment(
 
 
 // TODO: These need to be more flexible for acccepting different ASDF versions
+// TODO: Depending on strictness level we can resume even if this fails
 static int parse_asdf_version(asdf_parser_t *parser, asdf_event_t *event) {
     if (parse_version_comment(
             parser, asdf_version_comment, parser->asdf_version, ASDF_ASDF_VERSION_BUFFER_SIZE) != 0)
@@ -137,9 +151,33 @@ static int parse_standard_version(asdf_parser_t *parser, asdf_event_t *event) {
     event->type = ASDF_STANDARD_VERSION_EVENT;
     event->payload.version = malloc(sizeof(asdf_version_t));
     event->payload.version->version = strdup(parser->standard_version);
-    parser->state = ASDF_PARSER_STATE_YAML;
-    parser->yaml_start = ftello(parser->file);
+    parser->state = ASDF_PARSER_STATE_COMMENT;
     return 0;
+}
+
+
+static int parse_comment(asdf_parser_t *parser, asdf_event_t *event) {
+    char *r = NULL;
+    off_t offset = ftello(parser->file);
+
+    while ((r = read_next_line(parser))) {
+        if (r[0] == '\0')  // blank line; keep looking
+            continue;
+        if (r[0] == ASDF_COMMENT_CHAR) { // found comment
+            event->type = ASDF_COMMENT_EVENT;
+            event->payload.comment = strdup(r + 1);
+            event->payload.comment[strcspn(event->payload.comment, "\r\n")] = '\0';
+            // State remains searching for comment events
+            return 0;
+        }
+    }
+
+    // Something else, could be either start of the YAML or start of a block, or padding
+    parser->state = ASDF_PARSER_STATE_YAML;
+    // *If* there is a tree, it starts here
+    parser->tree_start = offset;
+    fseek(parser->file, parser->tree_start, SEEK_SET);
+    return asdf_parser_parse(parser, event);
 }
 
 
@@ -164,14 +202,14 @@ static int parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
         if (mark) {
             // libfyaml's input_pos starts at 0, whatever the actual offset
             // was in the file stream we handed it
-            parser->yaml_end = parser->yaml_start + mark->input_pos;
+            parser->tree_end = parser->tree_start + mark->input_pos;
         } else {
-            parser->yaml_end = parser->yaml_start;
+            parser->tree_end = parser->tree_start;
         }
         // Make sure to put the file back where we left off.
         // This is obviously broken for streams, where we may need to take a more
         // careful approach to this / more sophisticated input handling.
-        fseek(parser->file, parser->yaml_end, SEEK_SET);
+        fseek(parser->file, parser->tree_end, SEEK_SET);
         parser->state = ASDF_PARSER_STATE_BLOCK;
     }
 
@@ -182,7 +220,7 @@ static int parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
 static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     off_t pos = ftello(parser->file);
 
-    if (!read_next(parser)) {
+    if (!read_next_chunk(parser)) {
         // EOF; we are done now
         // TODO: This is wrong though, there might be a block index
         // check if we've reached it.
@@ -301,6 +339,8 @@ int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
         return parse_asdf_version(parser, event);
     case ASDF_PARSER_STATE_STANDARD_VERSION:
         return parse_standard_version(parser, event);
+    case ASDF_PARSER_STATE_COMMENT:
+        return parse_comment(parser, event);
     case ASDF_PARSER_STATE_YAML:
         return parse_yaml(parser, event);
     case ASDF_PARSER_STATE_BLOCK:
@@ -310,7 +350,14 @@ int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
     case ASDF_PARSER_STATE_BLOCK_INDEX:
         return parse_block_index(parser, event);
     case ASDF_PARSER_STATE_END:
-        event->type = ASDF_END_EVENT;
+        if (!parser->done) {
+            // Produce a valid ASDF_END_EVENT and return 0 (success)
+            // but on subsequent calls produce no more valid events and return 1 (error)
+            parser->done = true;
+            event->type = ASDF_END_EVENT;
+            return 0;
+        }
+        event->type = ASDF_NONE_EVENT;
         return 1;
     case ASDF_PARSER_STATE_ERROR:
         return 1;
@@ -345,6 +392,10 @@ int asdf_parser_init(asdf_parser_t *parser, asdf_parser_cfg_t *config) {
     parser->error = NULL;
     parser->error_type = ASDF_ERROR_NONE;
     parser->found_blocks = false;
+    parser->read_buffer = malloc(ASDF_PARSER_READ_BUFFER_INIT_SIZE);
+    parser->read_buffer_size = ASDF_PARSER_READ_BUFFER_INIT_SIZE;
+    parser->peek_last = false;
+    parser->done = false;
     ZERO_MEMORY(parser->asdf_version, sizeof(parser->asdf_version));
     ZERO_MEMORY(parser->standard_version, sizeof(parser->standard_version));
     ZERO_MEMORY(parser->read_buffer, sizeof(parser->read_buffer));
@@ -393,6 +444,8 @@ void asdf_parser_destroy(asdf_parser_t *parser) {
 
     if (parser->error_type == ASDF_ERROR_HEAP)
         free((void *)parser->error);
+
+    free(parser->read_buffer);
     // Leave no trace behind, leaving things clean for accidental
     // API calls on an already destroyed parser
     ZERO_MEMORY(parser, sizeof(asdf_parser_t));

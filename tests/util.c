@@ -10,6 +10,17 @@
 #error "REFERENCE_FILES_DIR not defined"
 #endif
 
+#ifndef FIXTURES_DIR
+#error "FIXTURES_DIR not defined"
+#endif
+
+
+const char* get_fixture_file_path(const char* relative_path) {
+    static char full_path[4096];
+    snprintf(full_path, sizeof(full_path), "%s/%s", FIXTURES_DIR, relative_path);
+    return full_path;
+}
+
 
 const char* get_reference_file_path(const char* relative_path) {
     static char full_path[4096];

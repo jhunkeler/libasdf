@@ -161,3 +161,4 @@ Event: ASDF_BLOCK_EVENT
   Used size: 64
   Data size: 64
   Checksum: 35594cae5fb11be3ea419c26bc4cfbee
+Event: ASDF_END_EVENT

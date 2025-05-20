@@ -23,6 +23,22 @@ asdf_event_type_t asdf_event_type(asdf_event_t *event) {
 }
 
 
+const char *asdf_event_comment(const asdf_event_t *event) {
+    if (!(event && event->type == ASDF_COMMENT_EVENT))
+        return NULL;
+
+    return event->payload.comment;
+}
+
+
+const asdf_tree_info_t *asdf_event_tree_info(const asdf_event_t *event) {
+    if (!(event && (event->type == ASDF_TREE_START_EVENT || event->type == ASDF_TREE_END_EVENT)))
+        return NULL;
+
+    return event->payload.tree;
+}
+
+
 const asdf_block_info_t *asdf_event_block_info(const asdf_event_t *event) {
     if (!(event && event->type == ASDF_BLOCK_EVENT))
         return NULL;
@@ -114,6 +130,10 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
 void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event) {
     assert(event);
     switch (event->type) {
+    case ASDF_TREE_START_EVENT:
+    case ASDF_TREE_END_EVENT:
+        free(event->payload.tree);
+        break;
     case ASDF_YAML_EVENT:
         fy_parser_event_free(parser->yaml_parser, event->payload.yaml);
         break;
@@ -126,6 +146,9 @@ void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event) {
         break;
     case ASDF_BLOCK_EVENT:
         free(event->payload.block);
+        break;
+    case ASDF_COMMENT_EVENT:
+        free(event->payload.comment);
         break;
     default:
         break;

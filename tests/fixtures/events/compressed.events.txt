@@ -206,3 +206,4 @@ Event: ASDF_BLOCK_EVENT
   Data size: 226
   Compression: bzp2
   Checksum: 7f1a85bed4cf6d03b940e3d7f95dbc5a
+Event: ASDF_END_EVENT

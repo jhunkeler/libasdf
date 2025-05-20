@@ -4,6 +4,7 @@
 #include "munit.h"
 #include "util.h"
 
+#include "block.h"
 #include "event.h"
 #include "parse.h"
 #include "yaml.h"
@@ -143,6 +144,20 @@ MU_TEST(test_asdf_event_basic) {
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_END_EVENT);
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_END_EVENT);
+    CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
+    const asdf_block_info_t *block = event.payload.block;
+    assert_int(block->header_pos, ==, 664);
+    assert_int(block->data_pos, ==, 718);
+    // 718 - 664 == 54 ?? But recall, the header_size field of the block_header
+    // does not include the block magic and the header_size field itself (6 bytes)
+    assert_int(block->header.header_size, ==, 48);
+    assert_int(block->header.flags, ==, 0);
+    assert_memory_equal(4, block->header.compression, "\0\0\0\0");
+    assert_int(block->header.allocated_size, ==, 64);
+    assert_int(block->header.used_size, ==, 64);
+    assert_int(block->header.data_size, ==, 64);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
 
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
