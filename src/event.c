@@ -83,6 +83,11 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
         fprintf(file, "  Standard Version: %s\n", event->payload.version->version);
         break;
 
+
+    case ASDF_COMMENT_EVENT:
+        fprintf(file, "  Comment: %s\n", event->payload.comment);
+        break;
+
     case ASDF_YAML_EVENT: {
         fprintf(file, "  Type: %s\n", asdf_yaml_event_type_text(event));
 
