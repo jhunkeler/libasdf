@@ -111,7 +111,7 @@ typedef struct asdf_parser {
 
 static inline bool asdf_parser_has_opt(asdf_parser_t *parser, asdf_parser_opt_t opt) {
     assert(parser);
-    return (parser->config && parser->config->flags & opt);
+    return (parser->config && ((parser->config->flags & opt) == opt));
 }
 
 

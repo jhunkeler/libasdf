@@ -138,6 +138,18 @@ static int append_to_tree_buffer(asdf_parser_t *parser, const char *buf, size_t 
 }
 
 
+static ssize_t parse_yaml_input_callback(void *user_data, void *buf, size_t count) {
+    asdf_parser_t *parser = (asdf_parser_t *)user_data;
+    ssize_t len = fread(buf, 1, count, parser->file);
+
+    if (len <= 0)
+        return len;
+
+    append_to_tree_buffer(parser, buf, len);
+    return len;
+}
+
+
 /**
  * This phase of parsing expects *either* an explicit start to the YAML tree indicated
  * by the "%YAML <yaml-version>" directive or the start of a block indicated by the block
@@ -169,6 +181,10 @@ static int parse_yaml_or_block(asdf_parser_t *parser, asdf_event_t *event) {
         event->type = ASDF_TREE_START_EVENT;
         event->payload.tree = calloc(1, sizeof(asdf_tree_info_t));
         event->payload.tree->start = offset;
+
+        if (asdf_parser_has_opt(parser, ASDF_PARSER_OPT_BUFFER_TREE | ASDF_PARSER_OPT_EMIT_YAML_EVENTS))
+            fy_parser_set_input_callback(parser->yaml_parser, parser, parse_yaml_input_callback);
+
         return 0;
     }
 }
@@ -256,9 +272,6 @@ static int parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
         return 0;
     }
 
-    // TODO: This won't work if we want to also support ASDF_PARSER_OPT_BUFFER_TREE
-    // Instead of immediately calling fy_parser_set_input_fp, need call that here
-    // *or* read blocks ourselves and pass them to the parser with fy_parser_set_string
     struct fy_event *yaml = fy_parser_parse(parser->yaml_parser);
 
     if (fy_parser_get_stream_error(parser->yaml_parser)) {
@@ -282,6 +295,15 @@ static int parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
             parser->tree.end = parser->tree.start + mark->input_pos;
         } else {
             parser->tree.end = parser->tree.start;
+        }
+
+        // Cap off the tree buffer; normally this is done naturally by
+        // append_to_tree_buffer but it might get left with some dangling bytes
+        // from the libfyaml parser if we generated YAML events immediately
+        if (parser->tree.buf) {
+            size_t tree_buf_end = parser->tree.end - parser->tree.start;
+            assert(tree_buf_end < parser->tree.size);
+            parser->tree.buf[tree_buf_end] = '\0';
         }
         parser->tree.done = true;
     }
