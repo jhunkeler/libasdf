@@ -150,6 +150,29 @@ static ssize_t parse_yaml_input_callback(void *user_data, void *buf, size_t coun
 }
 
 
+static int transition_to_yaml(asdf_parser_t *parser, asdf_event_t *event, size_t offset) {
+    // Happy case, emit tree start event
+    parser->state = ASDF_PARSER_STATE_YAML;
+    parser->tree.start = offset;
+    event->type = ASDF_TREE_START_EVENT;
+    event->payload.tree = calloc(1, sizeof(asdf_tree_info_t));
+    event->payload.tree->start = offset;
+
+    // Set up libfyaml parser:
+    // - In the special case of the flag combination below, we read into our own internal buffer
+    //   for the YAML tree, while also feeding into libfyaml by using a custom input callback
+    // - Otherwise in the normal case we let libfyaml take over the file pointer for a bit
+    if (asdf_parser_has_opt(parser, ASDF_PARSER_OPT_BUFFER_TREE | ASDF_PARSER_OPT_EMIT_YAML_EVENTS))
+        fy_parser_set_input_callback(parser->yaml_parser, parser, parse_yaml_input_callback);
+    else if (fy_parser_set_input_fp(parser->yaml_parser, parser->filename, parser->file) != 0) {
+        asdf_parser_set_common_error(parser, ASDF_ERR_YAML_PARSER_INIT_FAILED);
+        return 1;
+    }
+
+    return 0;
+}
+
+
 /**
  * This phase of parsing expects *either* an explicit start to the YAML tree indicated
  * by the "%YAML <yaml-version>" directive or the start of a block indicated by the block
@@ -175,18 +198,14 @@ static int parse_yaml_or_block(asdf_parser_t *parser, asdf_event_t *event) {
     if (is_yaml_directive(r, len)) {
         // Rewind to start of YAML
         fseek(parser->file, -strlen(r), SEEK_CUR);
-        // Happy case, emit tree start event
-        parser->state = ASDF_PARSER_STATE_YAML;
-        parser->tree.start = offset;
-        event->type = ASDF_TREE_START_EVENT;
-        event->payload.tree = calloc(1, sizeof(asdf_tree_info_t));
-        event->payload.tree->start = offset;
-
-        if (asdf_parser_has_opt(parser, ASDF_PARSER_OPT_BUFFER_TREE | ASDF_PARSER_OPT_EMIT_YAML_EVENTS))
-            fy_parser_set_input_callback(parser->yaml_parser, parser, parse_yaml_input_callback);
-
-        return 0;
+        return transition_to_yaml(parser, event, offset);
     }
+
+    // Pathological case--some kind of padding or malformed YAML
+    // TODO: Various cases like this can be handled for sure, but come back to that.
+    // For now just throw error.
+    asdf_parser_set_common_error(parser, ASDF_ERR_YAML_PARSE_FAILED);
+    return 1;
 }
 
 
@@ -509,12 +528,7 @@ int asdf_parser_set_input_file(asdf_parser_t *parser, FILE *file, const char *na
     assert(parser);
     assert(!parser->file);
     assert(file);
-
-    if (fy_parser_set_input_fp(parser->yaml_parser, name, file) != 0) {
-        asdf_parser_set_common_error(parser, ASDF_ERR_YAML_PARSER_INIT_FAILED);
-        return 1;
-    }
-
+    parser->filename = name;
     parser->file = file;
     parser->found_blocks = false;
     parser->state = ASDF_PARSER_STATE_ASDF_VERSION;

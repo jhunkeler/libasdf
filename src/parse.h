@@ -97,6 +97,7 @@ typedef struct asdf_parser {
     asdf_parser_state_t state;
     asdf_error_type_t error_type;
     const char *error;
+    const char *filename;
     FILE *file;
     char asdf_version[ASDF_ASDF_VERSION_BUFFER_SIZE];
     char standard_version[ASDF_STANDARD_VERSION_BUFFER_SIZE];
