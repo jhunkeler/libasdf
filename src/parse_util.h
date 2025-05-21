@@ -18,9 +18,9 @@
 #include "util.h"
 
 
-ASDF_LOCAL const char *asdf_standard_comment;
-ASDF_LOCAL const char *asdf_version_comment;
-ASDF_LOCAL const char *asdf_yaml_directive;
+extern ASDF_LOCAL const char *asdf_standard_comment;
+extern ASDF_LOCAL const char *asdf_version_comment;
+extern ASDF_LOCAL const char *asdf_yaml_directive;
 
 /* Internal error helper functions */
 ASDF_LOCAL void asdf_parser_set_oom_error(asdf_parser_t *parser);
