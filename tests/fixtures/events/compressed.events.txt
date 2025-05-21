@@ -2,6 +2,8 @@ Event: ASDF_ASDF_VERSION_EVENT
   ASDF Version: 1.0.0
 Event: ASDF_STANDARD_VERSION_EVENT
   Standard Version: 1.6.0
+Event: ASDF_TREE_START_EVENT
+  Tree start position: 33 (0x21)
 Event: ASDF_YAML_EVENT
   Type: +STR
 Event: ASDF_YAML_EVENT
@@ -190,20 +192,22 @@ Event: ASDF_YAML_EVENT
   Type: -DOC
 Event: ASDF_YAML_EVENT
   Type: -STR
+Event: ASDF_TREE_END_EVENT
+  Tree end position: 757 (0x2f5)
 Event: ASDF_BLOCK_EVENT
-  Header position: 757
-  Data position: 811
-  Allocated size: 211
-  Used size: 1024
-  Data size: 211
+  Header position: 757 (0x2f5)
+  Data position: 811 (0x32b)
+  Allocated size: 211 (0xd3)
+  Used size: 1024 (0x400)
+  Data size: 211 (0xd3)
   Compression: zlib
   Checksum: 7f1a85bed4cf6d03b940e3d7f95dbc5a
 Event: ASDF_BLOCK_EVENT
-  Header position: 1022
-  Data position: 1076
-  Allocated size: 226
-  Used size: 1024
-  Data size: 226
+  Header position: 1022 (0x3fe)
+  Data position: 1076 (0x434)
+  Allocated size: 226 (0xe2)
+  Used size: 1024 (0x400)
+  Data size: 226 (0xe2)
   Compression: bzp2
   Checksum: 7f1a85bed4cf6d03b940e3d7f95dbc5a
 Event: ASDF_END_EVENT

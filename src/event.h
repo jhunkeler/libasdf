@@ -9,6 +9,7 @@
 
 #include "block.h"
 #include "parse.h"
+#include "util.h"
 #include "yaml.h"
 
 
@@ -51,7 +52,7 @@ typedef struct {
 typedef struct {
     size_t start;
     size_t end;
-    const char *buff;
+    const char *buf;
 } asdf_tree_info_t;
 
 
@@ -73,11 +74,11 @@ typedef struct asdf_event {
 
 
 /* Public API functions */
-asdf_event_type_t asdf_event_type(asdf_event_t *event);
-const char *asdf_event_comment(const asdf_event_t *event);
-const asdf_tree_info_t *asdf_event_tree_info(const asdf_event_t *event);
-const asdf_block_info_t *asdf_event_block_info(const asdf_event_t *event);
-int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event);
-const char *asdf_event_type_name(asdf_event_type_t event_type);
-void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose);
-void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event);
+ASDF_EXPORT asdf_event_type_t asdf_event_type(asdf_event_t *event);
+ASDF_EXPORT const char *asdf_event_comment(const asdf_event_t *event);
+ASDF_EXPORT const asdf_tree_info_t *asdf_event_tree_info(const asdf_event_t *event);
+ASDF_EXPORT const asdf_block_info_t *asdf_event_block_info(const asdf_event_t *event);
+ASDF_EXPORT int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event);
+ASDF_EXPORT const char *asdf_event_type_name(asdf_event_type_t event_type);
+ASDF_EXPORT void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose);
+ASDF_EXPORT void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event);

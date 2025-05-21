@@ -88,6 +88,9 @@ MU_TEST(test_asdf_event_basic) {
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
     assert_string_equal(event.payload.version->version, "1.6.0");
 
+    CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
+    assert_int(event.payload.tree->start, ==, 0x21);
+
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_START_EVENT);
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_START_EVENT);
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/asdf-1.1.0");
@@ -144,6 +147,11 @@ MU_TEST(test_asdf_event_basic) {
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_END_EVENT);
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_END_EVENT);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_TREE_END_EVENT);
+    assert_int(event.payload.tree->start, ==, 0x21);
+    assert_int(event.payload.tree->end, ==, 0x298);
+
     CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
     const asdf_block_info_t *block = event.payload.block;
     assert_int(block->header_pos, ==, 664);

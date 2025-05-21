@@ -106,14 +106,29 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
         break;
     }
 
+    case ASDF_TREE_START_EVENT:
+        fprintf(file, "  Tree start position: %zu (0x%zx)\n", event->payload.tree->start,
+                event->payload.tree->start);
+        break;
+
+    case ASDF_TREE_END_EVENT:
+        fprintf(file, "  Tree end position: %zu (0x%zx)\n", event->payload.tree->end,
+                event->payload.tree->end);
+        break;
+
     case ASDF_BLOCK_EVENT: {
         const asdf_block_info_t *block = event->payload.block;
         const asdf_block_header_t header = block->header;
-        fprintf(file, "  Header position: %" PRId64 "\n", (int64_t)block->header_pos);
-        fprintf(file, "  Data position: %" PRId64 "\n", (int64_t)block->data_pos);
-        fprintf(file, "  Allocated size: %" PRIu64 "\n", header.allocated_size);
-        fprintf(file, "  Used size: %" PRIu64 "\n", header.used_size);
-        fprintf(file, "  Data size: %" PRIu64 "\n", header.data_size);
+        fprintf(file, "  Header position: %" PRId64 " (0x%" PRIx64 ")\n",
+                (int64_t)block->header_pos, (int64_t)block->header_pos);
+        fprintf(file, "  Data position: %" PRId64 " (0x%" PRIx64 ")\n",
+                (int64_t)block->data_pos, (int64_t)block->data_pos);
+        fprintf(file, "  Allocated size: %" PRIu64 " (0x%" PRIx64 ")\n",
+                header.allocated_size, header.allocated_size);
+        fprintf(file, "  Used size: %" PRIu64 " (0x%" PRIx64 ")\n", header.used_size,
+                header.used_size);
+        fprintf(file, "  Data size: %" PRIu64 " (0x%" PRIx64 ")\n", header.data_size,
+                header.data_size);
 
         if (header.compression[0] != '\0')
             fprintf(file, "  Compression: %.4s\n", header.compression);

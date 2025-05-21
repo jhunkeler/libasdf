@@ -36,14 +36,6 @@ MU_TEST(test_asdf_parse_minimal) {
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
     assert_string_equal(event.payload.version->version, "1.6.0");
 
-    // YAML stream start and stop events
-    // TODO: These probably shouldn't be output at all by the time
-    // issue #15 is done; it's just that for now we always at least
-    // start the YAML stream even if there's nothing left in the file
-    // to read.
-    CHECK_NEXT_EVENT_TYPE(ASDF_YAML_EVENT);
-    CHECK_NEXT_EVENT_TYPE(ASDF_YAML_EVENT);
-
     CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
 
     // If we try to get further events asdf_event_iterate returns 1
@@ -76,14 +68,6 @@ MU_TEST(test_asdf_parse_minimal_extra_comment) {
 
     CHECK_NEXT_EVENT_TYPE(ASDF_COMMENT_EVENT);
     assert_string_equal(asdf_event_comment(&event), "NONSTANDARD HEADER COMMENT");
-
-    // YAML stream start and stop events
-    // TODO: These probably shouldn't be output at all by the time
-    // issue #15 is done; it's just that for now we always at least
-    // start the YAML stream even if there's nothing left in the file
-    // to read.
-    CHECK_NEXT_EVENT_TYPE(ASDF_YAML_EVENT);
-    CHECK_NEXT_EVENT_TYPE(ASDF_YAML_EVENT);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
 
