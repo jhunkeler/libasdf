@@ -388,8 +388,8 @@ static int parse_block(asdf_parser_t *parser, asdf_event_t *event) {
 
 
 static int parse_padding(asdf_parser_t *parser, asdf_event_t *event) {
-    // TODO: For now, we skip padding and transition directly to block index
-    parser->state = ASDF_PARSER_STATE_BLOCK_INDEX;
+    // TODO: For now, we skip padding and transition directly to block parsing
+    parser->state = ASDF_PARSER_STATE_BLOCK;
     return asdf_parser_parse(parser, event);
 }
 

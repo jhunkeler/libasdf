@@ -151,13 +151,18 @@ static char events_doc[] = "Print event stream from ASDF parser (for debugging)"
 static char events_args_doc[] = "FILENAME";
 
 
+#define EVENTS_OPT_NO_YAML_KEY 0x100
+
+
 static struct argp_option events_options[] = {
-    {"verbose", 'v', 0, 0, "Show extra information about each event", 0}, {0}};
+    {"verbose", 'v', 0, 0, "Show extra information about each event", 0},
+    {"no-yaml", EVENTS_OPT_NO_YAML_KEY, 0, 0, "Do not produce YAML stream events", 0}, {0}};
 
 
 struct events_args {
     const char *filename;
     bool verbose;
+    bool no_yaml;
 };
 
 
@@ -166,6 +171,9 @@ static error_t parse_events_opt(int key, char *arg, struct argp_state *state) {
     struct events_args *args = state->input;
 
     switch (key) {
+    case EVENTS_OPT_NO_YAML_KEY:
+        args->no_yaml = true;
+        break;
     case 'v':
         args->verbose = true;
         break;
@@ -190,7 +198,7 @@ static error_t parse_events_opt(int key, char *arg, struct argp_state *state) {
 static struct argp events_argp = {events_options, parse_events_opt, events_args_doc, events_doc};
 
 
-int events_main(const char *filename, bool verbose) {
+int events_main(const char *filename, bool verbose, bool no_yaml) {
     FILE *file = fopen(filename, "r");
 
     if (!file) {
@@ -201,7 +209,7 @@ int events_main(const char *filename, bool verbose) {
     asdf_parser_t parser;
     // Current implementation always outputs YAML events, so this is needed; later update
     // to allow an option to skip YAML events (useful for testing)
-    asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_EMIT_YAML_EVENTS};
+    asdf_parser_cfg_t parser_cfg = {.flags = no_yaml ? 0 : ASDF_PARSER_OPT_EMIT_YAML_EVENTS};
 
     if (asdf_parser_init(&parser, &parser_cfg)) {
         fprintf(stderr, "error: %s\n", asdf_parser_get_error(&parser));
@@ -256,7 +264,7 @@ int main(int argc, char *argv[]) {
         argp_parse(
             &events_argp, global_args.subcmd_argc, global_args.subcmd_argv, 0, NULL, &events_args);
 
-        return events_main(events_args.filename, events_args.verbose);
+        return events_main(events_args.filename, events_args.verbose, events_args.no_yaml);
     }
     case ASDF_SUBCMD_NONE:
         break;
