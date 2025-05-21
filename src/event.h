@@ -52,7 +52,7 @@ typedef struct {
 typedef struct {
     size_t start;
     size_t end;
-    const char *buf;
+    char *buf;
 } asdf_tree_info_t;
 
 

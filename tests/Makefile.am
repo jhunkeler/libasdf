@@ -27,7 +27,7 @@ UNIT_TEST_CPPFLAGS = \
 # Unit tests
 # test-event.unit
 test_event_unit_SOURCES = test-event.c util.c munit/munit.c
-test_event_unit_CPPFLAGS = $(UNIT_TEST_CPPFLAGS)
+test_event_unit_CPPFLAGS = $(UNIT_TEST_CPPFLAGS) -DMUNIT_NO_FORK
 test_event_unit_CFLAGS = $(FYAML_CFLAGS) $(CODE_COVERAGE_CFLAGS)
 test_event_unit_LDFLAGS = $(CODE_COVERAGE_LDFLAGS)
 test_event_unit_LDADD = $(top_srcdir)/libasdf.la

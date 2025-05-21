@@ -24,6 +24,7 @@ static char *read_next_line(asdf_parser_t *parser) {
 
 
 static char *read_next_chunk(asdf_parser_t *parser) {
+    // TODO: Don't use fgets for this, just fread read_buffer_size
     return fgets((char *)parser->read_buffer, parser->read_buffer_size, parser->file);
 }
 
@@ -109,13 +110,13 @@ static int parse_comment(asdf_parser_t *parser, asdf_event_t *event) {
 
 static int append_to_tree_buffer(asdf_parser_t *parser, const char *buf, size_t len) {
     if (!parser->tree.buf) {
-        parser->tree.buf = malloc(len + 1);
+        parser->tree.buf = malloc(ASDF_PARSER_READ_BUFFER_INIT_SIZE + len + 1);
         if (!parser->tree.buf) {
             asdf_parser_set_oom_error(parser);
             return 1;
         }
-        parser->tree.size = len + 1;
-        parser->tree.cap = len + 1;
+        parser->tree.size = 0;
+        parser->tree.cap = ASDF_PARSER_READ_BUFFER_INIT_SIZE + len + 1;
     } else if (parser->tree.size + len + 1 > parser->tree.cap) {
         // Twice the needed capacity for the new extension to avoid too-frequent reallocs
         size_t new_cap = (parser->tree.cap + len + 1) * 2;
@@ -157,14 +158,9 @@ static int parse_yaml_or_block(asdf_parser_t *parser, asdf_event_t *event) {
         return asdf_parser_parse(parser, event);
     }
 
-    if (is_yaml_directive(r, parser->read_buffer_size)) {
-        // If YAML buffering is enable also start copying into the buffer
-        if (asdf_parser_has_opt(parser, ASDF_PARSER_OPT_BUFFER_TREE)) {
-            if (0 != append_to_tree_buffer(parser, r, parser->read_buffer_size))
-                return 1;
-        }
+    size_t len = strlen(r);
 
-
+    if (is_yaml_directive(r, len)) {
         // Rewind to start of YAML
         fseek(parser->file, -strlen(r), SEEK_CUR);
         // Happy case, emit tree start event
@@ -199,6 +195,11 @@ static int parse_yaml_fast(asdf_parser_t *parser, asdf_event_t *event) {
         explicit_document_end = is_yaml_document_end_marker(r, len);
         found_block = is_block_magic(r, len);
 
+        if (!found_block && asdf_parser_has_opt(parser, ASDF_PARSER_OPT_BUFFER_TREE)) {
+            if (0 != append_to_tree_buffer(parser, r, len))
+                return 1;
+        }
+
         if (!(explicit_document_end || found_block)) {
             offset = ftello(parser->file);
             continue;
@@ -209,8 +210,6 @@ static int parse_yaml_fast(asdf_parser_t *parser, asdf_event_t *event) {
         // this or error in strict mode)
         if (explicit_document_end) {
             parser->tree.end = offset + len;
-            if (asdf_parser_has_opt(parser, ASDF_PARSER_OPT_BUFFER_TREE)) 
-                append_to_tree_buffer(parser, r, len);
         } else {
             parser->tree.end = offset;
             // Cludgy rewind for block handler
