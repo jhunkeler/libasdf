@@ -16,6 +16,7 @@
 #include <libfyaml.h>
 
 #include "event.h"
+#include "util.h"
 
 
 typedef struct fy_event asdf_yaml_event_t;
@@ -37,7 +38,7 @@ typedef enum {
 } asdf_yaml_event_type_t;
 
 
-const char *asdf_yaml_event_scalar_value(const asdf_event_t *event, size_t *lenp);
-const char *asdf_yaml_event_tag(const asdf_event_t *event, size_t *lenp);
-asdf_yaml_event_type_t asdf_yaml_event_type(const asdf_event_t *event);
-const char *asdf_yaml_event_type_text(const asdf_event_t *event);
+ASDF_EXPORT const char *asdf_yaml_event_scalar_value(const asdf_event_t *event, size_t *lenp);
+ASDF_EXPORT const char *asdf_yaml_event_tag(const asdf_event_t *event, size_t *lenp);
+ASDF_EXPORT asdf_yaml_event_type_t asdf_yaml_event_type(const asdf_event_t *event);
+ASDF_EXPORT const char *asdf_yaml_event_type_text(const asdf_event_t *event);

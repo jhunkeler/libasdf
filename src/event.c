@@ -23,6 +23,22 @@ asdf_event_type_t asdf_event_type(asdf_event_t *event) {
 }
 
 
+const char *asdf_event_comment(const asdf_event_t *event) {
+    if (!(event && event->type == ASDF_COMMENT_EVENT))
+        return NULL;
+
+    return event->payload.comment;
+}
+
+
+const asdf_tree_info_t *asdf_event_tree_info(const asdf_event_t *event) {
+    if (!(event && (event->type == ASDF_TREE_START_EVENT || event->type == ASDF_TREE_END_EVENT)))
+        return NULL;
+
+    return event->payload.tree;
+}
+
+
 const asdf_block_info_t *asdf_event_block_info(const asdf_event_t *event) {
     if (!(event && event->type == ASDF_BLOCK_EVENT))
         return NULL;
@@ -67,6 +83,11 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
         fprintf(file, "  Standard Version: %s\n", event->payload.version->version);
         break;
 
+
+    case ASDF_COMMENT_EVENT:
+        fprintf(file, "  Comment: %s\n", event->payload.comment);
+        break;
+
     case ASDF_YAML_EVENT: {
         fprintf(file, "  Type: %s\n", asdf_yaml_event_type_text(event));
 
@@ -85,14 +106,29 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
         break;
     }
 
+    case ASDF_TREE_START_EVENT:
+        fprintf(file, "  Tree start position: %zu (0x%zx)\n", event->payload.tree->start,
+                event->payload.tree->start);
+        break;
+
+    case ASDF_TREE_END_EVENT:
+        fprintf(file, "  Tree end position: %zu (0x%zx)\n", event->payload.tree->end,
+                event->payload.tree->end);
+        break;
+
     case ASDF_BLOCK_EVENT: {
         const asdf_block_info_t *block = event->payload.block;
         const asdf_block_header_t header = block->header;
-        fprintf(file, "  Header position: %" PRId64 "\n", (int64_t)block->header_pos);
-        fprintf(file, "  Data position: %" PRId64 "\n", (int64_t)block->data_pos);
-        fprintf(file, "  Allocated size: %" PRIu64 "\n", header.allocated_size);
-        fprintf(file, "  Used size: %" PRIu64 "\n", header.used_size);
-        fprintf(file, "  Data size: %" PRIu64 "\n", header.data_size);
+        fprintf(file, "  Header position: %" PRId64 " (0x%" PRIx64 ")\n",
+                (int64_t)block->header_pos, (int64_t)block->header_pos);
+        fprintf(file, "  Data position: %" PRId64 " (0x%" PRIx64 ")\n",
+                (int64_t)block->data_pos, (int64_t)block->data_pos);
+        fprintf(file, "  Allocated size: %" PRIu64 " (0x%" PRIx64 ")\n",
+                header.allocated_size, header.allocated_size);
+        fprintf(file, "  Used size: %" PRIu64 " (0x%" PRIx64 ")\n", header.used_size,
+                header.used_size);
+        fprintf(file, "  Data size: %" PRIu64 " (0x%" PRIx64 ")\n", header.data_size,
+                header.data_size);
 
         if (header.compression[0] != '\0')
             fprintf(file, "  Compression: %.4s\n", header.compression);
@@ -114,6 +150,13 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
 void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event) {
     assert(event);
     switch (event->type) {
+    case ASDF_TREE_START_EVENT:
+    case ASDF_TREE_END_EVENT:
+        if (event->payload.tree)
+            free(event->payload.tree->buf);
+
+        free(event->payload.tree);
+        break;
     case ASDF_YAML_EVENT:
         fy_parser_event_free(parser->yaml_parser, event->payload.yaml);
         break;
@@ -126,6 +169,9 @@ void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event) {
         break;
     case ASDF_BLOCK_EVENT:
         free(event->payload.block);
+        break;
+    case ASDF_COMMENT_EVENT:
+        free(event->payload.comment);
         break;
     default:
         break;

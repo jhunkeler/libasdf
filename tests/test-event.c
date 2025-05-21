@@ -4,6 +4,7 @@
 #include "munit.h"
 #include "util.h"
 
+#include "block.h"
 #include "event.h"
 #include "parse.h"
 #include "yaml.h"
@@ -73,8 +74,9 @@ MU_TEST(test_asdf_event_basic) {
     assert_not_null(file);
     asdf_parser_t parser = {0};
     asdf_event_t event = {0};
+    asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_EMIT_YAML_EVENTS};
 
-    if (asdf_parser_init(&parser) != 0)
+    if (asdf_parser_init(&parser, &parser_cfg) != 0)
         munit_error("failed to initialize asdf parser");
 
     if (asdf_parser_set_input_file(&parser, file, filename) != 0)
@@ -85,6 +87,9 @@ MU_TEST(test_asdf_event_basic) {
 
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
     assert_string_equal(event.payload.version->version, "1.6.0");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
+    assert_int(event.payload.tree->start, ==, 0x21);
 
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_START_EVENT);
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_START_EVENT);
@@ -143,6 +148,248 @@ MU_TEST(test_asdf_event_basic) {
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_END_EVENT);
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_END_EVENT);
 
+    CHECK_NEXT_EVENT_TYPE(ASDF_TREE_END_EVENT);
+    assert_int(event.payload.tree->start, ==, 0x21);
+    assert_int(event.payload.tree->end, ==, 0x298);
+    assert_null(event.payload.tree->buf);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
+    const asdf_block_info_t *block = event.payload.block;
+    assert_int(block->header_pos, ==, 664);
+    assert_int(block->data_pos, ==, 718);
+    // 718 - 664 == 54 ?? But recall, the header_size field of the block_header
+    // does not include the block magic and the header_size field itself (6 bytes)
+    assert_int(block->header.header_size, ==, 48);
+    assert_int(block->header.flags, ==, 0);
+    assert_memory_equal(4, block->header.compression, "\0\0\0\0");
+    assert_int(block->header.allocated_size, ==, 64);
+    assert_int(block->header.used_size, ==, 64);
+    assert_int(block->header.data_size, ==, 64);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
+
+    asdf_event_destroy(&parser, &event);
+    asdf_parser_destroy(&parser);
+    fclose(file);
+    return MUNIT_OK;
+}
+
+
+/**
+ * Like `test_asdf_event_basic` but with YAML events disabled
+ */
+MU_TEST(test_asdf_event_basic_no_yaml) {
+    const char *filename = get_reference_file_path("1.6.0/basic.asdf");
+    FILE *file = fopen(filename, "r");
+    assert_not_null(file);
+    asdf_parser_t parser = {0};
+    asdf_event_t event = {0};
+    asdf_parser_cfg_t parser_cfg = {0};
+
+    if (asdf_parser_init(&parser, &parser_cfg) != 0)
+        munit_error("failed to initialize asdf parser");
+
+    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+        munit_error("failed to set asdf parser file");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
+    assert_string_equal(event.payload.version->version, "1.0.0");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
+    assert_string_equal(event.payload.version->version, "1.6.0");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
+    assert_int(event.payload.tree->start, ==, 0x21);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_TREE_END_EVENT);
+    assert_int(event.payload.tree->start, ==, 0x21);
+    assert_int(event.payload.tree->end, ==, 0x298);
+    assert_null(event.payload.tree->buf);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
+    const asdf_block_info_t *block = event.payload.block;
+    assert_int(block->header_pos, ==, 664);
+    assert_int(block->data_pos, ==, 718);
+    // 718 - 664 == 54 ?? But recall, the header_size field of the block_header
+    // does not include the block magic and the header_size field itself (6 bytes)
+    assert_int(block->header.header_size, ==, 48);
+    assert_int(block->header.flags, ==, 0);
+    assert_memory_equal(4, block->header.compression, "\0\0\0\0");
+    assert_int(block->header.allocated_size, ==, 64);
+    assert_int(block->header.used_size, ==, 64);
+    assert_int(block->header.data_size, ==, 64);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
+
+    asdf_event_destroy(&parser, &event);
+    asdf_parser_destroy(&parser);
+    fclose(file);
+    return MUNIT_OK;
+}
+
+
+/**
+ * Like `test_asdf_event_basic_no_yaml` but with YAML buffering enabled
+ */
+MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
+    const char *filename = get_reference_file_path("1.6.0/basic.asdf");
+    FILE *file = fopen(filename, "r");
+    assert_not_null(file);
+    asdf_parser_t parser = {0};
+    asdf_event_t event = {0};
+    asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_BUFFER_TREE};
+
+    if (asdf_parser_init(&parser, &parser_cfg) != 0)
+        munit_error("failed to initialize asdf parser");
+
+    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+        munit_error("failed to set asdf parser file");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
+    CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
+    CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
+    CHECK_NEXT_EVENT_TYPE(ASDF_TREE_END_EVENT);
+    assert_int(event.payload.tree->start, ==, 0x21);
+    assert_int(event.payload.tree->end, ==, 0x298);
+    assert_not_null(event.payload.tree->buf);
+
+    size_t reference_len = 0;
+    char *reference_data = tail_file(filename, 2, &reference_len);
+    assert_not_null(reference_data);
+    size_t end = event.payload.tree->end - event.payload.tree->start;
+    reference_data[end] = '\0';
+    assert_string_equal(event.payload.tree->buf, reference_data);
+    free(reference_data);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
+    const asdf_block_info_t *block = event.payload.block;
+    assert_int(block->header_pos, ==, 664);
+    assert_int(block->data_pos, ==, 718);
+    // 718 - 664 == 54 ?? But recall, the header_size field of the block_header
+    // does not include the block magic and the header_size field itself (6 bytes)
+    assert_int(block->header.header_size, ==, 48);
+    assert_int(block->header.flags, ==, 0);
+    assert_memory_equal(4, block->header.compression, "\0\0\0\0");
+    assert_int(block->header.allocated_size, ==, 64);
+    assert_int(block->header.used_size, ==, 64);
+    assert_int(block->header.data_size, ==, 64);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
+
+    asdf_event_destroy(&parser, &event);
+    asdf_parser_destroy(&parser);
+    fclose(file);
+    return MUNIT_OK;
+}
+
+
+/**
+ * Like `test_asdf_event_basic` but with YAML buffering enabled
+ */
+MU_TEST(test_asdf_event_basic_buffer_yaml) {
+    const char *filename = get_reference_file_path("1.6.0/basic.asdf");
+    FILE *file = fopen(filename, "r");
+    assert_not_null(file);
+    asdf_parser_t parser = {0};
+    asdf_event_t event = {0};
+    asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_EMIT_YAML_EVENTS | ASDF_PARSER_OPT_BUFFER_TREE};
+
+    if (asdf_parser_init(&parser, &parser_cfg) != 0)
+        munit_error("failed to initialize asdf parser");
+
+    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+        munit_error("failed to set asdf parser file");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
+    CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
+    CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
+    assert_int(event.payload.tree->start, ==, 0x21);
+
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_START_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_START_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/asdf-1.1.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf_library");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/software-1.0.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "author");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "The ASDF Developers");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "homepage");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "http://github.com/asdf-format/asdf");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "name");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "version");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "4.1.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "history");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "extensions");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SEQUENCE_START_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/extension_metadata-1.0.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "extension_class");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf.extension._manifest.ManifestExtension");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "extension_uri");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf://asdf-format.org/core/extensions/core-1.6.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "manifest_software");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/software-1.0.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "name");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf_standard");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "version");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "1.1.1");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "software");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/software-1.0.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "name");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "asdf");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "version");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "4.1.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SEQUENCE_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "data");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_START_EVENT, "tag:stsci.edu:asdf/core/ndarray-1.1.0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "source");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "0");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "datatype");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "int64");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "byteorder");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "little");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "shape");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SEQUENCE_START_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SCALAR_EVENT, NULL, "8");
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_SEQUENCE_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_MAPPING_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_END_EVENT);
+    CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_END_EVENT);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_TREE_END_EVENT);
+    assert_int(event.payload.tree->start, ==, 0x21);
+    assert_int(event.payload.tree->end, ==, 0x298);
+    assert_not_null(event.payload.tree->buf);
+
+    size_t reference_len = 0;
+    char *reference_data = tail_file(filename, 2, &reference_len);
+    assert_not_null(reference_data);
+    size_t end = event.payload.tree->end - event.payload.tree->start;
+    reference_data[end] = '\0';
+    assert_string_equal(event.payload.tree->buf, reference_data);
+    free(reference_data);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
+    const asdf_block_info_t *block = event.payload.block;
+    assert_int(block->header_pos, ==, 664);
+    assert_int(block->data_pos, ==, 718);
+    // 718 - 664 == 54 ?? But recall, the header_size field of the block_header
+    // does not include the block magic and the header_size field itself (6 bytes)
+    assert_int(block->header.header_size, ==, 48);
+    assert_int(block->header.flags, ==, 0);
+    assert_memory_equal(4, block->header.compression, "\0\0\0\0");
+    assert_int(block->header.allocated_size, ==, 64);
+    assert_int(block->header.used_size, ==, 64);
+    assert_int(block->header.data_size, ==, 64);
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
+
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
     fclose(file);
@@ -152,7 +399,10 @@ MU_TEST(test_asdf_event_basic) {
 
 MU_TEST_SUITE(
     test_asdf_event,
-    MU_RUN_TEST(test_asdf_event_basic)
+    MU_RUN_TEST(test_asdf_event_basic),
+    MU_RUN_TEST(test_asdf_event_basic_no_yaml),
+    MU_RUN_TEST(test_asdf_event_basic_no_yaml_buffer_yaml),
+    MU_RUN_TEST(test_asdf_event_basic_buffer_yaml)
 );
 
 
