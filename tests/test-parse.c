@@ -40,6 +40,7 @@ MU_TEST(test_asdf_parse_minimal) {
 
     // If we try to get further events asdf_event_iterate returns 1
     assert_int(asdf_event_iterate(&parser, &event), ==, 1);
+    asdf_parser_destroy(&parser);
     return MUNIT_OK;
 }
 
@@ -73,6 +74,7 @@ MU_TEST(test_asdf_parse_minimal_extra_comment) {
 
     // If we try to get further events asdf_event_iterate returns 1
     assert_int(asdf_event_iterate(&parser, &event), ==, 1);
+    asdf_parser_destroy(&parser);
     return MUNIT_OK;
 }
 
