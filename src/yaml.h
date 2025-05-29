@@ -19,9 +19,6 @@
 #include "util.h"
 
 
-typedef struct fy_event asdf_yaml_event_t;
-
-
 typedef enum {
     // Not a YAML event
     ASDF_YAML_NONE_EVENT = 0,

@@ -56,6 +56,9 @@ typedef struct {
 } asdf_tree_info_t;
 
 
+typedef struct fy_event asdf_yaml_event_t;
+
+
 typedef struct asdf_event {
     asdf_event_type_t type;
     union {

@@ -114,6 +114,10 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
     case ASDF_TREE_END_EVENT:
         fprintf(file, "  Tree end position: %zu (0x%zx)\n", event->payload.tree->end,
                 event->payload.tree->end);
+        if (event->payload.tree->buf) {
+            fprintf(file, "  Tree:\n");
+            fprintf(file, "%s\n", event->payload.tree->buf);
+        }
         break;
 
     case ASDF_BLOCK_EVENT: {

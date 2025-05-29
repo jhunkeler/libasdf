@@ -467,7 +467,7 @@ int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         return 1;
 
-    if (asdf_parser_set_input_file(&parser, in_file, cfg->filename) != 0) {
+    if (asdf_parser_set_input_fp(&parser, in_file, cfg->filename) != 0) {
         asdf_parser_destroy(&parser);
         return 1;
     }

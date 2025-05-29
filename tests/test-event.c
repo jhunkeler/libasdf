@@ -70,8 +70,6 @@
 
 MU_TEST(test_asdf_event_basic) {
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
-    FILE *file = fopen(filename, "r");
-    assert_not_null(file);
     asdf_parser_t parser = {0};
     asdf_event_t event = {0};
     asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_EMIT_YAML_EVENTS};
@@ -79,7 +77,7 @@ MU_TEST(test_asdf_event_basic) {
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         munit_error("failed to initialize asdf parser");
 
-    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+    if (asdf_parser_set_input_file(&parser, filename) != 0)
         munit_error("failed to set asdf parser file");
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
@@ -170,7 +168,6 @@ MU_TEST(test_asdf_event_basic) {
 
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
-    fclose(file);
     return MUNIT_OK;
 }
 
@@ -180,8 +177,6 @@ MU_TEST(test_asdf_event_basic) {
  */
 MU_TEST(test_asdf_event_basic_no_yaml) {
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
-    FILE *file = fopen(filename, "r");
-    assert_not_null(file);
     asdf_parser_t parser = {0};
     asdf_event_t event = {0};
     asdf_parser_cfg_t parser_cfg = {0};
@@ -189,7 +184,7 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         munit_error("failed to initialize asdf parser");
 
-    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+    if (asdf_parser_set_input_file(&parser, filename) != 0)
         munit_error("failed to set asdf parser file");
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
@@ -223,7 +218,6 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
 
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
-    fclose(file);
     return MUNIT_OK;
 }
 
@@ -233,8 +227,6 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
  */
 MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
-    FILE *file = fopen(filename, "r");
-    assert_not_null(file);
     asdf_parser_t parser = {0};
     asdf_event_t event = {0};
     asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_BUFFER_TREE};
@@ -242,7 +234,7 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         munit_error("failed to initialize asdf parser");
 
-    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+    if (asdf_parser_set_input_file(&parser, filename) != 0)
         munit_error("failed to set asdf parser file");
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
@@ -278,7 +270,6 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
 
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
-    fclose(file);
     return MUNIT_OK;
 }
 
@@ -297,7 +288,7 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         munit_error("failed to initialize asdf parser");
 
-    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+    if (asdf_parser_set_input_file(&parser, filename) != 0)
         munit_error("failed to set asdf parser file");
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
@@ -392,7 +383,6 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
 
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
-    fclose(file);
     return MUNIT_OK;
 }
 

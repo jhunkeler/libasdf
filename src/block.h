@@ -8,7 +8,9 @@
 #include "config.h"
 #endif
 
+#include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include <sys/types.h>
 
 
@@ -65,3 +67,14 @@ typedef struct asdf_block_info {
     off_t header_pos;
     off_t data_pos;
 } asdf_block_info_t;
+
+
+/**
+ * Returns `true` if the given buffer begins with the ASDF block magic
+ */
+static inline bool is_block_magic(const char *buf, size_t len) {
+    if (len < ASDF_BLOCK_MAGIC_SIZE)
+        return false;
+
+    return memcmp(buf, ASDF_BLOCK_MAGIC, (size_t)ASDF_BLOCK_MAGIC_SIZE) == 0;
+}

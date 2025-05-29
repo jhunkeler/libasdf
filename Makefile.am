@@ -2,8 +2,8 @@ AM_CFLAGS = -fvisibility=hidden
 AM_CPPFLAGS = -I$(top_srcdir)/src # so that tests also find header files
 ACLOCAL_AMFLAGS = -Im4
 
-src_files = src/block.c src/event.c src/info.c src/parse.c src/parse_util.c src/yaml.c
-src_headers = src/block.h src/event.h src/info.h src/parse.h src/parse_util.h src/yaml.h
+src_files = src/block.c src/event.c src/info.c src/parse.c src/parse_util.c src/stream.c src/yaml.c
+src_headers = src/block.h src/event.h src/info.h src/parse.h src/parse_util.h src/stream.h src/yaml.h
 
 noinst_HEADERS = $(src_headers)
 

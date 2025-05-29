@@ -9,6 +9,7 @@
 
 #include <libfyaml.h>
 
+#include "stream.h"
 #include "util.h"
 
 
@@ -25,7 +26,10 @@ typedef enum {
     ASDF_PARSER_STATE_COMMENT,
     // This state comes after comment parsing, and tries to determine
     // if we have a YAML tree or of the next thing in the file is a block
-    ASDF_PARSER_STATE_YAML_OR_BLOCK,
+    ASDF_PARSER_STATE_TREE_OR_BLOCK,
+    // This state means we have found the start of the YAML tree
+    ASDF_PARSER_STATE_TREE,
+    // This state means we are generating YAML events
     ASDF_PARSER_STATE_YAML,
     ASDF_PARSER_STATE_BLOCK,
     ASDF_PARSER_STATE_PADDING,
@@ -46,6 +50,7 @@ typedef enum {
     ASDF_ERR_NONE = 0,
 
     ASDF_ERR_UNKNOWN_STATE,
+    ASDF_ERR_STREAM_INIT_FAILED,
     ASDF_ERR_INVALID_ASDF_HEADER,
     ASDF_ERR_UNEXPECTED_EOF,
     ASDF_ERR_INVALID_BLOCK_HEADER,
@@ -84,28 +89,24 @@ typedef struct asdf_parser_cfg {
 typedef struct asdf_parser_tree_info {
     off_t start;
     off_t end;
-    char *buf;
+    uint8_t *buf;
     size_t size;
-    size_t cap;
-    // Reached the end of YAML tree parsing
-    bool done;
+    // Found the full YAML tree
+    bool found;
 } asdf_parser_tree_info_t;
 
 
 typedef struct asdf_parser {
     const asdf_parser_cfg_t *config;
     asdf_parser_state_t state;
+    asdf_stream_t *stream;
     asdf_error_type_t error_type;
     const char *error;
-    const char *filename;
-    FILE *file;
     char asdf_version[ASDF_ASDF_VERSION_BUFFER_SIZE];
     char standard_version[ASDF_STANDARD_VERSION_BUFFER_SIZE];
     struct fy_parser *yaml_parser;
     asdf_parser_tree_info_t tree;
     size_t found_blocks;
-    uint8_t *read_buffer;
-    size_t read_buffer_size;
     bool done;
 } asdf_parser_t;
 
@@ -122,7 +123,8 @@ typedef struct asdf_event asdf_event_t;
 
 /* Public API functions */
 ASDF_EXPORT int asdf_parser_init(asdf_parser_t *parser, asdf_parser_cfg_t *config);
-ASDF_EXPORT int asdf_parser_set_input_file(asdf_parser_t *parser, FILE *file, const char *name);
+ASDF_EXPORT int asdf_parser_set_input_file(asdf_parser_t *parser, const char *filename);
+ASDF_EXPORT int asdf_parser_set_input_fp(asdf_parser_t *parser, FILE *file, const char *filename);
 ASDF_EXPORT int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event);
 ASDF_EXPORT void asdf_parser_destroy(asdf_parser_t *parser);
 ASDF_EXPORT bool asdf_parser_has_error(const asdf_parser_t *parser);
