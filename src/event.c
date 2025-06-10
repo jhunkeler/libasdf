@@ -3,6 +3,7 @@
  */
 #include <assert.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -115,8 +116,8 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
         fprintf(file, "  Tree end position: %zu (0x%zx)\n", event->payload.tree->end,
                 event->payload.tree->end);
         if (event->payload.tree->buf) {
-            fprintf(file, "  Tree:\n");
-            fprintf(file, "%s\n", event->payload.tree->buf);
+            size_t tree_size = event->payload.tree->end - event->payload.tree->start - 1;
+            fprintf(file, "%.*s\n", (int)(tree_size > INT_MAX ? INT_MAX : tree_size), event->payload.tree->buf);
         }
         break;
 

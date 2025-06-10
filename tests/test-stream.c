@@ -31,6 +31,7 @@ MU_TEST(test_file_scan_token_no_match) {
     const uint8_t *r = asdf_stream_next(stream, &avail);
     assert_int(avail, ==, 0);
     assert_null(r);
+    asdf_stream_close(stream);
     return MUNIT_OK;
 }
 
@@ -50,6 +51,7 @@ MU_TEST(test_file_scan_token_at_beginning) {
     size_t avail = 0;
     const uint8_t *r = asdf_stream_next(stream, &avail);
     assert_int(memcmp(r, "asdf", 4), ==, 0);
+    asdf_stream_close(stream);
     return MUNIT_OK;
 }
 
@@ -70,6 +72,7 @@ MU_TEST(test_file_scan_token_at_end) {
     const uint8_t *r = asdf_stream_next(stream, &avail);
     assert_int(memcmp(r, "asdf", 4), ==, 0);
     assert_int(avail, ==, 4);
+    asdf_stream_close(stream);
     return MUNIT_OK;
 }
 
@@ -90,6 +93,7 @@ MU_TEST(test_file_scan_token_in_middle) {
     const uint8_t *r = asdf_stream_next(stream, &avail);
     assert_int(memcmp(r, "asdf", 4), ==, 0);
     assert_int(avail, ==, 18);
+    asdf_stream_close(stream);
     return MUNIT_OK;
 }
 
@@ -121,6 +125,7 @@ MU_TEST(test_file_scan_token_spans_buffers) {
         // the buffer will depend on how much of the buffer window had to be shifted to find
         // the match
         assert_int(avail, ==, data->buf_avail - data->buf_pos);
+        asdf_stream_close(stream);
     }
 
     return MUNIT_OK;

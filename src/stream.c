@@ -79,6 +79,16 @@ static void stream_capture(asdf_stream_t *stream, const uint8_t *buf, size_t siz
 }
 
 
+void asdf_stream_set_capture(asdf_stream_t *stream, uint8_t **buf, size_t *size, size_t capacity) {
+    if (!stream)
+        return;
+
+    stream->capture_buf = buf;
+    stream->capture_cap = capacity;
+    stream->capture_size = size;
+}
+
+
 /**
  * File-backed read handling
  */
@@ -233,6 +243,7 @@ static void file_close(asdf_stream_t *stream) {
     if (data->should_close)
         fclose(data->file);
 
+    free(data->buf);
     free(data);
     free(stream);
 }
@@ -305,6 +316,7 @@ asdf_stream_t *asdf_stream_from_fp(FILE* file, const char *filename) {
     stream->tell = file_tell;
     stream->close = file_close;
     stream->fy_parser_set_input = file_fy_parser_set_input;
+    asdf_stream_set_capture(stream, NULL, NULL, 0);
 
 #if DEBUG
     stream->last_next_size = 0;
@@ -485,6 +497,7 @@ asdf_stream_t *asdf_stream_from_memory(const void *buf, size_t size) {
     stream->tell = mem_tell;
     stream->close = mem_close;
     stream->fy_parser_set_input = mem_fy_parser_set_input;
+    asdf_stream_set_capture(stream, NULL, NULL, 0);
 
 #if DEBUG
     stream->last_next_size = 0;
@@ -493,15 +506,4 @@ asdf_stream_t *asdf_stream_from_memory(const void *buf, size_t size) {
 #endif
 
     return stream;
-}
-
-
-
-void asdf_stream_set_capture(asdf_stream_t *stream, uint8_t **buf, size_t *size, size_t capacity) {
-    if (!stream)
-        return;
-
-    stream->capture_buf = buf;
-    stream->capture_cap = capacity;
-    stream->capture_size = size;
 }

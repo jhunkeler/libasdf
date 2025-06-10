@@ -111,6 +111,11 @@ static inline asdf_stream_error_t asdf_stream_error(asdf_stream_t *stream) {
 }
 
 
+static inline void asdf_stream_close(asdf_stream_t *stream) {
+    return stream->close(stream);
+}
+
+
 ASDF_LOCAL asdf_stream_t *asdf_stream_from_file(const char *filename);
 ASDF_LOCAL asdf_stream_t *asdf_stream_from_fp(FILE* file, const char *filename);
 ASDF_LOCAL asdf_stream_t *asdf_stream_from_memory(const void *buf, size_t size);

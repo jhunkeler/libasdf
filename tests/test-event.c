@@ -248,9 +248,8 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
     size_t reference_len = 0;
     char *reference_data = tail_file(filename, 2, &reference_len);
     assert_not_null(reference_data);
-    size_t end = event.payload.tree->end - event.payload.tree->start;
-    reference_data[end] = '\0';
-    assert_string_equal(event.payload.tree->buf, reference_data);
+    size_t tree_size = event.payload.tree->end - event.payload.tree->start;
+    assert_memory_equal(tree_size, event.payload.tree->buf, reference_data);
     free(reference_data);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
@@ -361,9 +360,8 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
     size_t reference_len = 0;
     char *reference_data = tail_file(filename, 2, &reference_len);
     assert_not_null(reference_data);
-    size_t end = event.payload.tree->end - event.payload.tree->start;
-    reference_data[end] = '\0';
-    assert_string_equal(event.payload.tree->buf, reference_data);
+    size_t tree_size = event.payload.tree->end - event.payload.tree->start;
+    assert_memory_equal(tree_size, event.payload.tree->buf, reference_data);
     free(reference_data);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
