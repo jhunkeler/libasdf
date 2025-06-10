@@ -21,14 +21,14 @@ extern ASDF_LOCAL const char *asdf_version_comment;
 /**
  * The "%YAML 1.1\n" directive specifically expected for valid ASDF
  */
-extern ASDF_LOCAL const unsigned char *ASDF_YAML_DIRECTIVE;
+extern ASDF_LOCAL const char *ASDF_YAML_DIRECTIVE;
 #define ASDF_YAML_DIRECTIVE_SIZE 9
 
 
 /**
  * The string "%YAML " indicating start of an arbitrary YAML directive
  */
-extern ASDF_LOCAL const unsigned char *ASDF_YAML_DIRECTIVE_PREFIX;
+extern ASDF_LOCAL const char *ASDF_YAML_DIRECTIVE_PREFIX;
 #define ASDF_YAML_DIRECTIVE_PREFIX_SIZE 6
 
 
@@ -38,7 +38,7 @@ extern ASDF_LOCAL const unsigned char *ASDF_YAML_DIRECTIVE_PREFIX;
  * since it could be either \r\n or just \n so we check for that explicitly once
  * this token is found
  */
-extern ASDF_LOCAL const unsigned char *ASDF_YAML_DOCUMENT_END_MARKER;
+extern ASDF_LOCAL const char *ASDF_YAML_DOCUMENT_END_MARKER;
 #define ASDF_YAML_DOCUMENT_END_MARKER_SIZE 4
 
 

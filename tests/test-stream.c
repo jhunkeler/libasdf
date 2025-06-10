@@ -9,14 +9,20 @@
 #include "stream_intern.h"
 
 
+#define TOKEN(t) ((const uint8_t *)(t))
+#define TOKEN_LEN(t) (sizeof(t) - 1)
+
+
+static const uint8_t *tokens[] = {TOKEN("dummy"), TOKEN("asdf")};
+static size_t token_lens[] = {TOKEN_LEN("dummy"), TOKEN_LEN("asdf")};
+
+
 MU_TEST(test_file_scan_token_no_match) {
     char buffer[] = "fdsa and some other garbage";
     FILE *file = fmemopen(buffer, strlen(buffer), "r");
     asdf_stream_t *stream = asdf_stream_from_fp(file, NULL);
     size_t match_offset = 0;
     size_t match_idx = 0;
-    const uint8_t *tokens[] = {"dummy", "asdf"};
-    size_t token_lens[] = {sizeof("dummy") - 1, sizeof("asdf") - 1};
     int ret = asdf_stream_scan(stream, tokens, token_lens, 2, &match_offset, &match_idx);
     assert_int(ret, ==, 1);
 
@@ -35,8 +41,6 @@ MU_TEST(test_file_scan_token_at_beginning) {
     asdf_stream_t *stream = asdf_stream_from_fp(file, NULL);
     size_t match_offset = 0;
     size_t match_idx = 0;
-    const uint8_t *tokens[] = {"dummy", "asdf"};
-    size_t token_lens[] = {sizeof("dummy") - 1, sizeof("asdf") - 1};
     int ret = asdf_stream_scan(stream, tokens, token_lens, 2, &match_offset, &match_idx);
     assert_int(ret, ==, 0);
     assert_int(match_offset, ==, 0);
@@ -56,8 +60,6 @@ MU_TEST(test_file_scan_token_at_end) {
     asdf_stream_t *stream = asdf_stream_from_fp(file, NULL);
     size_t match_offset = 0;
     size_t match_idx = 0;
-    const uint8_t *tokens[] = {"dummy", "asdf"};
-    size_t token_lens[] = {sizeof("dummy") - 1, sizeof("asdf") - 1};
     int ret = asdf_stream_scan(stream, tokens, token_lens, 2, &match_offset, &match_idx);
     assert_int(ret, ==, 0);
     assert_int(match_offset, ==, 23);
@@ -78,8 +80,6 @@ MU_TEST(test_file_scan_token_in_middle) {
     asdf_stream_t *stream = asdf_stream_from_fp(file, NULL);
     size_t match_offset = 0;
     size_t match_idx = 0;
-    const uint8_t *tokens[] = {"dummy", "asdf"};
-    size_t token_lens[] = {sizeof("dummy") - 1, sizeof("asdf") - 1};
     int ret = asdf_stream_scan(stream, tokens, token_lens, 2, &match_offset, &match_idx);
     assert_int(ret, ==, 0);
     assert_int(match_offset, ==, 14);
@@ -96,8 +96,6 @@ MU_TEST(test_file_scan_token_in_middle) {
 
 MU_TEST(test_file_scan_token_spans_buffers) {
     char buffer[] = "fdsa and some asdf other garbage";
-    const uint8_t *tokens[] = {"dummy", "asdf"};
-    size_t token_lens[] = {sizeof("dummy") - 1, sizeof("asdf") - 1};
 
     // Hack buf_size so that it only reads up to part-way into the token to match
     // TODO item is still to make an option to configure the read buffer size explicitly
