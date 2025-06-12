@@ -159,35 +159,6 @@ static parse_result_t parse_comment(asdf_parser_t *parser, asdf_event_t *event) 
 }
 
 
-static ssize_t parse_yaml_input_callback(void *user_data, void *buf, size_t count) {
-    asdf_parser_t *parser = (asdf_parser_t *)user_data;
-    size_t total_read = 0;
-    const uint8_t *chunk = NULL;
-    size_t len = 0;
-
-    while (total_read < count) {
-        if (!(chunk = asdf_stream_next(parser->stream, &len)))
-            break;
-
-        size_t to_copy = len;
-        if (to_copy > (count - total_read))
-            to_copy = count - total_read;
-
-        // A lot of needless copying happening here especially if reading from the file
-        // buffer; could improve.  But it's also a bit of a special case.
-        memcpy((uint8_t *)buf + total_read, chunk, to_copy);
-        asdf_stream_consume(parser->stream, to_copy);
-
-        if (0 != check_stream(parser))
-            return (ssize_t)-1;
-
-        total_read += to_copy;
-    }
-
-    return total_read > 0 ? (ssize_t)total_read : -1;
-}
-
-
 static parse_result_t emit_tree_start_event(asdf_parser_t *parser, asdf_event_t *event) {
     off_t offset = asdf_stream_tell(parser->stream);
     parser->tree.start = offset;
