@@ -40,6 +40,17 @@ static int check_stream(asdf_parser_t *parser) {
 #define CONSUME_AND_CHECK(parser, count) do { \
     asdf_stream_consume(parser->stream, count); \
     if (UNLIKELY(check_stream(parser) != 0)) { \
+        return ASDF_PARSE_ERROR; \
+    } \
+} while (0);
+
+
+/**
+ * Like CONSUME_AND_CHECK but returns 1 in case of error instead of ASDF_PARSER_ERROR;
+ */
+#define CONSUME_AND_CHECK_INT(parser, count) do { \
+    asdf_stream_consume(parser->stream, count); \
+    if (UNLIKELY(check_stream(parser) != 0)) { \
         return 1; \
     } \
 } while (0);
@@ -302,7 +313,7 @@ static int parse_tree_fast(asdf_parser_t *parser) {
                     // Read and consume the full line then set the tree end
                     // First chomp the leading newline of the document end marker, then consume
                     // the line of the marker itself.
-                    CONSUME_AND_CHECK(parser, 1);
+                    CONSUME_AND_CHECK_INT(parser, 1);
                     asdf_stream_readline(parser->stream, &len);
                     tree_end = asdf_stream_tell(parser->stream);
                     tree_end_found = true;

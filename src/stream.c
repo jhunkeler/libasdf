@@ -221,7 +221,24 @@ static int file_scan(struct asdf_stream *stream, const uint8_t **tokens, const s
 
 static int file_seek(asdf_stream_t *stream, off_t offset, int whence) {
     file_userdata_t *data = stream->userdata;
-return fseeko(data->file, offset, whence);
+    int ret = fseeko(data->file, offset, whence);
+
+    if (0 == ret) {
+        // After a seek we need to reset the next buffer
+        data->buf_avail = 0;
+        data->buf_pos = 0;
+        switch (whence) {
+        case SEEK_SET:
+            data->offset = offset;
+        case SEEK_CUR:
+            data->offset += offset;
+        case SEEK_END:
+            data->offset = ftello(data->file);
+        default:
+            // Should never get here
+            assert(false);
+        }
+    }
 }
 
 
