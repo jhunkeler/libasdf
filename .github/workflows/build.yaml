@@ -20,6 +20,10 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
+        cc: [gcc, clang]
+        exclude:
+          - os: macos-latest
+            cc: gcc
 
     steps:
       - name: Checkout code
@@ -38,6 +42,10 @@ jobs:
             build-essential \
             libfyaml-dev
 
+          if [ "${{ matrix.cc }}" = "clang" ]; then
+            sudo apt-get install -y clang
+          fi
+
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: |
@@ -53,7 +61,7 @@ jobs:
         run: ./autogen.sh
 
       - name: Configure
-        run: ./configure
+        run: ./configure CC=${{ matrix.cc }}
 
       - name: Build
         run: make ${{ github.event.inputs.make_flags }}
