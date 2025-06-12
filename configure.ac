@@ -102,4 +102,14 @@ AS_IF([test "x$asdf_build_tool" = "xyes"], [
 
 AC_CONFIG_HEADERS([config.h]) # use config.h instead of passing -D in the command line
 AC_CONFIG_FILES([Makefile tests/Makefile])
+
 AC_OUTPUT
+
+# Report
+CC_VERSION=`$CC --version | head -n 1`
+FYAML_VERSION=`$PKG_CONFIG --modversion libfyaml`
+printf "\n==================== Configuration Summary ====================\n"
+printf "  %18s %s\n" "$PACKAGE_NAME version:" "$VERSION"
+printf "  %18s %s\n" "compiler version:" "$CC_VERSION"
+printf "  %18s %s\n" "libfyaml version:" "$FYAML_VERSION"
+printf "===============================================================\n\n"
