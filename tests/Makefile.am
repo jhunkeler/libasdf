@@ -75,3 +75,8 @@ EXTRA_DIST = minunit.h
 
 # Bit of a hack to make syncing the submodule a prerequisite to make check
 check-am: $(asdf_standard_submodule)
+
+
+update-fixtures:
+	./test-events.sh --update
+	./test-info.sh --update

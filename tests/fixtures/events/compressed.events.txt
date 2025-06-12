@@ -198,16 +198,16 @@ Event: ASDF_BLOCK_EVENT
   Header position: 757 (0x2f5)
   Data position: 811 (0x32b)
   Allocated size: 211 (0xd3)
-  Used size: 1024 (0x400)
-  Data size: 211 (0xd3)
+  Used size: 211 (0xd3)
+  Data size: 1024 (0x400)
   Compression: zlib
   Checksum: 7f1a85bed4cf6d03b940e3d7f95dbc5a
 Event: ASDF_BLOCK_EVENT
   Header position: 1022 (0x3fe)
   Data position: 1076 (0x434)
   Allocated size: 226 (0xe2)
-  Used size: 1024 (0x400)
-  Data size: 226 (0xe2)
+  Used size: 226 (0xe2)
+  Data size: 1024 (0x400)
   Compression: bzp2
   Checksum: 7f1a85bed4cf6d03b940e3d7f95dbc5a
 Event: ASDF_END_EVENT

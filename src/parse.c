@@ -552,8 +552,6 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
         return ASDF_PARSE_ERROR;
     }
 
-    CONSUME_AND_CHECK(parser, header->header_size);
-
     // Parse block fields
     uint32_t flags =
         // NOLINTNEXTLINE(readability-magic-numbers)
@@ -576,20 +574,25 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     memcpy(header->checksum, buf + ASDF_BLOCK_CHECKSUM_OFFSET, sizeof(header->checksum));
 
     block->header_pos = header_pos;
+
+    CONSUME_AND_CHECK(parser, header->header_size);
+
     block->data_pos = asdf_stream_tell(parser->stream);
 
     // Seek to end of the block (hopefully?)
-    // TODO: When reading the file from a stream we will want the option to return a pointer
-    // to the start of the block data, possibly with the option to copy it to a buffer.
-    // For now it will suffice to skip past it.
-    if (asdf_stream_seek(parser->stream, header->allocated_size, SEEK_CUR)) {
-        asdf_parser_set_static_error(parser, "Failed to seek past block data");
-        return ASDF_PARSE_ERROR;
+    if (parser->stream->is_seekable) {
+        // TODO: When reading the file from a stream we will want the option to return a pointer
+        // to the start of the block data, possibly with the option to copy it to a buffer.
+        // For now it will suffice to skip past it.
+        if (asdf_stream_seek(parser->stream, header->allocated_size, SEEK_CUR)) {
+            asdf_parser_set_static_error(parser, "Failed to seek past block data");
+            return ASDF_PARSE_ERROR;
+        }
     }
     // TODO: Fix this: asdf_stream_seek doesn't mark the current buffer as consumed.
     // In fact seek doesn't really make sense with the next()/consume() semantics so it should
     // probably be deleted.
-    CONSUME_AND_CHECK(parser, header->allocated_size);
+    //CONSUME_AND_CHECK(parser, header->allocated_size);
     parser->found_blocks += 1;
     event->type = ASDF_BLOCK_EVENT;
     event->payload.block = block;

@@ -220,8 +220,16 @@ static int file_scan(struct asdf_stream *stream, const uint8_t **tokens, const s
 
 
 static int file_seek(asdf_stream_t *stream, off_t offset, int whence) {
+    // Should seek relative to where we've *consumed* up to
     file_userdata_t *data = stream->userdata;
-    int ret = fseeko(data->file, offset, whence);
+    int ret = -1;
+
+    if (SEEK_CUR == whence) {
+        offset = data->offset - (data->buf_avail - data->buf_pos);
+        ret = fseeko(data->file, offset, SEEK_SET);
+    } else {
+        ret = fseeko(data->file, offset, whence);
+    }
 
     if (0 == ret) {
         // After a seek we need to reset the next buffer
@@ -229,16 +237,19 @@ static int file_seek(asdf_stream_t *stream, off_t offset, int whence) {
         data->buf_pos = 0;
         switch (whence) {
         case SEEK_SET:
-            data->offset = offset;
         case SEEK_CUR:
-            data->offset += offset;
+            data->offset = offset;
+            break;
         case SEEK_END:
             data->offset = ftello(data->file);
+            break;
         default:
             // Should never get here
             assert(false);
         }
     }
+
+    return ret;
 }
 
 
