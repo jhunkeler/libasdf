@@ -35,7 +35,7 @@ typedef struct asdf_stream {
 
     const uint8_t *(*next)(struct asdf_stream *stream, size_t *avail);
     void (*consume)(struct asdf_stream *stream, size_t count);
-    const char *(*readline)(struct asdf_stream *stream, size_t *len);
+    const uint8_t *(*readline)(struct asdf_stream *stream, size_t *len);
     int (*scan)(struct asdf_stream *stream, const uint8_t **tokens, const size_t *token_lens,
                 size_t n_tokens, size_t *match_offset, size_t *match_token_idx);
     int (*seek)(struct asdf_stream *stream, off_t offset, int whence);
@@ -85,7 +85,7 @@ static inline void asdf_stream_consume(asdf_stream_t *stream, size_t count) {
 }
 
 
-static inline const char *asdf_stream_readline(asdf_stream_t *stream, size_t *len) {
+static inline const uint8_t *asdf_stream_readline(asdf_stream_t *stream, size_t *len) {
     return stream->readline(stream, len);
 }
 

@@ -157,9 +157,6 @@ void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event) {
     switch (event->type) {
     case ASDF_TREE_START_EVENT:
     case ASDF_TREE_END_EVENT:
-        if (event->payload.tree)
-            free(event->payload.tree->buf);
-
         free(event->payload.tree);
         break;
     case ASDF_YAML_EVENT:

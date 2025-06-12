@@ -130,7 +130,7 @@ static void file_consume(asdf_stream_t *stream, size_t count) {
 // The file-based readline only returns lines up to the file buffer size
 // Anything longer than that is truncated, though it still advances the file
 // to the end of the line (or EOF)
-const char *file_readline(asdf_stream_t *stream, size_t *len) {
+const uint8_t *file_readline(asdf_stream_t *stream, size_t *len) {
     file_userdata_t *data = stream->userdata;
 
     size_t avail = 0;
@@ -145,7 +145,7 @@ const char *file_readline(asdf_stream_t *stream, size_t *len) {
         if (buf[idx] == '\n') {
             *len = idx + 1;
             file_consume(stream, idx + 1);
-            return (const char *)buf;
+            return buf;
         }
     }
 
@@ -160,7 +160,7 @@ const char *file_readline(asdf_stream_t *stream, size_t *len) {
     }
 
     *len = avail;
-    return (const char *)buf;
+    return buf;
 }
 
 
@@ -371,7 +371,7 @@ static void mem_consume(asdf_stream_t *stream, size_t n) {
 }
 
 
-static const char *mem_readline(asdf_stream_t *stream, size_t *len) {
+static const uint8_t *mem_readline(asdf_stream_t *stream, size_t *len) {
     mem_userdata_t *data = stream->userdata;
     const uint8_t *buf = data->buf + data->pos;
     size_t remaining = data->size - data->pos;
@@ -382,13 +382,13 @@ static const char *mem_readline(asdf_stream_t *stream, size_t *len) {
 
         data->pos += idx + 1;
         *len = idx + 1;
-        return (const char *)buf;
+        return buf;
     }
 
     if (remaining > 0) {
         *len = remaining;
         data->pos = data->size;
-        return (const char *)buf;
+        return buf;
     }
 
     *len = 0;
