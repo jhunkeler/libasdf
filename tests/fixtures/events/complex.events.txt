@@ -1,0 +1,297 @@
+Event: ASDF_ASDF_VERSION_EVENT
+  ASDF Version: 1.0.0
+Event: ASDF_STANDARD_VERSION_EVENT
+  Standard Version: 1.6.0
+Event: ASDF_TREE_START_EVENT
+  Tree start position: 33 (0x21)
+Event: ASDF_YAML_EVENT
+  Type: +STR
+Event: ASDF_YAML_EVENT
+  Type: +DOC
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/asdf-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf_library
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/software-1.0.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: author
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: The ASDF Developers
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: homepage
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: http://github.com/asdf-format/asdf
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: name
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: version
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 4.1.0
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: history
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: extensions
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/extension_metadata-1.0.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: extension_class
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf.extension._manifest.ManifestExtension
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: extension_uri
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf://asdf-format.org/core/extensions/core-1.6.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: manifest_software
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/software-1.0.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: name
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf_standard
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: version
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 1.1.1
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: software
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/software-1.0.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: name
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: version
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 4.1.0
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype<c16
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 3
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: complex128
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: little
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 100
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype<c8
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 1
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: complex64
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: little
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 100
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype>c16
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 2
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: complex128
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: big
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 100
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype>c8
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: complex64
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: big
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 100
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: -DOC
+Event: ASDF_YAML_EVENT
+  Type: -STR
+Event: ASDF_TREE_END_EVENT
+  Tree end position: 981 (0x3d5)
+Event: ASDF_BLOCK_EVENT
+  Header position: 981 (0x3d5)
+  Data position: 1035 (0x40b)
+  Allocated size: 800 (0x320)
+  Used size: 800 (0x320)
+  Data size: 800 (0x320)
+  Checksum: f96bc50e58105b346d523aa51d5bcd37
+Event: ASDF_BLOCK_EVENT
+  Header position: 1835 (0x72b)
+  Data position: 1889 (0x761)
+  Allocated size: 800 (0x320)
+  Used size: 800 (0x320)
+  Data size: 800 (0x320)
+  Checksum: 5bc6dac55f054140789f3422233caf10
+Event: ASDF_BLOCK_EVENT
+  Header position: 2689 (0xa81)
+  Data position: 2743 (0xab7)
+  Allocated size: 1600 (0x640)
+  Used size: 1600 (0x640)
+  Data size: 1600 (0x640)
+  Checksum: b7900be9a758160d095ebdb60385ce04
+Event: ASDF_BLOCK_EVENT
+  Header position: 4343 (0x10f7)
+  Data position: 4397 (0x112d)
+  Allocated size: 1600 (0x640)
+  Used size: 1600 (0x640)
+  Data size: 1600 (0x640)
+  Checksum: d96e53623263f4bc55862072c4e3aaa9
+Event: ASDF_END_EVENT

@@ -1,0 +1,641 @@
+Event: ASDF_ASDF_VERSION_EVENT
+  ASDF Version: 1.0.0
+Event: ASDF_STANDARD_VERSION_EVENT
+  Standard Version: 1.6.0
+Event: ASDF_TREE_START_EVENT
+  Tree start position: 33 (0x21)
+Event: ASDF_YAML_EVENT
+  Type: +STR
+Event: ASDF_YAML_EVENT
+  Type: +DOC
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/asdf-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf_library
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/software-1.0.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: author
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: The ASDF Developers
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: homepage
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: http://github.com/asdf-format/asdf
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: name
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: version
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 4.1.0
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: history
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: extensions
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/extension_metadata-1.0.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: extension_class
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf.extension._manifest.ManifestExtension
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: extension_uri
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf://asdf-format.org/core/extensions/core-1.6.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: manifest_software
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/software-1.0.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: name
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf_standard
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: version
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 1.1.1
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: software
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/software-1.0.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: name
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: asdf
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: version
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 4.1.0
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype<i1
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 2
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: int8
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: big
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 3
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype<i2
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 6
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: int16
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: little
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 3
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype<i4
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 10
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: int32
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: little
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 3
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype<u1
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 3
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: uint8
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: big
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 2
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype<u2
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 7
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: uint16
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: little
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 2
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype<u4
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 11
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: uint32
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: little
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 2
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype>i1
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: int8
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: big
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 3
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype>i2
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 4
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: int16
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: big
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 3
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype>i4
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 8
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: int32
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: big
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 3
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype>u1
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 1
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: uint8
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: big
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 2
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype>u2
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 5
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: uint16
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: big
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 2
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype>u4
+Event: ASDF_YAML_EVENT
+  Type: +MAP
+  Tag: tag:stsci.edu:asdf/core/ndarray-1.1.0
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: source
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 9
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: datatype
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: uint32
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: byteorder
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: big
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: shape
+Event: ASDF_YAML_EVENT
+  Type: +SEQ
+Event: ASDF_YAML_EVENT
+  Type: =VAL
+  Value: 2
+Event: ASDF_YAML_EVENT
+  Type: -SEQ
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: -MAP
+Event: ASDF_YAML_EVENT
+  Type: -DOC
+Event: ASDF_YAML_EVENT
+  Type: -STR
+Event: ASDF_TREE_END_EVENT
+  Tree end position: 1707 (0x6ab)
+Event: ASDF_BLOCK_EVENT
+  Header position: 1707 (0x6ab)
+  Data position: 1761 (0x6e1)
+  Allocated size: 3 (0x3)
+  Used size: 3 (0x3)
+  Data size: 3 (0x3)
+  Checksum: 7ae47475d41f93ea034f49f82ba74e55
+Event: ASDF_BLOCK_EVENT
+  Header position: 1764 (0x6e4)
+  Data position: 1818 (0x71a)
+  Allocated size: 2 (0x2)
+  Used size: 2 (0x2)
+  Data size: 2 (0x2)
+  Checksum: e0e8bfafbb0689563b2fba789c97b3cc
+Event: ASDF_BLOCK_EVENT
+  Header position: 1820 (0x71c)
+  Data position: 1874 (0x752)
+  Allocated size: 3 (0x3)
+  Used size: 3 (0x3)
+  Data size: 3 (0x3)
+  Checksum: 7ae47475d41f93ea034f49f82ba74e55
+Event: ASDF_BLOCK_EVENT
+  Header position: 1877 (0x755)
+  Data position: 1931 (0x78b)
+  Allocated size: 2 (0x2)
+  Used size: 2 (0x2)
+  Data size: 2 (0x2)
+  Checksum: e0e8bfafbb0689563b2fba789c97b3cc
+Event: ASDF_BLOCK_EVENT
+  Header position: 1933 (0x78d)
+  Data position: 1987 (0x7c3)
+  Allocated size: 6 (0x6)
+  Used size: 6 (0x6)
+  Data size: 6 (0x6)
+  Checksum: 116562b562d22d1ad1f352aa5f85f066
+Event: ASDF_BLOCK_EVENT
+  Header position: 1993 (0x7c9)
+  Data position: 2047 (0x7ff)
+  Allocated size: 4 (0x4)
+  Used size: 4 (0x4)
+  Data size: 4 (0x4)
+  Checksum: 5d5ebe7707f02dec747fd0d111d0f83c
+Event: ASDF_BLOCK_EVENT
+  Header position: 2051 (0x803)
+  Data position: 2105 (0x839)
+  Allocated size: 6 (0x6)
+  Used size: 6 (0x6)
+  Data size: 6 (0x6)
+  Checksum: f8108f71c9adcbf2d39c72045d5b7332
+Event: ASDF_BLOCK_EVENT
+  Header position: 2111 (0x83f)
+  Data position: 2165 (0x875)
+  Allocated size: 4 (0x4)
+  Used size: 4 (0x4)
+  Data size: 4 (0x4)
+  Checksum: 5d5ebe7707f02dec747fd0d111d0f83c
+Event: ASDF_BLOCK_EVENT
+  Header position: 2169 (0x879)
+  Data position: 2223 (0x8af)
+  Allocated size: 12 (0xc)
+  Used size: 12 (0xc)
+  Data size: 12 (0xc)
+  Checksum: a08efdf249207fca5200346afdccdd7f
+Event: ASDF_BLOCK_EVENT
+  Header position: 2235 (0x8bb)
+  Data position: 2289 (0x8f1)
+  Allocated size: 8 (0x8)
+  Used size: 8 (0x8)
+  Data size: 8 (0x8)
+  Checksum: 14f9c4ad952bff03b2eb8fa9fb3aae76
+Event: ASDF_BLOCK_EVENT
+  Header position: 2297 (0x8f9)
+  Data position: 2351 (0x92f)
+  Allocated size: 12 (0xc)
+  Used size: 12 (0xc)
+  Data size: 12 (0xc)
+  Checksum: d2926b9ff11d5328695afb4aa7a33cab
+Event: ASDF_BLOCK_EVENT
+  Header position: 2363 (0x93b)
+  Data position: 2417 (0x971)
+  Allocated size: 8 (0x8)
+  Used size: 8 (0x8)
+  Data size: 8 (0x8)
+  Checksum: 14f9c4ad952bff03b2eb8fa9fb3aae76
+Event: ASDF_END_EVENT
