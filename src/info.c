@@ -500,6 +500,14 @@ int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
         }
     }
 
+    if (asdf_parser_has_error(&parser)) {
+        const char *error = asdf_parser_get_error(&parser);
+        // TODO: (#5) Better error formatting / probably go through logging system
+        fprintf(stderr, "error: %s\n", error);
+        asdf_parser_destroy(&parser);
+        return 1;
+    }
+
     asdf_parser_destroy(&parser);
     return 0;
 }
