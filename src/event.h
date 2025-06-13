@@ -37,7 +37,7 @@ typedef enum {
 } asdf_event_type_t;
 
 
-static const char *const ASDF_EVENT_TYPE_NAMES[] = {
+static const char *const asdf_event_type_names[] = {
 #define X(name) #name,
     ASDF_EVENT_TYPES(X)
 #undef X

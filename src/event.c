@@ -60,7 +60,7 @@ int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event) {
 
 const char *asdf_event_type_name(asdf_event_type_t event_type) {
     if (event_type >= 0 && event_type < ASDF_EVENT_TYPE_COUNT)
-        return ASDF_EVENT_TYPE_NAMES[event_type];
+        return asdf_event_type_names[event_type];
 
     return "ASDF_UNKNOWN_EVENT";
 }

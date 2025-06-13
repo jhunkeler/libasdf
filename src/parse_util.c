@@ -9,13 +9,13 @@ const char *asdf_standard_comment = "#ASDF_STANDARD ";
 const char *asdf_version_comment = "#ASDF ";
 
 
-#define _ASDF_YAML_DIRECTIVE_PREFIX "%YAML "
-#define _ASDF_YAML_DOCUMENT_END_MARKER "\n..."
+#define ASDF_YAML_DIRECTIVE_PREFIX "%YAML "
+#define ASDF_YAML_DOCUMENT_END_MARKER "\n..."
 
 
-const char *ASDF_YAML_DIRECTIVE_PREFIX = _ASDF_YAML_DIRECTIVE_PREFIX;
-const char *ASDF_YAML_DIRECTIVE = "%YAML 1.1";
-const char *ASDF_YAML_DOCUMENT_END_MARKER = _ASDF_YAML_DOCUMENT_END_MARKER;
+const char *asdf_yaml_directive_prefix = ASDF_YAML_DIRECTIVE_PREFIX;
+const char *asdf_yaml_directive = "%YAML 1.1";
+const char *asdf_yaml_document_end_marker = ASDF_YAML_DOCUMENT_END_MARKER;
 
 
 #define TOKEN(t) ((const uint8_t *)(t))
@@ -23,10 +23,10 @@ const char *ASDF_YAML_DOCUMENT_END_MARKER = _ASDF_YAML_DOCUMENT_END_MARKER;
 
 const asdf_parse_token_t asdf_parse_tokens[] = {
     [ASDF_YAML_DIRECTIVE_TOK] =
-        {TOKEN(_ASDF_YAML_DIRECTIVE_PREFIX), ASDF_YAML_DIRECTIVE_PREFIX_SIZE},
+        {TOKEN(ASDF_YAML_DIRECTIVE_PREFIX), ASDF_YAML_DIRECTIVE_PREFIX_SIZE},
     [ASDF_YAML_DOCUMENT_END_TOK] =
-        {TOKEN(_ASDF_YAML_DOCUMENT_END_MARKER), ASDF_YAML_DOCUMENT_END_MARKER_SIZE},
-    [ASDF_BLOCK_MAGIC_TOK] = {ASDF_BLOCK_MAGIC, ASDF_BLOCK_MAGIC_SIZE}};
+        {TOKEN(ASDF_YAML_DOCUMENT_END_MARKER), ASDF_YAML_DOCUMENT_END_MARKER_SIZE},
+    [ASDF_BLOCK_MAGIC_TOK] = {asdf_block_magic, ASDF_BLOCK_MAGIC_SIZE}};
 
 
 static const char *const parser_error_messages[] = {

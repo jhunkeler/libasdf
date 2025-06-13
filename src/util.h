@@ -22,6 +22,13 @@
 #endif
 
 
+#if defined(__GNUC__) || defined(__clang__)
+#define UNUSED(x) x __attribute__((unused))
+#else
+#define UNUSED(x) (void)(x)
+#endif
+
+
 #define FIELD_SIZEOF(t, f) (sizeof(((t*)0)->f))
 
 

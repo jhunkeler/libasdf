@@ -29,7 +29,7 @@
 #define ASDF_BLOCK_CHECKSUM_OFFSET 32
 
 
-extern const unsigned char ASDF_BLOCK_MAGIC[];
+extern const unsigned char asdf_block_magic[];
 
 
 typedef struct asdf_block_header {
@@ -76,5 +76,5 @@ static inline bool is_block_magic(const char *buf, size_t len) {
     if (len < ASDF_BLOCK_MAGIC_SIZE)
         return false;
 
-    return memcmp(buf, ASDF_BLOCK_MAGIC, (size_t)ASDF_BLOCK_MAGIC_SIZE) == 0;
+    return memcmp(buf, asdf_block_magic, (size_t)ASDF_BLOCK_MAGIC_SIZE) == 0;
 }

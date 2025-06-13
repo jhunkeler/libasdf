@@ -61,6 +61,7 @@ typedef enum {
 } asdf_parser_error_code_t;
 
 
+// NOLINTNEXTLINE(readability-identifier-naming)
 #define _ASDF_PARSER_OPTS(X) \
     X(ASDF_PARSER_OPT_EMIT_YAML_EVENTS, 0) \
     X(ASDF_PARSER_OPT_BUFFER_TREE, 1)
@@ -68,13 +69,14 @@ typedef enum {
 
 typedef enum {
 // clang-format off
-#define X(flag, bit) flag = (1UL << bit),
+#define X(flag, bit) flag = (1UL << (bit)),
     _ASDF_PARSER_OPTS(X)
 #undef X
     // clang-format on
 } asdf_parser_opt_t;
 
 
+// NOLINTNEXTLINE(readability-magic-numbers)
 _Static_assert(ASDF_PARSER_OPT_BUFFER_TREE < (1UL << 63), "too many flags for 64-bit int");
 
 

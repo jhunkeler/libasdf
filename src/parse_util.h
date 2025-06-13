@@ -21,14 +21,14 @@ extern ASDF_LOCAL const char *asdf_version_comment;
 /**
  * The "%YAML 1.1\n" directive specifically expected for valid ASDF
  */
-extern ASDF_LOCAL const char *ASDF_YAML_DIRECTIVE;
+extern ASDF_LOCAL const char *asdf_yaml_directive;
 #define ASDF_YAML_DIRECTIVE_SIZE 9
 
 
 /**
  * The string "%YAML " indicating start of an arbitrary YAML directive
  */
-extern ASDF_LOCAL const char *ASDF_YAML_DIRECTIVE_PREFIX;
+extern ASDF_LOCAL const char *asdf_yaml_directive_prefix;
 #define ASDF_YAML_DIRECTIVE_PREFIX_SIZE 6
 
 
@@ -38,7 +38,7 @@ extern ASDF_LOCAL const char *ASDF_YAML_DIRECTIVE_PREFIX;
  * since it could be either \r\n or just \n so we check for that explicitly once
  * this token is found
  */
-extern ASDF_LOCAL const char *ASDF_YAML_DOCUMENT_END_MARKER;
+extern ASDF_LOCAL const char *asdf_yaml_document_end_marker;
 #define ASDF_YAML_DOCUMENT_END_MARKER_SIZE 4
 
 
@@ -86,7 +86,7 @@ static inline bool is_yaml_1_1_directive(const char *buf, size_t len) {
     if (len < ASDF_YAML_DIRECTIVE_SIZE + 1)
         return false;
 
-    if (strncmp(buf, ASDF_YAML_DIRECTIVE, ASDF_YAML_DIRECTIVE_SIZE) != 0)
+    if (strncmp(buf, asdf_yaml_directive, ASDF_YAML_DIRECTIVE_SIZE) != 0)
         return false;
 
     if (buf[ASDF_YAML_DIRECTIVE_SIZE] == '\n' ||
@@ -119,7 +119,10 @@ static inline bool is_yaml_directive(const char *buf, size_t len) {
  */
 static inline bool is_yaml_document_end_marker(const char *buf, size_t len) {
     return (
-        len >= 5 &&
-        strncmp(buf, ASDF_YAML_DOCUMENT_END_MARKER, ASDF_YAML_DOCUMENT_END_MARKER_SIZE) == 0 &&
-        (buf[4] == '\n' || (len >= 6 && buf[4] == '\r' && buf[5] == '\n')));
+        (len >= ASDF_YAML_DOCUMENT_END_MARKER_SIZE + 1) &&
+        strncmp(buf, asdf_yaml_document_end_marker, ASDF_YAML_DOCUMENT_END_MARKER_SIZE) == 0 &&
+        (buf[ASDF_YAML_DOCUMENT_END_MARKER_SIZE] == '\n' ||
+         (len >= ASDF_YAML_DOCUMENT_END_MARKER_SIZE + 2 &&
+          buf[ASDF_YAML_DOCUMENT_END_MARKER_SIZE] == '\r' &&
+          buf[ASDF_YAML_DOCUMENT_END_MARKER_SIZE + 1] == '\n')));
 }

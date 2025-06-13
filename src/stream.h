@@ -60,7 +60,7 @@ static inline const uint8_t *asdf_stream_next(asdf_stream_t *stream, size_t coun
     if (stream->last_next_ptr == r) {
         stream->unconsumed_next_count++;
 
-        if (!stream->unconsumed_next_count > 2) {
+        if (stream->unconsumed_next_count > 2) {
             // It's ok to call next() once (to peek) without consuming, but peeking multiple
             // times at the same position indicates a likely bug
             fprintf(

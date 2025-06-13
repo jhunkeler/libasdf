@@ -449,7 +449,7 @@ void print_block(FILE *file, const asdf_event_t *event, size_t block_idx) {
 }
 
 
-static const asdf_info_cfg_t ASDF_INFO_DEFAULT_CFG = {
+static const asdf_info_cfg_t asdf_info_default_cfg = {
     .filename = NULL, .print_tree = true, .print_blocks = false};
 
 
@@ -457,7 +457,7 @@ int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
     asdf_parser_t parser = {0};
 
     if (!cfg)
-        cfg = &ASDF_INFO_DEFAULT_CFG;
+        cfg = &asdf_info_default_cfg;
 
     // Current implementation needs YAML events unless no-tree
     asdf_parser_cfg_t parser_cfg = {

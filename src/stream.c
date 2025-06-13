@@ -411,7 +411,7 @@ asdf_stream_t *asdf_stream_from_file(const char *filename) {
 /**
  * Memory-backed read handling
  */
-static const uint8_t *mem_next(asdf_stream_t *stream, size_t count, size_t *avail) {
+static const uint8_t *mem_next(asdf_stream_t *stream, UNUSED(size_t count), size_t *avail) {
     assert(stream);
     assert(avail);
     mem_userdata_t *data = stream->userdata;
@@ -443,7 +443,7 @@ static const uint8_t *mem_readline(asdf_stream_t *stream, size_t *len) {
         return NULL;
     }
 
-    for (idx; idx < remaining; idx++) {
+    for (; idx < remaining; idx++) {
         if (buf[idx] == '\n')
             break;
     }
