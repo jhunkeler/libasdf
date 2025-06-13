@@ -28,7 +28,7 @@ MU_TEST(test_file_scan_token_no_match) {
 
     // Assert that asdf_stream_next() returns NULL (we have exhausted the stream scanning)
     size_t avail = 0;
-    const uint8_t *r = asdf_stream_next(stream, &avail);
+    const uint8_t *r = asdf_stream_next(stream, 0, &avail);
     assert_int(avail, ==, 0);
     assert_null(r);
     asdf_stream_close(stream);
@@ -49,7 +49,7 @@ MU_TEST(test_file_scan_token_at_beginning) {
 
     // Assert that asdf_stream_next() returns the position of the matched token
     size_t avail = 0;
-    const uint8_t *r = asdf_stream_next(stream, &avail);
+    const uint8_t *r = asdf_stream_next(stream, 0, &avail);
     assert_int(memcmp(r, "asdf", 4), ==, 0);
     asdf_stream_close(stream);
     return MUNIT_OK;
@@ -69,7 +69,7 @@ MU_TEST(test_file_scan_token_at_end) {
  
     // Assert that asdf_stream_next() returns the position of the matched token
     size_t avail = 0;
-    const uint8_t *r = asdf_stream_next(stream, &avail);
+    const uint8_t *r = asdf_stream_next(stream, 0, &avail);
     assert_int(memcmp(r, "asdf", 4), ==, 0);
     assert_int(avail, ==, 4);
     asdf_stream_close(stream);
@@ -90,7 +90,7 @@ MU_TEST(test_file_scan_token_in_middle) {
  
     // Assert that asdf_stream_next() returns the position of the matched token
     size_t avail = 0;
-    const uint8_t *r = asdf_stream_next(stream, &avail);
+    const uint8_t *r = asdf_stream_next(stream, 0, &avail);
     assert_int(memcmp(r, "asdf", 4), ==, 0);
     assert_int(avail, ==, 18);
     asdf_stream_close(stream);
@@ -118,7 +118,7 @@ MU_TEST(test_file_scan_token_spans_buffers) {
  
         // Assert that asdf_stream_next() returns the position of the matched token
         size_t avail = 0;
-        const uint8_t *r = asdf_stream_next(stream, &avail);
+        const uint8_t *r = asdf_stream_next(stream, 0, &avail);
         assert_int(memcmp(r, "asdf", 4), ==, 0);
         // At first glance this seems wrong, but under the circumstances it's actually
         // right: The buffer will contain buf_size bytes, but the position of the match in

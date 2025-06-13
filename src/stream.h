@@ -33,7 +33,7 @@ typedef struct asdf_stream {
     size_t *capture_size;
     size_t capture_cap;
 
-    const uint8_t *(*next)(struct asdf_stream *stream, size_t *avail);
+    const uint8_t *(*next)(struct asdf_stream *stream, size_t count, size_t *avail);
     void (*consume)(struct asdf_stream *stream, size_t count);
     const uint8_t *(*readline)(struct asdf_stream *stream, size_t *len);
     int (*scan)(struct asdf_stream *stream, const uint8_t **tokens, const size_t *token_lens,
@@ -52,9 +52,9 @@ typedef struct asdf_stream {
 } asdf_stream_t;
 
 
-static inline const uint8_t *asdf_stream_next(asdf_stream_t *stream, size_t *avail) {
+static inline const uint8_t *asdf_stream_next(asdf_stream_t *stream, size_t count, size_t *avail) {
 #if DEBUG
-    const uint8_t *r = stream->next(stream, avail);
+    const uint8_t *r = stream->next(stream, count, avail);
     if (stream->last_next_ptr == r) {
         stream->unconsumed_next_count++;
 
@@ -71,7 +71,7 @@ static inline const uint8_t *asdf_stream_next(asdf_stream_t *stream, size_t *ava
     }
     return r;
 #else
-    return stream->next(stream, avail);
+    return stream->next(stream, count, avail);
 #endif
 }
 

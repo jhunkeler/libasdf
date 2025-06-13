@@ -121,7 +121,7 @@ static parse_result_t parse_comment(asdf_parser_t *parser, asdf_event_t *event) 
     size_t len = 0;
 
     // Peek the stream to see if we have a comment or blank line
-    while ((r = asdf_stream_next(parser->stream, &len))) {
+    while ((r = asdf_stream_next(parser->stream, 1, &len))) {
         if (len == 0) {
             // EOF
             parser->state = ASDF_PARSER_STATE_END;
@@ -182,7 +182,7 @@ static parse_result_t emit_tree_start_event(asdf_parser_t *parser, asdf_event_t 
 static parse_result_t parse_tree_or_block(asdf_parser_t *parser, asdf_event_t *event) {
     size_t len = 0;
 
-    const uint8_t *r = asdf_stream_next(parser->stream, &len);
+    const uint8_t *r = asdf_stream_next(parser->stream, 0, &len);
 
     if (!r || !len) {
         parser->state = ASDF_PARSER_STATE_END;
@@ -279,7 +279,7 @@ static int parse_tree_fast(asdf_parser_t *parser) {
         switch (match_token) {
             case ASDF_YAML_DOCUMENT_END_TOK: {
                 size_t len = 0;
-                const uint8_t *r = asdf_stream_next(parser->stream, &len);
+                const uint8_t *r = asdf_stream_next(parser->stream, 0, &len);
                 if (LIKELY(is_yaml_document_end_marker((const char *)r, len))) {
                     // Read and consume the full line then set the tree end
                     // First chomp the leading newline of the document end marker, then consume
@@ -443,10 +443,9 @@ static parse_result_t parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
 
         size_t tree_size = parser->tree.end - parser->tree.start;
         parser->tree.found = true;
-
-        if (!buffer_tree)
-            // Mark the bytes read by libfyaml as consumed
-            CONSUME_AND_CHECK(parser, tree_size);
+        // Rewind the stream back to the end of the tree, as libfyaml will likely have read
+        // past it for its own internal buffering.
+        asdf_stream_seek(parser->stream, parser->tree.end, SEEK_SET);
     }
 
     return ASDF_PARSE_EVENT;
@@ -455,7 +454,7 @@ static parse_result_t parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
 
 static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     size_t len = 0;
-    const uint8_t *buf = asdf_stream_next(parser->stream, &len);
+    const uint8_t *buf = asdf_stream_next(parser->stream, ASDF_BLOCK_MAGIC_SIZE, &len);
     size_t header_pos = 0;
 
     // Happy path, we are already pointing to the start of a block
@@ -495,7 +494,7 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
 
     CONSUME_AND_CHECK(parser, ASDF_BLOCK_MAGIC_SIZE);
 
-    buf = asdf_stream_next(parser->stream, &len);
+    buf = asdf_stream_next(parser->stream, FIELD_SIZEOF(asdf_block_header_t, header_size), &len);
 
     if (!buf) {
         asdf_parser_set_static_error(parser, "Failed to seek past block magic");
@@ -516,7 +515,7 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     }
 
     CONSUME_AND_CHECK(parser, FIELD_SIZEOF(asdf_block_header_t, header_size));
-    buf = asdf_stream_next(parser->stream, &len);
+    buf = asdf_stream_next(parser->stream, header->header_size, &len);
 
     if (len < header->header_size) {
         asdf_parser_set_static_error(parser, "Failed to read full block header");

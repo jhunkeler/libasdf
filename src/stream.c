@@ -92,24 +92,41 @@ void asdf_stream_set_capture(asdf_stream_t *stream, uint8_t **buf, size_t *size,
 /**
  * File-backed read handling
  */
-static const uint8_t *file_next(asdf_stream_t *stream, size_t *avail) {
+static const uint8_t *file_next(asdf_stream_t *stream, size_t count, size_t *avail) {
     assert(stream);
     assert(avail);
     file_userdata_t *data = stream->userdata;
+    size_t buf_remain = data->buf_avail - data->buf_pos;
 
-    if (data->buf_pos >= data->buf_avail) {
-        size_t n = fread(data->buf, 1, data->buf_size, data->file);
-        if (n <= 0) {
+    // Resize buffer if necessary; note if pass a large count request this can
+    // resize effectively unbounded so use with caution
+    if (count > data->buf_size) {
+        uint8_t *new_buf = realloc(data->buf, count);
+        if (!new_buf) {
             *avail = 0;
+            stream->error = ASDF_STREAM_ERR_OOM;
             return NULL;
         }
-        data->buf_avail = n;
-        data->buf_pos = 0;
-        data->offset += n;
+        data->buf = new_buf;
+        data->buf_size = count;
     }
 
-    *avail = data->buf_avail - data->buf_pos;
-    return data->buf + data->buf_pos;
+    // If not enough data available, shift remaining data to start
+    if (buf_remain < count) {
+        memmove(data->buf, data->buf + data->buf_pos, buf_remain);
+        data->buf_avail = buf_remain;
+        data->buf_pos = 0;
+    }
+
+    if (buf_remain < count || data->buf_pos >= data->buf_avail) {
+        size_t n = fread(data->buf + buf_remain, 1, data->buf_size - buf_remain, data->file);
+        data->buf_avail += n;
+        data->offset += n;
+        buf_remain = data->buf_avail - data->buf_pos;
+    }
+
+    *avail = buf_remain;
+    return (buf_remain > 0) ? data->buf + data->buf_pos : NULL;
 }
 
 
@@ -134,7 +151,7 @@ const uint8_t *file_readline(asdf_stream_t *stream, size_t *len) {
     file_userdata_t *data = stream->userdata;
 
     size_t avail = 0;
-    const uint8_t *buf = file_next(stream, &avail);
+    const uint8_t *buf = file_next(stream, 0, &avail);
 
     if (!buf || avail == 0) {
         *len = 0;
@@ -378,7 +395,7 @@ asdf_stream_t *asdf_stream_from_file(const char *filename) {
 /**
  * Memory-backed read handling
  */
-static const uint8_t *mem_next(asdf_stream_t *stream, size_t *avail) {
+static const uint8_t *mem_next(asdf_stream_t *stream, size_t count, size_t *avail) {
     assert(stream);
     assert(avail);
     mem_userdata_t *data = stream->userdata;
