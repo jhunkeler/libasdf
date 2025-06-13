@@ -18,14 +18,15 @@ const char *ASDF_YAML_DIRECTIVE = "%YAML 1.1";
 const char *ASDF_YAML_DOCUMENT_END_MARKER = _ASDF_YAML_DOCUMENT_END_MARKER;
 
 
-#define TOKEN(t) ((const uint8_t*)(t))
+#define TOKEN(t) ((const uint8_t *)(t))
 
 
 const asdf_parse_token_t asdf_parse_tokens[] = {
-    [ASDF_YAML_DIRECTIVE_TOK] = {TOKEN(_ASDF_YAML_DIRECTIVE_PREFIX), ASDF_YAML_DIRECTIVE_PREFIX_SIZE},
-    [ASDF_YAML_DOCUMENT_END_TOK] = {TOKEN(_ASDF_YAML_DOCUMENT_END_MARKER), ASDF_YAML_DOCUMENT_END_MARKER_SIZE},
-    [ASDF_BLOCK_MAGIC_TOK] = {ASDF_BLOCK_MAGIC, ASDF_BLOCK_MAGIC_SIZE}
-};
+    [ASDF_YAML_DIRECTIVE_TOK] =
+        {TOKEN(_ASDF_YAML_DIRECTIVE_PREFIX), ASDF_YAML_DIRECTIVE_PREFIX_SIZE},
+    [ASDF_YAML_DOCUMENT_END_TOK] =
+        {TOKEN(_ASDF_YAML_DOCUMENT_END_MARKER), ASDF_YAML_DOCUMENT_END_MARKER_SIZE},
+    [ASDF_BLOCK_MAGIC_TOK] = {ASDF_BLOCK_MAGIC, ASDF_BLOCK_MAGIC_SIZE}};
 
 
 static const char *const parser_error_messages[] = {
@@ -49,8 +50,10 @@ static const char *const parser_error_messages[] = {
  * a value of asdf_parse_token_id_t
  */
 int asdf_parser_scan_tokens(
-        asdf_parser_t *parser, const asdf_parse_token_id_t *token_ids, size_t *match_offset,
-        asdf_parse_token_id_t *match_token) {
+    asdf_parser_t *parser,
+    const asdf_parse_token_id_t *token_ids,
+    size_t *match_offset,
+    asdf_parse_token_id_t *match_token) {
     assert(token_ids);
     asdf_parse_token_id_t used_token_ids[ASDF_LAST_TOK];
     asdf_parse_token_t tokens[ASDF_LAST_TOK] = {0};
@@ -74,8 +77,8 @@ int asdf_parser_scan_tokens(
         token_lens[idx] = tokens[idx].tok_len;
     }
 
-    int ret = asdf_stream_scan(parser->stream, token_vals, token_lens, n_tokens, match_offset,
-                               &matched_idx);
+    int ret = asdf_stream_scan(
+        parser->stream, token_vals, token_lens, n_tokens, match_offset, &matched_idx);
     if (0 == ret) {
         *match_token = used_token_ids[matched_idx];
     }
@@ -179,5 +182,3 @@ bool is_generic_yaml_directive(const char *buf, size_t len) {
 
     return *p == '\n';
 }
-
-

@@ -17,8 +17,13 @@
  * NOTE: This is dog**** performance though; spend more time optimizing later, could use SIMD
  */
 int asdf_scan_tokens(
-    const uint8_t *buf, size_t len, const uint8_t **tokens, const size_t *token_lens,
-    size_t n_tokens, size_t *match_offset, size_t *match_token_idx) {
+    const uint8_t *buf,
+    size_t len,
+    const uint8_t **tokens,
+    const size_t *token_lens,
+    size_t n_tokens,
+    size_t *match_offset,
+    size_t *match_token_idx) {
 
     if (!buf || len == 0 || n_tokens == 0)
         return 1;
@@ -181,8 +186,13 @@ const uint8_t *file_readline(asdf_stream_t *stream, size_t *len) {
 }
 
 
-static int file_scan(struct asdf_stream *stream, const uint8_t **tokens, const size_t *token_lens,
-                     size_t n_tokens, size_t *match_offset, size_t *match_token_idx) {
+static int file_scan(
+    struct asdf_stream *stream,
+    const uint8_t **tokens,
+    const size_t *token_lens,
+    size_t n_tokens,
+    size_t *match_offset,
+    size_t *match_token_idx) {
     // File-based scan is a little trickier because tokens could straddle buffered pages of the
     // file, so we maintain a sliding window so that the last (max_token_len - 1) bytes are always
     // available at the beginning of the next read
@@ -204,8 +214,14 @@ static int file_scan(struct asdf_stream *stream, const uint8_t **tokens, const s
         int res = 1;
 
         if (avail >= max_token_len)
-            res = asdf_scan_tokens(data->buf + data->buf_pos, avail, tokens, token_lens, n_tokens,
-                                   &offset, &token_idx);
+            res = asdf_scan_tokens(
+                data->buf + data->buf_pos,
+                avail,
+                tokens,
+                token_lens,
+                n_tokens,
+                &offset,
+                &token_idx);
 
         if (0 == res) {
             if (match_offset)
@@ -322,7 +338,7 @@ static int file_fy_parser_set_input(asdf_stream_t *stream, struct fy_parser *fyp
 }
 
 
-asdf_stream_t *asdf_stream_from_fp(FILE* file, const char *filename) {
+asdf_stream_t *asdf_stream_from_fp(FILE *file, const char *filename) {
     if (!file)
         return NULL;
 
@@ -334,7 +350,7 @@ asdf_stream_t *asdf_stream_from_fp(FILE* file, const char *filename) {
 
     data->file = file;
     data->filename = filename;
-    data->buf_size = BUFSIZ;  // hard-coded for now, could make tuneable later
+    data->buf_size = BUFSIZ; // hard-coded for now, could make tuneable later
     data->buf = malloc(data->buf_size);
 
     if (!data->buf) {
@@ -344,7 +360,7 @@ asdf_stream_t *asdf_stream_from_fp(FILE* file, const char *filename) {
 
     asdf_stream_t *stream = malloc(sizeof(asdf_stream_t));
 
-    if (!stream) { 
+    if (!stream) {
         free(data->buf);
         free(data);
         return NULL;
@@ -438,15 +454,20 @@ static const uint8_t *mem_readline(asdf_stream_t *stream, size_t *len) {
 }
 
 
-static int mem_scan(struct asdf_stream *stream, const uint8_t **tokens, const size_t *token_lens,
-                    size_t n_tokens, size_t *match_offset, size_t *match_token_idx) {
+static int mem_scan(
+    struct asdf_stream *stream,
+    const uint8_t **tokens,
+    const size_t *token_lens,
+    size_t n_tokens,
+    size_t *match_offset,
+    size_t *match_token_idx) {
     // The mem_scan case is simple; we only need to wrap asdf_scan_tokens
     mem_userdata_t *data = stream->userdata;
     size_t offset = 0;
     size_t token_idx = 0;
     size_t avail = data->size - data->pos;
-    int res = asdf_scan_tokens(data->buf + data->pos, avail, tokens, token_lens, n_tokens,
-                               &offset, &token_idx);
+    int res = asdf_scan_tokens(
+        data->buf + data->pos, avail, tokens, token_lens, n_tokens, &offset, &token_idx);
 
     if (0 == res) {
         if (match_offset)

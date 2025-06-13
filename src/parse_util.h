@@ -64,7 +64,9 @@ extern ASDF_LOCAL const asdf_parse_token_t asdf_parse_tokens[];
 
 /* Internal parse helper functions */
 ASDF_LOCAL int asdf_parser_scan_tokens(
-    asdf_parser_t *parser, const asdf_parse_token_id_t *token_ids, size_t *match_offset,
+    asdf_parser_t *parser,
+    const asdf_parse_token_id_t *token_ids,
+    size_t *match_offset,
     asdf_parse_token_id_t *match_token);
 
 
@@ -87,9 +89,9 @@ static inline bool is_yaml_1_1_directive(const char *buf, size_t len) {
     if (strncmp(buf, ASDF_YAML_DIRECTIVE, ASDF_YAML_DIRECTIVE_SIZE) != 0)
         return false;
 
-    if (buf[ASDF_YAML_DIRECTIVE_SIZE] == '\n'
-        || (buf[ASDF_YAML_DIRECTIVE_SIZE] == '\r'
-        && len >= ASDF_YAML_DIRECTIVE_SIZE + 2 && buf[ASDF_YAML_DIRECTIVE_SIZE + 1] == '\n'))
+    if (buf[ASDF_YAML_DIRECTIVE_SIZE] == '\n' ||
+        (buf[ASDF_YAML_DIRECTIVE_SIZE] == '\r' && len >= ASDF_YAML_DIRECTIVE_SIZE + 2 &&
+         buf[ASDF_YAML_DIRECTIVE_SIZE + 1] == '\n'))
         return true;
 
     return false;
@@ -117,8 +119,7 @@ static inline bool is_yaml_directive(const char *buf, size_t len) {
  */
 static inline bool is_yaml_document_end_marker(const char *buf, size_t len) {
     return (
-        len >= 5
-        && strncmp(buf, ASDF_YAML_DOCUMENT_END_MARKER, ASDF_YAML_DOCUMENT_END_MARKER_SIZE) == 0
-        && (buf[4] == '\n' || (len >= 6 && buf[4] == '\r' && buf[5] == '\n'))
-    );
+        len >= 5 &&
+        strncmp(buf, ASDF_YAML_DOCUMENT_END_MARKER, ASDF_YAML_DOCUMENT_END_MARKER_SIZE) == 0 &&
+        (buf[4] == '\n' || (len >= 6 && buf[4] == '\r' && buf[5] == '\n')));
 }

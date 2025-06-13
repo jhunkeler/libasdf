@@ -5,12 +5,12 @@
 #include <stdlib.h>
 
 #include "block.h"
+#include "compat/endian.h"
 #include "event.h"
 #include "parse.h"
 #include "parse_util.h"
 #include "util.h"
 #include "yaml.h"
-#include "compat/endian.h"
 
 
 typedef enum {
@@ -37,23 +37,25 @@ static int check_stream(asdf_parser_t *parser) {
  * Helper to consume bytes from the stream and immediately check the stream status
  * for any errors.
  */
-#define CONSUME_AND_CHECK(parser, count) do { \
-    asdf_stream_consume(parser->stream, count); \
-    if (UNLIKELY(check_stream(parser) != 0)) { \
-        return ASDF_PARSE_ERROR; \
-    } \
-} while (0);
+#define CONSUME_AND_CHECK(parser, count) \
+    do { \
+        asdf_stream_consume(parser->stream, count); \
+        if (UNLIKELY(check_stream(parser) != 0)) { \
+            return ASDF_PARSE_ERROR; \
+        } \
+    } while (0);
 
 
 /**
  * Like CONSUME_AND_CHECK but returns 1 in case of error instead of ASDF_PARSER_ERROR;
  */
-#define CONSUME_AND_CHECK_INT(parser, count) do { \
-    asdf_stream_consume(parser->stream, count); \
-    if (UNLIKELY(check_stream(parser) != 0)) { \
-        return 1; \
-    } \
-} while (0);
+#define CONSUME_AND_CHECK_INT(parser, count) \
+    do { \
+        asdf_stream_consume(parser->stream, count); \
+        if (UNLIKELY(check_stream(parser) != 0)) { \
+            return 1; \
+        } \
+    } while (0);
 
 
 static int parse_version_comment(
@@ -102,7 +104,8 @@ static parse_result_t parse_asdf_version(asdf_parser_t *parser, asdf_event_t *ev
 
 
 static parse_result_t parse_standard_version(asdf_parser_t *parser, asdf_event_t *event) {
-    if (parse_version_comment(parser,
+    if (parse_version_comment(
+            parser,
             asdf_standard_comment,
             parser->standard_version,
             ASDF_STANDARD_VERSION_BUFFER_SIZE) != 0)
@@ -277,34 +280,34 @@ static int parse_tree_fast(asdf_parser_t *parser) {
     while (0 == asdf_parser_scan_tokens(parser, tokens, &match_offset, &match_token)) {
         // We got a match for either a document end marker or a block magic
         switch (match_token) {
-            case ASDF_YAML_DOCUMENT_END_TOK: {
-                size_t len = 0;
-                const uint8_t *r = asdf_stream_next(parser->stream, 0, &len);
-                if (LIKELY(is_yaml_document_end_marker((const char *)r, len))) {
-                    // Read and consume the full line then set the tree end
-                    // First chomp the leading newline of the document end marker, then consume
-                    // the line of the marker itself.
-                    CONSUME_AND_CHECK_INT(parser, 1);
-                    asdf_stream_readline(parser->stream, &len);
-                    tree_end = asdf_stream_tell(parser->stream);
-                    tree_end_found = true;
-                    break;
-                } else {
-                    // Looked like a document end marker but unexpected trailing bytes
-                    // instead of a newline; keep parsing
-                    continue;
-                }
-                break;
-            }
-            case ASDF_BLOCK_MAGIC_TOK:
-                // Unexpectedly found a block magic before the document end marker
+        case ASDF_YAML_DOCUMENT_END_TOK: {
+            size_t len = 0;
+            const uint8_t *r = asdf_stream_next(parser->stream, 0, &len);
+            if (LIKELY(is_yaml_document_end_marker((const char *)r, len))) {
+                // Read and consume the full line then set the tree end
+                // First chomp the leading newline of the document end marker, then consume
+                // the line of the marker itself.
+                CONSUME_AND_CHECK_INT(parser, 1);
+                asdf_stream_readline(parser->stream, &len);
                 tree_end = asdf_stream_tell(parser->stream);
                 tree_end_found = true;
                 break;
-            default:
-                /* should happen */
-                asdf_parser_set_common_error(parser, ASDF_ERR_UNKNOWN_STATE);
-                return 1;
+            } else {
+                // Looked like a document end marker but unexpected trailing bytes
+                // instead of a newline; keep parsing
+                continue;
+            }
+            break;
+        }
+        case ASDF_BLOCK_MAGIC_TOK:
+            // Unexpectedly found a block magic before the document end marker
+            tree_end = asdf_stream_tell(parser->stream);
+            tree_end_found = true;
+            break;
+        default:
+            /* should happen */
+            asdf_parser_set_common_error(parser, ASDF_ERR_UNKNOWN_STATE);
+            return 1;
         }
 
         if (tree_end_found)
@@ -333,8 +336,8 @@ static int initialize_yaml_parser(asdf_parser_t *parser) {
     int ret = 0;
 
     if (buffer_tree) {
-        ret = fy_parser_set_string(parser->yaml_parser, (const char *)parser->tree.buf,
-                                   parser->tree.size);
+        ret = fy_parser_set_string(
+            parser->yaml_parser, (const char *)parser->tree.buf, parser->tree.size);
     } else {
         ret = parser->stream->fy_parser_set_input(parser->stream, parser->yaml_parser);
     }
@@ -370,8 +373,11 @@ static parse_result_t parse_tree(asdf_parser_t *parser, asdf_event_t *event) {
             return ASDF_PARSE_ERROR;
         }
         parser->tree.size = 0;
-        asdf_stream_set_capture(parser->stream, &parser->tree.buf, &parser->tree.size,
-                                ASDF_PARSER_READ_BUFFER_INIT_SIZE);
+        asdf_stream_set_capture(
+            parser->stream,
+            &parser->tree.buf,
+            &parser->tree.size,
+            ASDF_PARSER_READ_BUFFER_INIT_SIZE);
     }
 
     if (buffer_tree || !emit_yaml_events) {
@@ -526,7 +532,8 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     uint32_t flags =
         // NOLINTNEXTLINE(readability-magic-numbers)
         (((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | buf[3]);
-    strncpy(header->compression,
+    strncpy(
+        header->compression,
         (char *)buf + ASDF_BLOCK_COMPRESSION_OFFSET,
         sizeof(header->compression));
 
@@ -562,7 +569,7 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     // TODO: Fix this: asdf_stream_seek doesn't mark the current buffer as consumed.
     // In fact seek doesn't really make sense with the next()/consume() semantics so it should
     // probably be deleted.
-    //CONSUME_AND_CHECK(parser, header->allocated_size);
+    // CONSUME_AND_CHECK(parser, header->allocated_size);
     parser->found_blocks += 1;
     event->type = ASDF_BLOCK_EVENT;
     event->payload.block = block;

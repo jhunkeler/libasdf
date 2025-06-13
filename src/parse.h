@@ -71,7 +71,7 @@ typedef enum {
 #define X(flag, bit) flag = (1UL << bit),
     _ASDF_PARSER_OPTS(X)
 #undef X
-// clang-format on
+    // clang-format on
 } asdf_parser_opt_t;
 
 

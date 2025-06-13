@@ -7,18 +7,15 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <unistd.h>
 #include <sys/types.h>
+#include <unistd.h>
 
 #include <libfyaml.h>
 
 #include "util.h"
 
 
-typedef enum {
-    ASDF_STREAM_OK = 0,
-    ASDF_STREAM_ERR_OOM
-} asdf_stream_error_t;
+typedef enum { ASDF_STREAM_OK = 0, ASDF_STREAM_ERR_OOM } asdf_stream_error_t;
 
 
 // TODO: Document this once things shake out
@@ -36,8 +33,13 @@ typedef struct asdf_stream {
     const uint8_t *(*next)(struct asdf_stream *stream, size_t count, size_t *avail);
     void (*consume)(struct asdf_stream *stream, size_t count);
     const uint8_t *(*readline)(struct asdf_stream *stream, size_t *len);
-    int (*scan)(struct asdf_stream *stream, const uint8_t **tokens, const size_t *token_lens,
-                size_t n_tokens, size_t *match_offset, size_t *match_token_idx);
+    int (*scan)(
+        struct asdf_stream *stream,
+        const uint8_t **tokens,
+        const size_t *token_lens,
+        size_t n_tokens,
+        size_t *match_offset,
+        size_t *match_token_idx);
     int (*seek)(struct asdf_stream *stream, off_t offset, int whence);
     off_t (*tell)(struct asdf_stream *stream);
     void (*close)(struct asdf_stream *stream);
@@ -61,8 +63,12 @@ static inline const uint8_t *asdf_stream_next(asdf_stream_t *stream, size_t coun
         if (!stream->unconsumed_next_count > 2) {
             // It's ok to call next() once (to peek) without consuming, but peeking multiple
             // times at the same position indicates a likely bug
-            fprintf(stderr, "warning: calling stream->next() without consuming previous buffer"
-                    "(%zu bytes at %p)\n", stream->last_next_size, stream->last_next_ptr);
+            fprintf(
+                stderr,
+                "warning: calling stream->next() without consuming previous buffer"
+                "(%zu bytes at %p)\n",
+                stream->last_next_size,
+                stream->last_next_ptr);
         }
     } else {
         stream->unconsumed_next_count = 1;
@@ -90,9 +96,13 @@ static inline const uint8_t *asdf_stream_readline(asdf_stream_t *stream, size_t 
 }
 
 
-static inline int asdf_stream_scan(asdf_stream_t *stream, const uint8_t **tokens,
-                                   const size_t *token_lens, size_t n_tokens, size_t *match_offset,
-                                   size_t *match_token_idx) {
+static inline int asdf_stream_scan(
+    asdf_stream_t *stream,
+    const uint8_t **tokens,
+    const size_t *token_lens,
+    size_t n_tokens,
+    size_t *match_offset,
+    size_t *match_token_idx) {
     return stream->scan(stream, tokens, token_lens, n_tokens, match_offset, match_token_idx);
 }
 
@@ -117,12 +127,17 @@ static inline void asdf_stream_close(asdf_stream_t *stream) {
 
 
 ASDF_LOCAL asdf_stream_t *asdf_stream_from_file(const char *filename);
-ASDF_LOCAL asdf_stream_t *asdf_stream_from_fp(FILE* file, const char *filename);
+ASDF_LOCAL asdf_stream_t *asdf_stream_from_fp(FILE *file, const char *filename);
 ASDF_LOCAL asdf_stream_t *asdf_stream_from_memory(const void *buf, size_t size);
 
-ASDF_LOCAL void asdf_stream_set_capture(asdf_stream_t *stream, uint8_t **buf, size_t *size,
-                                        size_t capacity);
+ASDF_LOCAL void asdf_stream_set_capture(
+    asdf_stream_t *stream, uint8_t **buf, size_t *size, size_t capacity);
 
 ASDF_LOCAL int asdf_scan_tokens(
-    const uint8_t *buf, size_t len, const uint8_t **tokens, const size_t *token_lens,
-    size_t n_tokens, size_t *match_offset, size_t *match_token_idx);
+    const uint8_t *buf,
+    size_t len,
+    const uint8_t **tokens,
+    const size_t *token_lens,
+    size_t n_tokens,
+    size_t *match_offset,
+    size_t *match_token_idx);

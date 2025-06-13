@@ -461,8 +461,7 @@ int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
 
     // Current implementation needs YAML events unless no-tree
     asdf_parser_cfg_t parser_cfg = {
-        .flags = cfg->print_tree ? ASDF_PARSER_OPT_EMIT_YAML_EVENTS : 0
-    };
+        .flags = cfg->print_tree ? ASDF_PARSER_OPT_EMIT_YAML_EVENTS : 0};
 
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         return 1;
