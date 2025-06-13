@@ -732,6 +732,8 @@ void asdf_parser_destroy(asdf_parser_t *parser) {
     if (parser->stream)
         parser->stream->close(parser->stream);
 
+    free(parser->tree.buf);
+
     // Leave no trace behind, leaving things clean for accidental
     // API calls on an already destroyed parser
     ZERO_MEMORY(parser, sizeof(asdf_parser_t));
