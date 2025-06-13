@@ -3,6 +3,7 @@
  */
 #include <assert.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -59,7 +60,7 @@ int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event) {
 
 const char *asdf_event_type_name(asdf_event_type_t event_type) {
     if (event_type >= 0 && event_type < ASDF_EVENT_TYPE_COUNT)
-        return ASDF_EVENT_TYPE_NAMES[event_type];
+        return asdf_event_type_names[event_type];
 
     return "ASDF_UNKNOWN_EVENT";
 }
@@ -107,28 +108,51 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
     }
 
     case ASDF_TREE_START_EVENT:
-        fprintf(file, "  Tree start position: %zu (0x%zx)\n", event->payload.tree->start,
-                event->payload.tree->start);
+        fprintf(
+            file,
+            "  Tree start position: %zu (0x%zx)\n",
+            event->payload.tree->start,
+            event->payload.tree->start);
         break;
 
     case ASDF_TREE_END_EVENT:
-        fprintf(file, "  Tree end position: %zu (0x%zx)\n", event->payload.tree->end,
-                event->payload.tree->end);
+        fprintf(
+            file,
+            "  Tree end position: %zu (0x%zx)\n",
+            event->payload.tree->end,
+            event->payload.tree->end);
+        if (event->payload.tree->buf) {
+            size_t tree_size = event->payload.tree->end - event->payload.tree->start - 1;
+            fprintf(
+                file,
+                "%.*s\n",
+                (int)(tree_size > INT_MAX ? INT_MAX : tree_size),
+                event->payload.tree->buf);
+        }
         break;
 
     case ASDF_BLOCK_EVENT: {
         const asdf_block_info_t *block = event->payload.block;
         const asdf_block_header_t header = block->header;
-        fprintf(file, "  Header position: %" PRId64 " (0x%" PRIx64 ")\n",
-                (int64_t)block->header_pos, (int64_t)block->header_pos);
-        fprintf(file, "  Data position: %" PRId64 " (0x%" PRIx64 ")\n",
-                (int64_t)block->data_pos, (int64_t)block->data_pos);
-        fprintf(file, "  Allocated size: %" PRIu64 " (0x%" PRIx64 ")\n",
-                header.allocated_size, header.allocated_size);
-        fprintf(file, "  Used size: %" PRIu64 " (0x%" PRIx64 ")\n", header.used_size,
-                header.used_size);
-        fprintf(file, "  Data size: %" PRIu64 " (0x%" PRIx64 ")\n", header.data_size,
-                header.data_size);
+        fprintf(
+            file,
+            "  Header position: %" PRId64 " (0x%" PRIx64 ")\n",
+            (int64_t)block->header_pos,
+            (int64_t)block->header_pos);
+        fprintf(
+            file,
+            "  Data position: %" PRId64 " (0x%" PRIx64 ")\n",
+            (int64_t)block->data_pos,
+            (int64_t)block->data_pos);
+        fprintf(
+            file,
+            "  Allocated size: %" PRIu64 " (0x%" PRIx64 ")\n",
+            header.allocated_size,
+            header.allocated_size);
+        fprintf(
+            file, "  Used size: %" PRIu64 " (0x%" PRIx64 ")\n", header.used_size, header.used_size);
+        fprintf(
+            file, "  Data size: %" PRIu64 " (0x%" PRIx64 ")\n", header.data_size, header.data_size);
 
         if (header.compression[0] != '\0')
             fprintf(file, "  Compression: %.4s\n", header.compression);
@@ -152,9 +176,6 @@ void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event) {
     switch (event->type) {
     case ASDF_TREE_START_EVENT:
     case ASDF_TREE_END_EVENT:
-        if (event->payload.tree)
-            free(event->payload.tree->buf);
-
         free(event->payload.tree);
         break;
     case ASDF_YAML_EVENT:

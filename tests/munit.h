@@ -8,9 +8,18 @@
 #define MU_TEST(name) MunitResult name(const MunitParameter params[], void *fixture)
 
 
+#define __MU_RUN_TEST_DISPATCH(_1, _2, NAME, ...) NAME
+#define __MU_RUN_TEST_2(name, params) \
+    { "/" #name, name, NULL, NULL, MUNIT_TEST_OPTION_NONE, (params) }
+#define __MU_RUN_TEST_1(name) __MU_RUN_TEST_2(name, NULL)
+
 // Macro to declare tests to run within a test suite
-#define MU_RUN_TEST(name) \
-    { "/" #name, name, NULL, NULL, MUNIT_TEST_OPTION_NONE, NULL }
+#define MU_RUN_TEST(...) \
+    __MU_RUN_TEST_DISPATCH( \
+        __VA_ARGS__, \
+        __MU_RUN_TEST_2, \
+        __MU_RUN_TEST_1, \
+    )(__VA_ARGS__)
 
 
 // Helper to create a null-terminated array of tests from varargs

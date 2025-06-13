@@ -13,6 +13,22 @@
 #endif
 
 
+#if defined(__GNUC__) || defined(__clang__)
+#define LIKELY(x)   __builtin_expect(!!(x), 1)
+#define UNLIKELY(x) __builtin_expect(!!(x), 0)
+#else
+#define LIKELY(x)   (x)
+#define UNLIKELY(x) (x)
+#endif
+
+
+#if defined(__GNUC__) || defined(__clang__)
+#define UNUSED(x) x __attribute__((unused))
+#else
+#define UNUSED(x) (void)(x)
+#endif
+
+
 #define FIELD_SIZEOF(t, f) (sizeof(((t*)0)->f))
 
 

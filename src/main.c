@@ -152,17 +152,21 @@ static char events_args_doc[] = "FILENAME";
 
 
 #define EVENTS_OPT_NO_YAML_KEY 0x100
+#define EVENTS_OPT_CAP_TREE_KEY 0x101
 
 
 static struct argp_option events_options[] = {
     {"verbose", 'v', 0, 0, "Show extra information about each event", 0},
-    {"no-yaml", EVENTS_OPT_NO_YAML_KEY, 0, 0, "Do not produce YAML stream events", 0}, {0}};
+    {"no-yaml", EVENTS_OPT_NO_YAML_KEY, 0, 0, "Do not produce YAML stream events", 0},
+    {"cap-tree", EVENTS_OPT_CAP_TREE_KEY, 0, 0, "Capture the YAML tree and print it (for debugging)", 0},
+    {0}};
 
 
 struct events_args {
     const char *filename;
     bool verbose;
     bool no_yaml;
+    bool cap_tree;
 };
 
 
@@ -173,6 +177,9 @@ static error_t parse_events_opt(int key, char *arg, struct argp_state *state) {
     switch (key) {
     case EVENTS_OPT_NO_YAML_KEY:
         args->no_yaml = true;
+        break;
+    case EVENTS_OPT_CAP_TREE_KEY:
+        args->cap_tree = true;
         break;
     case 'v':
         args->verbose = true;
@@ -198,28 +205,25 @@ static error_t parse_events_opt(int key, char *arg, struct argp_state *state) {
 static struct argp events_argp = {events_options, parse_events_opt, events_args_doc, events_doc};
 
 
-int events_main(const char *filename, bool verbose, bool no_yaml) {
-    FILE *file = fopen(filename, "r");
-
-    if (!file) {
-        perror("error");
-        return EXIT_FAILURE;
-    }
-
+int events_main(const char *filename, bool verbose, bool no_yaml, bool cap_tree) {
     asdf_parser_t parser;
     // Current implementation always outputs YAML events, so this is needed; later update
     // to allow an option to skip YAML events (useful for testing)
-    asdf_parser_cfg_t parser_cfg = {.flags = no_yaml ? 0 : ASDF_PARSER_OPT_EMIT_YAML_EVENTS};
+    asdf_parser_optflags_t flags = no_yaml ? 0 : ASDF_PARSER_OPT_EMIT_YAML_EVENTS;
+
+    if (cap_tree)
+        flags |= ASDF_PARSER_OPT_BUFFER_TREE;
+
+    asdf_parser_cfg_t parser_cfg = {.flags = flags};
 
     if (asdf_parser_init(&parser, &parser_cfg)) {
         fprintf(stderr, "error: %s\n", asdf_parser_get_error(&parser));
-        fclose(file);
         return EXIT_FAILURE;
     }
 
-    if (asdf_parser_set_input_file(&parser, file, filename)) {
+    if (asdf_parser_set_input_file(&parser, filename)) {
         fprintf(stderr, "error: %s\n", asdf_parser_get_error(&parser));
-        fclose(file);
+        asdf_parser_destroy(&parser);
         return EXIT_FAILURE;
     }
 
@@ -233,13 +237,11 @@ int events_main(const char *filename, bool verbose, bool no_yaml) {
         fprintf(stderr, "error: %s\n", asdf_parser_get_error(&parser));
         asdf_event_destroy(&parser, &event);
         asdf_parser_destroy(&parser);
-        fclose(file);
         return EXIT_FAILURE;
     }
 
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
-    fclose(file);
     return EXIT_SUCCESS;
 }
 // end events
@@ -264,7 +266,8 @@ int main(int argc, char *argv[]) {
         argp_parse(
             &events_argp, global_args.subcmd_argc, global_args.subcmd_argv, 0, NULL, &events_args);
 
-        return events_main(events_args.filename, events_args.verbose, events_args.no_yaml);
+        return events_main(events_args.filename, events_args.verbose, events_args.no_yaml,
+                           events_args.cap_tree);
     }
     case ASDF_SUBCMD_NONE:
         break;

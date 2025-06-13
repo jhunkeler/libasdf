@@ -55,7 +55,7 @@ for input in $@; do
   mkdir -p tmp
 
   # Generate actual output
-  ${SRCDIR}/asdf ${SUBCOMMAND} ${EXTRA_ARGS} "$input" > "$actual"
+  ${SRCDIR}/asdf ${SUBCOMMAND} ${EXTRA_ARGS} "$input" 2>&1 > "$actual" || true
 
   if [ "$UPDATE" -eq 1 ]; then
     cp "$actual" "$expected"

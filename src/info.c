@@ -449,7 +449,7 @@ void print_block(FILE *file, const asdf_event_t *event, size_t block_idx) {
 }
 
 
-static const asdf_info_cfg_t ASDF_INFO_DEFAULT_CFG = {
+static const asdf_info_cfg_t asdf_info_default_cfg = {
     .filename = NULL, .print_tree = true, .print_blocks = false};
 
 
@@ -457,17 +457,16 @@ int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
     asdf_parser_t parser = {0};
 
     if (!cfg)
-        cfg = &ASDF_INFO_DEFAULT_CFG;
+        cfg = &asdf_info_default_cfg;
 
     // Current implementation needs YAML events unless no-tree
     asdf_parser_cfg_t parser_cfg = {
-        .flags = cfg->print_tree ? ASDF_PARSER_OPT_EMIT_YAML_EVENTS : 0
-    };
+        .flags = cfg->print_tree ? ASDF_PARSER_OPT_EMIT_YAML_EVENTS : 0};
 
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         return 1;
 
-    if (asdf_parser_set_input_file(&parser, in_file, cfg->filename) != 0) {
+    if (asdf_parser_set_input_fp(&parser, in_file, cfg->filename) != 0) {
         asdf_parser_destroy(&parser);
         return 1;
     }
@@ -498,6 +497,14 @@ int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
         default:
             break;
         }
+    }
+
+    if (asdf_parser_has_error(&parser)) {
+        const char *error = asdf_parser_get_error(&parser);
+        // TODO: (#5) Better error formatting / probably go through logging system
+        fprintf(stderr, "error: %s\n", error);
+        asdf_parser_destroy(&parser);
+        return 1;
     }
 
     asdf_parser_destroy(&parser);

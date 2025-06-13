@@ -4,7 +4,7 @@
 #include "yaml.h"
 
 
-static const asdf_yaml_event_type_t FYET_TO_ASDF_EVENT[] = {
+static const asdf_yaml_event_type_t fyet_to_asdf_event[] = {
     [FYET_STREAM_START] = ASDF_YAML_STREAM_START_EVENT,
     [FYET_STREAM_END] = ASDF_YAML_STREAM_END_EVENT,
     [FYET_DOCUMENT_START] = ASDF_YAML_DOCUMENT_START_EVENT,
@@ -27,10 +27,10 @@ asdf_yaml_event_type_t asdf_yaml_event_type(const asdf_event_t *event) {
         return ASDF_YAML_NONE_EVENT;
 
     enum fy_event_type type = event->payload.yaml->type;
-    if (type < 0 || type >= (int)(sizeof(FYET_TO_ASDF_EVENT) / sizeof(FYET_TO_ASDF_EVENT[0]))) {
+    if (type < 0 || type >= (int)(sizeof(fyet_to_asdf_event) / sizeof(fyet_to_asdf_event[0]))) {
         abort();
     }
-    return FYET_TO_ASDF_EVENT[type];
+    return fyet_to_asdf_event[type];
 }
 
 /**

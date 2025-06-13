@@ -37,7 +37,7 @@ typedef enum {
 } asdf_event_type_t;
 
 
-static const char *const ASDF_EVENT_TYPE_NAMES[] = {
+static const char *const asdf_event_type_names[] = {
 #define X(name) #name,
     ASDF_EVENT_TYPES(X)
 #undef X
@@ -52,8 +52,11 @@ typedef struct {
 typedef struct {
     size_t start;
     size_t end;
-    char *buf;
+    const char *buf;
 } asdf_tree_info_t;
+
+
+typedef struct fy_event asdf_yaml_event_t;
 
 
 typedef struct asdf_event {

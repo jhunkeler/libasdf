@@ -69,9 +69,8 @@
 
 
 MU_TEST(test_asdf_event_basic) {
+    // TODO: Move all of this setup into setup/teardown functions; lots of repetition here
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
-    FILE *file = fopen(filename, "r");
-    assert_not_null(file);
     asdf_parser_t parser = {0};
     asdf_event_t event = {0};
     asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_EMIT_YAML_EVENTS};
@@ -79,8 +78,21 @@ MU_TEST(test_asdf_event_basic) {
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         munit_error("failed to initialize asdf parser");
 
-    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
-        munit_error("failed to set asdf parser file");
+    const char *stream = munit_parameters_get(params, "stream");
+    size_t file_len = 0;
+    char *file_contents = NULL;
+
+    if (0 == strcmp(stream, "file")) {
+        if (asdf_parser_set_input_file(&parser, filename) != 0)
+            munit_error("failed to set asdf parser file");
+    } else if (0 == strcmp(stream, "memory")) {
+        file_contents = read_file(filename, &file_len);
+        assert_not_null(file_contents);
+        if (asdf_parser_set_input_mem(&parser, file_contents, file_len) != 0)
+            munit_error("failed to set asdf parser file");
+    } else {
+        munit_errorf("invalid test parameter for stream: %s", stream);
+    }
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
     assert_string_equal(event.payload.version->version, "1.0.0");
@@ -170,7 +182,9 @@ MU_TEST(test_asdf_event_basic) {
 
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
-    fclose(file);
+
+    // TODO: Add teardown fixtures too
+    free(file_contents);
     return MUNIT_OK;
 }
 
@@ -180,8 +194,6 @@ MU_TEST(test_asdf_event_basic) {
  */
 MU_TEST(test_asdf_event_basic_no_yaml) {
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
-    FILE *file = fopen(filename, "r");
-    assert_not_null(file);
     asdf_parser_t parser = {0};
     asdf_event_t event = {0};
     asdf_parser_cfg_t parser_cfg = {0};
@@ -189,8 +201,21 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         munit_error("failed to initialize asdf parser");
 
-    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
-        munit_error("failed to set asdf parser file");
+    const char *stream = munit_parameters_get(params, "stream");
+    size_t file_len = 0;
+    char *file_contents = NULL;
+
+    if (0 == strcmp(stream, "file")) {
+        if (asdf_parser_set_input_file(&parser, filename) != 0)
+            munit_error("failed to set asdf parser file");
+    } else if (0 == strcmp(stream, "memory")) {
+        file_contents = read_file(filename, &file_len);
+        assert_not_null(file_contents);
+        if (asdf_parser_set_input_mem(&parser, file_contents, file_len) != 0)
+            munit_error("failed to set asdf parser file");
+    } else {
+        munit_errorf("invalid test parameter for stream: %s", stream);
+    }
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
     assert_string_equal(event.payload.version->version, "1.0.0");
@@ -223,7 +248,8 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
 
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
-    fclose(file);
+    // TODO: Add teardown fixtures too
+    free(file_contents);
     return MUNIT_OK;
 }
 
@@ -233,8 +259,6 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
  */
 MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
-    FILE *file = fopen(filename, "r");
-    assert_not_null(file);
     asdf_parser_t parser = {0};
     asdf_event_t event = {0};
     asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_BUFFER_TREE};
@@ -242,8 +266,21 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         munit_error("failed to initialize asdf parser");
 
-    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
-        munit_error("failed to set asdf parser file");
+    const char *stream = munit_parameters_get(params, "stream");
+    size_t file_len = 0;
+    char *file_contents = NULL;
+
+    if (0 == strcmp(stream, "file")) {
+        if (asdf_parser_set_input_file(&parser, filename) != 0)
+            munit_error("failed to set asdf parser file");
+    } else if (0 == strcmp(stream, "memory")) {
+        file_contents = read_file(filename, &file_len);
+        assert_not_null(file_contents);
+        if (asdf_parser_set_input_mem(&parser, file_contents, file_len) != 0)
+            munit_error("failed to set asdf parser file");
+    } else {
+        munit_errorf("invalid test parameter for stream: %s", stream);
+    }
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
@@ -256,9 +293,8 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
     size_t reference_len = 0;
     char *reference_data = tail_file(filename, 2, &reference_len);
     assert_not_null(reference_data);
-    size_t end = event.payload.tree->end - event.payload.tree->start;
-    reference_data[end] = '\0';
-    assert_string_equal(event.payload.tree->buf, reference_data);
+    size_t tree_size = event.payload.tree->end - event.payload.tree->start;
+    assert_memory_equal(tree_size, event.payload.tree->buf, reference_data);
     free(reference_data);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
@@ -278,7 +314,8 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
 
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
-    fclose(file);
+    // TODO: Add teardown fixtures too
+    free(file_contents);
     return MUNIT_OK;
 }
 
@@ -297,8 +334,21 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
     if (asdf_parser_init(&parser, &parser_cfg) != 0)
         munit_error("failed to initialize asdf parser");
 
-    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
-        munit_error("failed to set asdf parser file");
+    const char *stream = munit_parameters_get(params, "stream");
+    size_t file_len = 0;
+    char *file_contents = NULL;
+
+    if (0 == strcmp(stream, "file")) {
+        if (asdf_parser_set_input_file(&parser, filename) != 0)
+            munit_error("failed to set asdf parser file");
+    } else if (0 == strcmp(stream, "memory")) {
+        file_contents = read_file(filename, &file_len);
+        assert_not_null(file_contents);
+        if (asdf_parser_set_input_mem(&parser, file_contents, file_len) != 0)
+            munit_error("failed to set asdf parser file");
+    } else {
+        munit_errorf("invalid test parameter for stream: %s", stream);
+    }
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
@@ -370,9 +420,8 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
     size_t reference_len = 0;
     char *reference_data = tail_file(filename, 2, &reference_len);
     assert_not_null(reference_data);
-    size_t end = event.payload.tree->end - event.payload.tree->start;
-    reference_data[end] = '\0';
-    assert_string_equal(event.payload.tree->buf, reference_data);
+    size_t tree_size = event.payload.tree->end - event.payload.tree->start;
+    assert_memory_equal(tree_size, event.payload.tree->buf, reference_data);
     free(reference_data);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
@@ -392,17 +441,26 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
 
     asdf_event_destroy(&parser, &event);
     asdf_parser_destroy(&parser);
-    fclose(file);
+    // TODO: Add teardown fixtures too
+    free(file_contents);
     return MUNIT_OK;
 }
 
 
+/* Parameterize all tests to work on file and memory buffers */
+static char *stream_params[] = {"file", "memory", NULL};
+static MunitParameterEnum test_params[] = {
+    {"stream", stream_params},
+    {NULL, NULL}
+};
+
+
 MU_TEST_SUITE(
     test_asdf_event,
-    MU_RUN_TEST(test_asdf_event_basic),
-    MU_RUN_TEST(test_asdf_event_basic_no_yaml),
-    MU_RUN_TEST(test_asdf_event_basic_no_yaml_buffer_yaml),
-    MU_RUN_TEST(test_asdf_event_basic_buffer_yaml)
+    MU_RUN_TEST(test_asdf_event_basic, test_params),
+    MU_RUN_TEST(test_asdf_event_basic_no_yaml, test_params),
+    MU_RUN_TEST(test_asdf_event_basic_no_yaml_buffer_yaml, test_params),
+    MU_RUN_TEST(test_asdf_event_basic_buffer_yaml, test_params)
 );
 
 

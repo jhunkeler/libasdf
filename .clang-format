@@ -22,7 +22,7 @@ AllowShortLoopsOnASingleLine: false
 ColumnLimit: 100
 MaxEmptyLinesToKeep: 2
 
-PenaltyReturnTypeOnItsOwnLine: 100
+PenaltyReturnTypeOnItsOwnLine: 10000
 PenaltyBreakBeforeFirstCallParameter: 100
 PenaltyBreakString: 1000
 
@@ -30,7 +30,7 @@ BinPackArguments: false
 BinPackParameters: false
 
 BreakBeforeBraces: Attach
-AlignAfterOpenBracket: DontAlign
+AlignAfterOpenBracket: AlwaysBreak
 AlignEscapedNewlines: DontAlign
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakBeforeMultilineStrings: false

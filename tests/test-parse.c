@@ -19,15 +19,13 @@
  */
 MU_TEST(test_asdf_parse_minimal) {
     const char *filename = get_fixture_file_path("parse-minimal.asdf");
-    FILE *file = fopen(filename, "r");
-    assert_not_null(file);
     asdf_parser_t parser = {0};
     asdf_event_t event = {0};
 
     if (asdf_parser_init(&parser, NULL) != 0)
         munit_error("failed to initialize asdf parser");
 
-    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+    if (asdf_parser_set_input_file(&parser, filename) != 0)
         munit_error("failed to set asdf parser file");
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
@@ -50,15 +48,13 @@ MU_TEST(test_asdf_parse_minimal) {
  */
 MU_TEST(test_asdf_parse_minimal_extra_comment) {
     const char *filename = get_fixture_file_path("parse-minimal-extra-comment.asdf");
-    FILE *file = fopen(filename, "r");
-    assert_not_null(file);
     asdf_parser_t parser = {0};
     asdf_event_t event = {0};
 
     if (asdf_parser_init(&parser, NULL) != 0)
         munit_error("failed to initialize asdf parser");
 
-    if (asdf_parser_set_input_file(&parser, file, filename) != 0)
+    if (asdf_parser_set_input_file(&parser, filename) != 0)
         munit_error("failed to set asdf parser file");
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
