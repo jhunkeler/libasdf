@@ -710,6 +710,21 @@ int asdf_parser_set_input_fp(asdf_parser_t *parser, FILE *file, const char *file
 }
 
 
+int asdf_parser_set_input_mem(asdf_parser_t *parser, const void *buf, size_t size) {
+    assert(parser);
+    parser->stream = asdf_stream_from_memory(buf, size);
+
+    if (!parser->stream) {
+        // TODO: Better error handling for file opening errors
+        // For now just use this generic error
+        asdf_parser_set_common_error(parser, ASDF_ERR_STREAM_INIT_FAILED);
+        return 1;
+    }
+    parser->state = ASDF_PARSER_STATE_ASDF_VERSION;
+    return 0;
+}
+
+
 bool asdf_parser_has_error(const asdf_parser_t *parser) {
     return parser->error != NULL;
 }

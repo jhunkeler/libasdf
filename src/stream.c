@@ -420,24 +420,21 @@ static const uint8_t *mem_readline(asdf_stream_t *stream, size_t *len) {
     mem_userdata_t *data = stream->userdata;
     const uint8_t *buf = data->buf + data->pos;
     size_t remaining = data->size - data->pos;
+    size_t idx = 0;
 
-    for (size_t idx = 0; idx < remaining; idx++) {
-        if (buf[idx] != '\n')
-            continue;
-
-        data->pos += idx + 1;
-        *len = idx + 1;
-        return buf;
+    if (UNLIKELY(remaining == 0)) {
+        *len = 0;
+        return NULL;
     }
 
-    if (remaining > 0) {
-        *len = remaining;
-        data->pos = data->size;
-        return buf;
+    for (idx; idx < remaining; idx++) {
+        if (buf[idx] == '\n')
+            break;
     }
 
-    *len = 0;
-    return NULL;
+    mem_consume(stream, idx + 1);
+    *len = idx + 1;
+    return buf;
 }
 
 
@@ -453,7 +450,7 @@ static int mem_scan(struct asdf_stream *stream, const uint8_t **tokens, const si
 
     if (0 == res) {
         if (match_offset)
-            *match_offset = offset;
+            *match_offset = offset + data->pos;
 
         if (match_token_idx)
             *match_token_idx = token_idx;
