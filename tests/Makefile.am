@@ -1,6 +1,6 @@
 # Tests
 # 'check' comes from 'make check'
-AM_CPPFLAGS = -I$(top_srcdir)/src
+AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src
 
 asdf_standard_dir = $(top_srcdir)/asdf-standard
 asdf_standard_submodule = $(asdf_standard_dir)/.git

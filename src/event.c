@@ -12,6 +12,7 @@
 #include "block.h"
 #include "event.h"
 #include "parse.h"
+#include "parse_util.h"
 #include "util.h"
 #include "yaml.h"
 
@@ -48,13 +49,57 @@ const asdf_block_info_t *asdf_event_block_info(const asdf_event_t *event) {
 }
 
 
-int asdf_event_iterate(asdf_parser_t *parser, asdf_event_t *event) {
+void asdf_event_cleanup(asdf_parser_t *parser, asdf_event_t *event) {
     assert(parser);
-    assert(event);
 
-    // Clear previous event contents
-    asdf_event_destroy(parser, event);
-    return asdf_parser_parse(parser, event);
+    if (!event)
+        return;
+
+    switch (event->type) {
+    case ASDF_TREE_START_EVENT:
+    case ASDF_TREE_END_EVENT:
+        free(event->payload.tree);
+        break;
+    case ASDF_YAML_EVENT:
+        fy_parser_event_free(parser->yaml_parser, event->payload.yaml);
+        break;
+    case ASDF_ASDF_VERSION_EVENT:
+    case ASDF_STANDARD_VERSION_EVENT:
+        if (event->payload.version)
+            free(event->payload.version->version);
+
+        free(event->payload.version);
+        break;
+    case ASDF_BLOCK_EVENT:
+        free(event->payload.block);
+        break;
+    case ASDF_COMMENT_EVENT:
+        free(event->payload.comment);
+        break;
+    default:
+        break;
+    }
+    ZERO_MEMORY(event, sizeof(asdf_event_t));
+}
+
+
+asdf_event_t *asdf_event_iterate(asdf_parser_t *parser) {
+    if (!parser)
+        return NULL;
+
+    // Recycle the current event before allocating a new one
+    if (parser->current_event_p) {
+        asdf_event_cleanup(parser, &parser->current_event_p->event);
+        asdf_parse_event_recycle(parser, &parser->current_event_p->event);
+        parser->current_event_p = NULL;
+    }
+
+    asdf_event_t *event = asdf_parser_parse(parser);
+
+    if (!event)
+        free(parser->current_event_p);
+
+    return event;
 }
 
 
@@ -171,31 +216,16 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
 }
 
 
-void asdf_event_destroy(asdf_parser_t *parser, asdf_event_t *event) {
-    assert(event);
-    switch (event->type) {
-    case ASDF_TREE_START_EVENT:
-    case ASDF_TREE_END_EVENT:
-        free(event->payload.tree);
-        break;
-    case ASDF_YAML_EVENT:
-        fy_parser_event_free(parser->yaml_parser, event->payload.yaml);
-        break;
-    case ASDF_ASDF_VERSION_EVENT:
-    case ASDF_STANDARD_VERSION_EVENT:
-        if (event->payload.version)
-            free(event->payload.version->version);
+void asdf_event_free(asdf_parser_t *parser, asdf_event_t *event) {
+    assert(parser);
 
-        free(event->payload.version);
-        break;
-    case ASDF_BLOCK_EVENT:
-        free(event->payload.block);
-        break;
-    case ASDF_COMMENT_EVENT:
-        free(event->payload.comment);
-        break;
-    default:
-        break;
-    }
-    ZERO_MEMORY(event, sizeof(asdf_event_t));
+    if (!event)
+        return;
+
+    if (!event) return;
+
+    struct asdf_event_p *event_p = (struct asdf_event_p *)((char *)event - offsetof(struct asdf_event_p, event));
+    asdf_event_cleanup(parser, &event_p->event);
+    free(event_p);
+    parser->current_event_p = NULL;
 }

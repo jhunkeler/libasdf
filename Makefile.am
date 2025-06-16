@@ -1,10 +1,17 @@
-AM_CFLAGS = -fvisibility=hidden
-AM_CPPFLAGS = -I$(top_srcdir)/src # so that tests also find header files
-ACLOCAL_AMFLAGS = -Im4
-
 src_files = src/block.c src/event.c src/info.c src/parse.c src/parse_util.c src/stream.c src/yaml.c
 src_headers = src/block.h src/event.h src/info.h src/parse.h src/parse_util.h src/stream.h src/yaml.h
+include_dir = $(top_srcdir)/include
 
+AM_CFLAGS = -fvisibility=hidden
+AM_CPPFLAGS = -I$(top_srcdir)/include
+ACLOCAL_AMFLAGS = -Im4
+
+include_HEADERS = $(include_dir)/asdf.h
+nobase_include_HEADERS = \
+    $(include_dir)/asdf/event.h \
+    $(include_dir)/asdf/parse.h \
+    $(include_dir)/asdf/util.h \
+    $(include_dir)/asdf/yaml.h
 noinst_HEADERS = $(src_headers)
 
 # libasdf library

@@ -17,12 +17,12 @@ Makefile
 */Makefile
 
 # build outputs
+/asdf
 */*.o
 */*.lo
 .deps
 .dirstamp
 .libs
-asdf
 libasdf.la
 libtool
 m4/libtool.m4

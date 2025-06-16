@@ -165,19 +165,19 @@ static tree_node_t *stack_peek(tree_node_stack_t *stack) {
 
 
 static tree_node_t *build_tree(asdf_parser_t *parser) {
-    asdf_event_t event = {0};
+    asdf_event_t *event = NULL;
     tree_node_t *root = NULL;
     tree_node_stack_t *stack = NULL;
     const char *tag = NULL;
     size_t tag_len = 0;
 
-    while (asdf_event_iterate(parser, &event) == 0) {
-        asdf_yaml_event_type_t type = asdf_yaml_event_type(&event);
+    while (event = asdf_event_iterate(parser)) {
+        asdf_yaml_event_type_t type = asdf_yaml_event_type(event);
         tree_node_t *parent = stack_peek(stack);
         tree_node_t *node = NULL;
 
         if (type == ASDF_YAML_STREAM_END_EVENT) {
-            asdf_event_destroy(parser, &event);
+            asdf_event_free(parser, event);
             break;
         }
 
@@ -208,7 +208,7 @@ static tree_node_t *build_tree(asdf_parser_t *parser) {
                 tree_node_add_child(parent, node);
             }
 
-            tag = asdf_yaml_event_tag(&event, &tag_len);
+            tag = asdf_yaml_event_tag(event, &tag_len);
 
             if (tag && tag_len > 0) {
                 node->tag = strndup(tag, tag_len);
@@ -230,8 +230,8 @@ static tree_node_t *build_tree(asdf_parser_t *parser) {
             const char *key = NULL;
             size_t index = 0;
             size_t val_len = 0;
-            const char *value = asdf_yaml_event_scalar_value(&event, &val_len);
-            tag = asdf_yaml_event_tag(&event, &tag_len);
+            const char *value = asdf_yaml_event_scalar_value(event, &val_len);
+            tag = asdf_yaml_event_tag(event, &tag_len);
 
             if (parent->type == TREE_MAPPING && !parent->state.mapping.pending_key) {
                 tree_node_set_pending_key(parent, value, val_len);
@@ -454,7 +454,6 @@ static const asdf_info_cfg_t asdf_info_default_cfg = {
 
 
 int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
-    asdf_parser_t parser = {0};
 
     if (!cfg)
         cfg = &asdf_info_default_cfg;
@@ -463,34 +462,36 @@ int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
     asdf_parser_cfg_t parser_cfg = {
         .flags = cfg->print_tree ? ASDF_PARSER_OPT_EMIT_YAML_EVENTS : 0};
 
-    if (asdf_parser_init(&parser, &parser_cfg) != 0)
+    asdf_parser_t *parser = asdf_parser_create(&parser_cfg);
+
+    if (!parser)
         return 1;
 
-    if (asdf_parser_set_input_fp(&parser, in_file, cfg->filename) != 0) {
-        asdf_parser_destroy(&parser);
+    if (asdf_parser_set_input_fp(parser, in_file, cfg->filename) != 0) {
+        asdf_parser_destroy(parser);
         return 1;
     }
 
-    asdf_event_t event = {0};
+    asdf_event_t *event = NULL;
     size_t block_count = 0;
 
-    while (asdf_event_iterate(&parser, &event) == 0) {
+    while (event = asdf_event_iterate(parser)) {
         // Iterate events--if we hit a YAML event start building the tree (
         // build_tree takes over iteration from there) otherwise for block
         // events just show the block header details immediately, if the option
         // is enabled.
-        asdf_event_type_t type = asdf_event_type(&event);
+        asdf_event_type_t type = asdf_event_type(event);
         switch (type) {
         case ASDF_YAML_EVENT:
             if (cfg->print_tree) {
-                tree_node_t *root = build_tree(&parser);
+                tree_node_t *root = build_tree(parser);
                 print_tree(out_file, root);
                 tree_node_free(root);
             }
             break;
         case ASDF_BLOCK_EVENT:
             if (cfg->print_blocks)
-                print_block(out_file, &event, block_count);
+                print_block(out_file, event, block_count);
 
             block_count++;
             break;
@@ -499,14 +500,15 @@ int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
         }
     }
 
-    if (asdf_parser_has_error(&parser)) {
-        const char *error = asdf_parser_get_error(&parser);
+    int retval = 0;
+
+    if (asdf_parser_has_error(parser)) {
+        const char *error = asdf_parser_get_error(parser);
         // TODO: (#5) Better error formatting / probably go through logging system
         fprintf(stderr, "error: %s\n", error);
-        asdf_parser_destroy(&parser);
-        return 1;
+        retval = 1;
     }
 
-    asdf_parser_destroy(&parser);
-    return 0;
+    asdf_parser_destroy(parser);
+    return retval;
 }

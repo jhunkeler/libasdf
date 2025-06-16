@@ -9,6 +9,9 @@
 
 #include <libfyaml.h>
 
+#include <asdf/parse.h>
+
+#include "event.h"
 #include "stream.h"
 #include "util.h"
 
@@ -61,33 +64,6 @@ typedef enum {
 } asdf_parser_error_code_t;
 
 
-// NOLINTNEXTLINE(readability-identifier-naming)
-#define _ASDF_PARSER_OPTS(X) \
-    X(ASDF_PARSER_OPT_EMIT_YAML_EVENTS, 0) \
-    X(ASDF_PARSER_OPT_BUFFER_TREE, 1)
-
-
-typedef enum {
-// clang-format off
-#define X(flag, bit) flag = (1UL << (bit)),
-    _ASDF_PARSER_OPTS(X)
-#undef X
-    // clang-format on
-} asdf_parser_opt_t;
-
-
-// NOLINTNEXTLINE(readability-magic-numbers)
-_Static_assert(ASDF_PARSER_OPT_BUFFER_TREE < (1UL << 63), "too many flags for 64-bit int");
-
-
-typedef uint64_t asdf_parser_optflags_t;
-
-
-typedef struct asdf_parser_cfg {
-    asdf_parser_optflags_t flags;
-} asdf_parser_cfg_t;
-
-
 typedef struct asdf_parser_tree_info {
     off_t start;
     off_t end;
@@ -98,12 +74,21 @@ typedef struct asdf_parser_tree_info {
 } asdf_parser_tree_info_t;
 
 
+/* Structure for asdf_event_t freelist */
+struct asdf_event_p {
+    asdf_event_t event;
+    struct asdf_event_p *next;
+};
+
+
 typedef struct asdf_parser {
     const asdf_parser_cfg_t *config;
     asdf_parser_state_t state;
     asdf_stream_t *stream;
     asdf_error_type_t error_type;
     const char *error;
+    struct asdf_event_p *event_freelist;
+    struct asdf_event_p *current_event_p;
     char asdf_version[ASDF_ASDF_VERSION_BUFFER_SIZE];
     char standard_version[ASDF_STANDARD_VERSION_BUFFER_SIZE];
     struct fy_parser *yaml_parser;
@@ -117,18 +102,3 @@ static inline bool asdf_parser_has_opt(asdf_parser_t *parser, asdf_parser_opt_t 
     assert(parser);
     return (parser->config && ((parser->config->flags & opt) == opt));
 }
-
-
-/* Forward declaration for asdf_event_t */
-typedef struct asdf_event asdf_event_t;
-
-
-/* Public API functions */
-ASDF_EXPORT int asdf_parser_init(asdf_parser_t *parser, asdf_parser_cfg_t *config);
-ASDF_EXPORT int asdf_parser_set_input_file(asdf_parser_t *parser, const char *filename);
-ASDF_EXPORT int asdf_parser_set_input_fp(asdf_parser_t *parser, FILE *file, const char *filename);
-ASDF_EXPORT int asdf_parser_set_input_mem(asdf_parser_t *parser, const void *buf, size_t size);
-ASDF_EXPORT int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event);
-ASDF_EXPORT void asdf_parser_destroy(asdf_parser_t *parser);
-ASDF_EXPORT bool asdf_parser_has_error(const asdf_parser_t *parser);
-ASDF_EXPORT const char *asdf_parser_get_error(const asdf_parser_t *parser);

@@ -2,6 +2,8 @@
 #include <ctype.h>
 
 #include "block.h"
+#include "event.h"
+#include "parse.h"
 #include "parse_util.h"
 #include "stream.h"
 
@@ -181,4 +183,49 @@ bool is_generic_yaml_directive(const char *buf, size_t len) {
         ++p;
 
     return *p == '\n';
+}
+
+
+/**
+ * asdf_event_t allocation helpers
+ */
+asdf_event_t *asdf_parse_event_alloc(asdf_parser_t *parser) {
+    assert(parser);
+    struct asdf_event_p *event_p = NULL;
+
+    if (parser->event_freelist) {
+        event_p = parser->event_freelist;
+        parser->event_freelist = event_p->next;
+    } else {
+        event_p = malloc(sizeof(*event_p));
+        if (!event_p)
+            return NULL;
+    }
+
+    ZERO_MEMORY(&event_p->event, sizeof(event_p->event));
+    parser->current_event_p = event_p;
+    return &event_p->event;
+}
+
+
+void asdf_parse_event_recycle(asdf_parser_t *parser, asdf_event_t *event) {
+    if (!parser || !event) return;
+
+    struct asdf_event_p *event_p = (struct asdf_event_p *)((char *)event - offsetof(struct asdf_event_p, event));
+    event_p->next = parser->event_freelist;
+    parser->event_freelist = event_p;
+
+    if (parser->current_event_p == event_p)
+        parser->current_event_p = NULL;
+}
+
+
+void asdf_parse_event_freelist_free(asdf_parser_t *parser) {
+    struct asdf_event_p *freelist = parser->event_freelist;
+
+    while (freelist) {
+        struct asdf_event_p *next = freelist->next;
+        free(freelist);
+        freelist = next;
+    }
 }

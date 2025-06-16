@@ -128,7 +128,7 @@ static parse_result_t parse_comment(asdf_parser_t *parser, asdf_event_t *event) 
         if (len == 0) {
             // EOF
             parser->state = ASDF_PARSER_STATE_END;
-            return asdf_parser_parse(parser, event);
+            return ASDF_PARSE_CONTINUE;
         }
 
         if (r[0] == '\r' || r[0] == '\n') {
@@ -320,6 +320,15 @@ static int parse_tree_fast(asdf_parser_t *parser) {
 
 
 /**
+ * Default libfyaml parser configuration
+ *
+ * Later we will likely want some ASDF parser configuration, and this could include
+ * the ability to pass through low-level YAML parser flags as well.  Could be useful.
+ */
+static const struct fy_parse_cfg default_fy_parse_cfg = {.flags = FYPCF_QUIET | FYPCF_COLLECT_DIAG};
+
+
+/**
  * Before transitioning to generating YAML events we need to set up libfyaml
  *
  * There are two possible cases:
@@ -333,6 +342,10 @@ static int initialize_yaml_parser(asdf_parser_t *parser) {
     assert(parser->stream->is_seekable || (parser->tree.found && parser->tree.buf));
     bool buffer_tree = asdf_parser_has_opt(parser, ASDF_PARSER_OPT_BUFFER_TREE);
     int ret = 0;
+
+    if (!(parser->yaml_parser = fy_parser_create(&default_fy_parse_cfg))) {
+        asdf_parser_set_common_error(parser, ASDF_ERR_YAML_PARSER_INIT_FAILED);
+    }
 
     if (buffer_tree) {
         ret = fy_parser_set_string(
@@ -607,12 +620,11 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, UNUSED(asdf_event
 }
 
 
-int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
+asdf_event_t *asdf_parser_parse(asdf_parser_t *parser) {
     assert(parser);
     assert(parser->stream);
-    assert(event);
 
-    ZERO_MEMORY(event, sizeof(asdf_event_t));
+    asdf_event_t *event = asdf_parse_event_alloc(parser);
 
     parse_result_t res = ASDF_PARSE_CONTINUE;
 
@@ -651,19 +663,18 @@ int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
                 // but on subsequent calls produce no more valid events and return 1 (error)
                 parser->done = true;
                 event->type = ASDF_END_EVENT;
-                return 0;
+                return event;
             }
-            event->type = ASDF_NONE_EVENT;
-            return 1;
+            return NULL;
         case ASDF_PARSER_STATE_ERROR:
-            return 1;
+            return NULL;
         default:
             asdf_parser_set_common_error(parser, ASDF_ERR_UNKNOWN_STATE);
-            return 1;
+            return NULL;
         }
     }
 
-    return res != ASDF_PARSE_EVENT;
+    return res == ASDF_PARSE_EVENT ? event : NULL;
 }
 
 
@@ -672,18 +683,12 @@ int asdf_parser_parse(asdf_parser_t *parser, asdf_event_t *event) {
  */
 static const asdf_parser_cfg_t default_asdf_parser_cfg = {.flags = 0};
 
-/**
- * Default libfyaml parser configuration
- *
- * Later we will likely want some ASDF parser configuration, and this could include
- * the ability to pass through low-level YAML parser flags as well.  Could be useful.
- */
-static const struct fy_parse_cfg default_fy_parse_cfg = {.flags = FYPCF_QUIET | FYPCF_COLLECT_DIAG};
 
+asdf_parser_t *asdf_parser_create(asdf_parser_cfg_t *config) {
+    asdf_parser_t *parser = calloc(1, sizeof(asdf_parser_t));
 
-int asdf_parser_init(asdf_parser_t *parser, asdf_parser_cfg_t *config) {
-    assert(parser);
-    ZERO_MEMORY(parser, sizeof(asdf_parser_t));
+    if (!parser)
+        return parser;
 
     parser->config = config ? config : &default_asdf_parser_cfg;
     parser->state = ASDF_PARSER_STATE_INITIAL;
@@ -693,13 +698,7 @@ int asdf_parser_init(asdf_parser_t *parser, asdf_parser_cfg_t *config) {
     parser->done = false;
     ZERO_MEMORY(parser->asdf_version, sizeof(parser->asdf_version));
     ZERO_MEMORY(parser->standard_version, sizeof(parser->standard_version));
-
-    if (!(parser->yaml_parser = fy_parser_create(&default_fy_parse_cfg))) {
-        asdf_parser_set_common_error(parser, ASDF_ERR_YAML_PARSER_INIT_FAILED);
-        return 1;
-    }
-
-    return 0;
+    return parser;
 }
 
 
@@ -771,8 +770,6 @@ void asdf_parser_destroy(asdf_parser_t *parser) {
         parser->stream->close(parser->stream);
 
     free(parser->tree.buf);
-
-    // Leave no trace behind, leaving things clean for accidental
-    // API calls on an already destroyed parser
-    ZERO_MEMORY(parser, sizeof(asdf_parser_t));
+    asdf_parse_event_freelist_free(parser);
+    free(parser);
 }
