@@ -1,10 +1,27 @@
+src_files = src/block.c src/event.c src/info.c src/parse.c src/parse_util.c src/stream.c src/yaml.c
+src_headers = \
+    src/block.h \
+    src/compat/endian.h \
+    src/event.h \
+    src/info.h \
+    src/parse.h \
+    src/parse_util.h \
+    src/stream.h \
+    src/stream_intern.h \
+    src/util.h \
+    src/yaml.h
+include_dir = $(top_srcdir)/include
+
 AM_CFLAGS = -fvisibility=hidden
-AM_CPPFLAGS = -I$(top_srcdir)/src # so that tests also find header files
+AM_CPPFLAGS = -I$(top_srcdir)/include
 ACLOCAL_AMFLAGS = -Im4
 
-src_files = src/block.c src/event.c src/info.c src/parse.c src/parse_util.c src/stream.c src/yaml.c
-src_headers = src/block.h src/event.h src/info.h src/parse.h src/parse_util.h src/stream.h src/yaml.h
-
+include_HEADERS = $(include_dir)/asdf.h
+nobase_include_HEADERS = \
+    $(include_dir)/asdf/event.h \
+    $(include_dir)/asdf/parse.h \
+    $(include_dir)/asdf/util.h \
+    $(include_dir)/asdf/yaml.h
 noinst_HEADERS = $(src_headers)
 
 # libasdf library
@@ -43,3 +60,24 @@ CODE_COVERAGE_IGNORE_PATTERN = \
 include $(top_srcdir)/aminclude_static.am
 
 SUBDIRS = tests
+
+# Include sample files from asdf-standard in the distribution (used in tests)
+# Eventually test against older reference files as well
+reference_files = $(top_srcdir)/asdf-standard/reference_files/1.6.0
+EXTRA_DIST = \
+    $(reference_files)/anchor.asdf \
+    $(reference_files)/ascii.asdf \
+    $(reference_files)/basic.asdf \
+    $(reference_files)/complex.asdf \
+    $(reference_files)/compressed.asdf \
+    $(reference_files)/endian.asdf \
+    $(reference_files)/exploded0000.asdf \
+    $(reference_files)/exploded.asdf \
+    $(reference_files)/float.asdf \
+    $(reference_files)/int.asdf \
+    $(reference_files)/scalars.asdf \
+    $(reference_files)/shared.asdf \
+    $(reference_files)/stream.asdf \
+    $(reference_files)/structured.asdf \
+    $(reference_files)/unicode_bmp.asdf \
+    $(reference_files)/unicode_spp.asdf

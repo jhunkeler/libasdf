@@ -1,12 +1,14 @@
 #include <errno.h>
 #include <string.h>
 
+#include <asdf/event.h>
+#include <asdf/parse.h>
+
 #include "munit.h"
 #include "util.h"
 
 #include "block.h"
 #include "event.h"
-#include "parse.h"
 #include "yaml.h"
 
 
@@ -14,21 +16,21 @@
  * Helper macros for checking ASDF and YAML events
  */
 #define CHECK_NEXT_EVENT_TYPE(type) do { \
-    assert_int(asdf_event_iterate(&parser, &event), ==, 0); \
-    assert_int(asdf_event_type(&event), ==, (type)); \
+    assert_not_null((event = asdf_event_iterate(parser))); \
+    assert_int(asdf_event_type(event), ==, (type)); \
 } while (0)
 
 
 #define __CHECK_NEXT_YAML_EVENT_1(type) do { \
     CHECK_NEXT_EVENT_TYPE(ASDF_YAML_EVENT); \
-    assert_int(asdf_yaml_event_type(&event), ==, (type)); \
+    assert_int(asdf_yaml_event_type(event), ==, (type)); \
 } while (0)
 
 
 #define __CHECK_NEXT_YAML_EVENT_2(type, tag) do { \
     __CHECK_NEXT_YAML_EVENT_1(type); \
     size_t __len = 0; \
-    const char *__tag = asdf_yaml_event_tag(&event, &__len); \
+    const char *__tag = asdf_yaml_event_tag(event, &__len); \
     if ((tag) == NULL) { \
         assert_int(__len, ==, 0); \
     } else { \
@@ -42,9 +44,9 @@
 
 #define __CHECK_NEXT_YAML_EVENT_3(type, tag, value) do { \
     __CHECK_NEXT_YAML_EVENT_2(type, tag); \
-    assert_int(asdf_yaml_event_type(&event), ==, ASDF_YAML_SCALAR_EVENT); \
+    assert_int(asdf_yaml_event_type(event), ==, ASDF_YAML_SCALAR_EVENT); \
     size_t __len = 0; \
-    const char *__value = asdf_yaml_event_scalar_value(&event, &__len); \
+    const char *__value = asdf_yaml_event_scalar_value(event, &__len); \
     if ((value) == NULL) { \
         assert_null(__value); \
     } else { \
@@ -71,11 +73,12 @@
 MU_TEST(test_asdf_event_basic) {
     // TODO: Move all of this setup into setup/teardown functions; lots of repetition here
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
-    asdf_parser_t parser = {0};
-    asdf_event_t event = {0};
     asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_EMIT_YAML_EVENTS};
 
-    if (asdf_parser_init(&parser, &parser_cfg) != 0)
+    asdf_parser_t *parser = asdf_parser_create(&parser_cfg);
+    asdf_event_t *event = NULL;
+
+    if (!parser)
         munit_error("failed to initialize asdf parser");
 
     const char *stream = munit_parameters_get(params, "stream");
@@ -83,25 +86,26 @@ MU_TEST(test_asdf_event_basic) {
     char *file_contents = NULL;
 
     if (0 == strcmp(stream, "file")) {
-        if (asdf_parser_set_input_file(&parser, filename) != 0)
-            munit_error("failed to set asdf parser file");
+        if (asdf_parser_set_input_file(parser, filename) != 0)
+            munit_errorf("failed to set asdf parser file '%s'", filename);
+
     } else if (0 == strcmp(stream, "memory")) {
         file_contents = read_file(filename, &file_len);
         assert_not_null(file_contents);
-        if (asdf_parser_set_input_mem(&parser, file_contents, file_len) != 0)
+        if (asdf_parser_set_input_mem(parser, file_contents, file_len) != 0)
             munit_error("failed to set asdf parser file");
     } else {
         munit_errorf("invalid test parameter for stream: %s", stream);
     }
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
-    assert_string_equal(event.payload.version->version, "1.0.0");
+    assert_string_equal(event->payload.version->version, "1.0.0");
 
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
-    assert_string_equal(event.payload.version->version, "1.6.0");
+    assert_string_equal(event->payload.version->version, "1.6.0");
 
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
-    assert_int(event.payload.tree->start, ==, 0x21);
+    assert_int(event->payload.tree->start, ==, 0x21);
 
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_START_EVENT);
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_START_EVENT);
@@ -161,12 +165,12 @@ MU_TEST(test_asdf_event_basic) {
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_END_EVENT);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_END_EVENT);
-    assert_int(event.payload.tree->start, ==, 0x21);
-    assert_int(event.payload.tree->end, ==, 0x298);
-    assert_null(event.payload.tree->buf);
+    assert_int(event->payload.tree->start, ==, 0x21);
+    assert_int(event->payload.tree->end, ==, 0x298);
+    assert_null(event->payload.tree->buf);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
-    const asdf_block_info_t *block = event.payload.block;
+    const asdf_block_info_t *block = event->payload.block;
     assert_int(block->header_pos, ==, 664);
     assert_int(block->data_pos, ==, 718);
     // 718 - 664 == 54 ?? But recall, the header_size field of the block_header
@@ -180,8 +184,8 @@ MU_TEST(test_asdf_event_basic) {
 
     CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
 
-    asdf_event_destroy(&parser, &event);
-    asdf_parser_destroy(&parser);
+    asdf_event_free(parser, event);
+    asdf_parser_destroy(parser);
 
     // TODO: Add teardown fixtures too
     free(file_contents);
@@ -194,11 +198,12 @@ MU_TEST(test_asdf_event_basic) {
  */
 MU_TEST(test_asdf_event_basic_no_yaml) {
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
-    asdf_parser_t parser = {0};
-    asdf_event_t event = {0};
     asdf_parser_cfg_t parser_cfg = {0};
 
-    if (asdf_parser_init(&parser, &parser_cfg) != 0)
+    asdf_parser_t *parser = asdf_parser_create(&parser_cfg);
+    asdf_event_t *event = NULL;
+
+    if (!parser)
         munit_error("failed to initialize asdf parser");
 
     const char *stream = munit_parameters_get(params, "stream");
@@ -206,33 +211,33 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
     char *file_contents = NULL;
 
     if (0 == strcmp(stream, "file")) {
-        if (asdf_parser_set_input_file(&parser, filename) != 0)
-            munit_error("failed to set asdf parser file");
+        if (asdf_parser_set_input_file(parser, filename) != 0)
+            munit_errorf("failed to set asdf parser file '%s'", filename);
     } else if (0 == strcmp(stream, "memory")) {
         file_contents = read_file(filename, &file_len);
         assert_not_null(file_contents);
-        if (asdf_parser_set_input_mem(&parser, file_contents, file_len) != 0)
+        if (asdf_parser_set_input_mem(parser, file_contents, file_len) != 0)
             munit_error("failed to set asdf parser file");
     } else {
         munit_errorf("invalid test parameter for stream: %s", stream);
     }
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
-    assert_string_equal(event.payload.version->version, "1.0.0");
+    assert_string_equal(event->payload.version->version, "1.0.0");
 
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
-    assert_string_equal(event.payload.version->version, "1.6.0");
+    assert_string_equal(event->payload.version->version, "1.6.0");
 
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
-    assert_int(event.payload.tree->start, ==, 0x21);
+    assert_int(event->payload.tree->start, ==, 0x21);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_END_EVENT);
-    assert_int(event.payload.tree->start, ==, 0x21);
-    assert_int(event.payload.tree->end, ==, 0x298);
-    assert_null(event.payload.tree->buf);
+    assert_int(event->payload.tree->start, ==, 0x21);
+    assert_int(event->payload.tree->end, ==, 0x298);
+    assert_null(event->payload.tree->buf);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
-    const asdf_block_info_t *block = event.payload.block;
+    const asdf_block_info_t *block = event->payload.block;
     assert_int(block->header_pos, ==, 664);
     assert_int(block->data_pos, ==, 718);
     // 718 - 664 == 54 ?? But recall, the header_size field of the block_header
@@ -246,8 +251,8 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
 
     CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
 
-    asdf_event_destroy(&parser, &event);
-    asdf_parser_destroy(&parser);
+    asdf_event_free(parser, event);
+    asdf_parser_destroy(parser);
     // TODO: Add teardown fixtures too
     free(file_contents);
     return MUNIT_OK;
@@ -259,11 +264,12 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
  */
 MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
-    asdf_parser_t parser = {0};
-    asdf_event_t event = {0};
     asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_BUFFER_TREE};
 
-    if (asdf_parser_init(&parser, &parser_cfg) != 0)
+    asdf_parser_t *parser = asdf_parser_create(&parser_cfg);
+    asdf_event_t *event = NULL;
+
+    if (!parser)
         munit_error("failed to initialize asdf parser");
 
     const char *stream = munit_parameters_get(params, "stream");
@@ -271,12 +277,12 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
     char *file_contents = NULL;
 
     if (0 == strcmp(stream, "file")) {
-        if (asdf_parser_set_input_file(&parser, filename) != 0)
-            munit_error("failed to set asdf parser file");
+        if (asdf_parser_set_input_file(parser, filename) != 0)
+            munit_errorf("failed to set asdf parser file '%s'", filename);
     } else if (0 == strcmp(stream, "memory")) {
         file_contents = read_file(filename, &file_len);
         assert_not_null(file_contents);
-        if (asdf_parser_set_input_mem(&parser, file_contents, file_len) != 0)
+        if (asdf_parser_set_input_mem(parser, file_contents, file_len) != 0)
             munit_error("failed to set asdf parser file");
     } else {
         munit_errorf("invalid test parameter for stream: %s", stream);
@@ -286,19 +292,19 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_END_EVENT);
-    assert_int(event.payload.tree->start, ==, 0x21);
-    assert_int(event.payload.tree->end, ==, 0x298);
-    assert_not_null(event.payload.tree->buf);
+    assert_int(event->payload.tree->start, ==, 0x21);
+    assert_int(event->payload.tree->end, ==, 0x298);
+    assert_not_null(event->payload.tree->buf);
 
     size_t reference_len = 0;
     char *reference_data = tail_file(filename, 2, &reference_len);
     assert_not_null(reference_data);
-    size_t tree_size = event.payload.tree->end - event.payload.tree->start;
-    assert_memory_equal(tree_size, event.payload.tree->buf, reference_data);
+    size_t tree_size = event->payload.tree->end - event->payload.tree->start;
+    assert_memory_equal(tree_size, event->payload.tree->buf, reference_data);
     free(reference_data);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
-    const asdf_block_info_t *block = event.payload.block;
+    const asdf_block_info_t *block = event->payload.block;
     assert_int(block->header_pos, ==, 664);
     assert_int(block->data_pos, ==, 718);
     // 718 - 664 == 54 ?? But recall, the header_size field of the block_header
@@ -312,8 +318,8 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
 
     CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
 
-    asdf_event_destroy(&parser, &event);
-    asdf_parser_destroy(&parser);
+    asdf_event_free(parser, event);
+    asdf_parser_destroy(parser);
     // TODO: Add teardown fixtures too
     free(file_contents);
     return MUNIT_OK;
@@ -327,11 +333,12 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
     FILE *file = fopen(filename, "r");
     assert_not_null(file);
-    asdf_parser_t parser = {0};
-    asdf_event_t event = {0};
     asdf_parser_cfg_t parser_cfg = {.flags = ASDF_PARSER_OPT_EMIT_YAML_EVENTS | ASDF_PARSER_OPT_BUFFER_TREE};
 
-    if (asdf_parser_init(&parser, &parser_cfg) != 0)
+    asdf_parser_t *parser = asdf_parser_create(&parser_cfg);
+    asdf_event_t *event = NULL;
+
+    if (!parser)
         munit_error("failed to initialize asdf parser");
 
     const char *stream = munit_parameters_get(params, "stream");
@@ -339,12 +346,12 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
     char *file_contents = NULL;
 
     if (0 == strcmp(stream, "file")) {
-        if (asdf_parser_set_input_file(&parser, filename) != 0)
-            munit_error("failed to set asdf parser file");
+        if (asdf_parser_set_input_file(parser, filename) != 0)
+            munit_errorf("failed to set asdf parser file '%s'", filename);
     } else if (0 == strcmp(stream, "memory")) {
         file_contents = read_file(filename, &file_len);
         assert_not_null(file_contents);
-        if (asdf_parser_set_input_mem(&parser, file_contents, file_len) != 0)
+        if (asdf_parser_set_input_mem(parser, file_contents, file_len) != 0)
             munit_error("failed to set asdf parser file");
     } else {
         munit_errorf("invalid test parameter for stream: %s", stream);
@@ -353,7 +360,7 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
-    assert_int(event.payload.tree->start, ==, 0x21);
+    assert_int(event->payload.tree->start, ==, 0x21);
 
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_START_EVENT);
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_DOCUMENT_START_EVENT);
@@ -413,19 +420,19 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
     CHECK_NEXT_YAML_EVENT(ASDF_YAML_STREAM_END_EVENT);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_END_EVENT);
-    assert_int(event.payload.tree->start, ==, 0x21);
-    assert_int(event.payload.tree->end, ==, 0x298);
-    assert_not_null(event.payload.tree->buf);
+    assert_int(event->payload.tree->start, ==, 0x21);
+    assert_int(event->payload.tree->end, ==, 0x298);
+    assert_not_null(event->payload.tree->buf);
 
     size_t reference_len = 0;
     char *reference_data = tail_file(filename, 2, &reference_len);
     assert_not_null(reference_data);
-    size_t tree_size = event.payload.tree->end - event.payload.tree->start;
-    assert_memory_equal(tree_size, event.payload.tree->buf, reference_data);
+    size_t tree_size = event->payload.tree->end - event->payload.tree->start;
+    assert_memory_equal(tree_size, event->payload.tree->buf, reference_data);
     free(reference_data);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_EVENT);
-    const asdf_block_info_t *block = event.payload.block;
+    const asdf_block_info_t *block = event->payload.block;
     assert_int(block->header_pos, ==, 664);
     assert_int(block->data_pos, ==, 718);
     // 718 - 664 == 54 ?? But recall, the header_size field of the block_header
@@ -439,8 +446,8 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
 
     CHECK_NEXT_EVENT_TYPE(ASDF_END_EVENT);
 
-    asdf_event_destroy(&parser, &event);
-    asdf_parser_destroy(&parser);
+    asdf_event_free(parser, event);
+    asdf_parser_destroy(parser);
     // TODO: Add teardown fixtures too
     free(file_contents);
     return MUNIT_OK;

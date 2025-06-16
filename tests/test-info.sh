@@ -1,7 +1,3 @@
 #!/bin/sh
 
-if [ -z "$SRCDIR" ]; then
-  SRCDIR=..
-fi
-
-./shell-test.sh info --blocks $@ ${SRCDIR}/asdf-standard/reference_files/1.6.0/*.asdf
+"${srcdir}"/shell-test.sh info --blocks $@ "${top_srcdir}"/asdf-standard/reference_files/1.6.0/*.asdf

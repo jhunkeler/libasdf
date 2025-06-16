@@ -37,25 +37,19 @@ for arg in "$@"; do
   esac
 done
 
-
-if [ -z "$SRCDIR" ]; then
-  SRCDIR=..
-fi
-
 fail=0
 
-fixtures_dir="fixtures/${SUBCOMMAND}"
-mkdir -p "${fixtures_dir}"
+fixtures_dir="${srcdir}/fixtures/${SUBCOMMAND}"
 
 for input in $@; do
   base=$(basename "$input" .asdf)
   expected="${fixtures_dir}/${base}.${SUBCOMMAND}.txt"
-  actual="tmp/${base}.${SUBCOMMAND}.out.txt"
+  actual="$(pwd)/tmp/${base}.${SUBCOMMAND}.out.txt"
 
   mkdir -p tmp
 
   # Generate actual output
-  ${SRCDIR}/asdf ${SUBCOMMAND} ${EXTRA_ARGS} "$input" 2>&1 > "$actual" || true
+  "${top_builddir}"/asdf ${SUBCOMMAND} ${EXTRA_ARGS} "$input" 2>&1 > "$actual" || true
 
   if [ "$UPDATE" -eq 1 ]; then
     cp "$actual" "$expected"

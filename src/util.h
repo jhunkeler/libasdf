@@ -2,15 +2,7 @@
 
 #include <string.h>
 
-
-// TODO: Eventually move this to main public header
-#if defined(__clang__) || (defined(__GNUC__) && __GNUC__ >= 4)
-#define ASDF_EXPORT __attribute__ ((visibility ("default")))
-#define ASDF_LOCAL __attribute__ ((visibility ("hidden")))
-#else
-#define ASDF_EXPORT
-#define ASDF_LOCAL
-#endif
+#include <asdf/util.h>
 
 
 #if defined(__GNUC__) || defined(__clang__)

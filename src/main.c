@@ -206,7 +206,6 @@ static struct argp events_argp = {events_options, parse_events_opt, events_args_
 
 
 int events_main(const char *filename, bool verbose, bool no_yaml, bool cap_tree) {
-    asdf_parser_t parser;
     // Current implementation always outputs YAML events, so this is needed; later update
     // to allow an option to skip YAML events (useful for testing)
     asdf_parser_optflags_t flags = no_yaml ? 0 : ASDF_PARSER_OPT_EMIT_YAML_EVENTS;
@@ -216,33 +215,34 @@ int events_main(const char *filename, bool verbose, bool no_yaml, bool cap_tree)
 
     asdf_parser_cfg_t parser_cfg = {.flags = flags};
 
-    if (asdf_parser_init(&parser, &parser_cfg)) {
-        fprintf(stderr, "error: %s\n", asdf_parser_get_error(&parser));
+    asdf_parser_t *parser = asdf_parser_create(&parser_cfg);
+
+    if (!parser) {
+        fprintf(stderr, "error: could not allocate ASDF parser (OOM?)\n");
         return EXIT_FAILURE;
     }
 
-    if (asdf_parser_set_input_file(&parser, filename)) {
-        fprintf(stderr, "error: %s\n", asdf_parser_get_error(&parser));
-        asdf_parser_destroy(&parser);
+    if (asdf_parser_set_input_file(parser, filename)) {
+        fprintf(stderr, "error: %s\n", asdf_parser_get_error(parser));
+        asdf_parser_destroy(parser);
         return EXIT_FAILURE;
     }
 
-    asdf_event_t event = {0};
+    asdf_event_t *event = NULL;
 
-    while (asdf_event_iterate(&parser, &event) == 0) {
-        asdf_event_print(&event, stdout, verbose);
+    while (event = asdf_event_iterate(parser)) {
+        asdf_event_print(event, stdout, verbose);
     }
 
-    if (asdf_parser_has_error(&parser)) {
-        fprintf(stderr, "error: %s\n", asdf_parser_get_error(&parser));
-        asdf_event_destroy(&parser, &event);
-        asdf_parser_destroy(&parser);
-        return EXIT_FAILURE;
+    int ret = EXIT_SUCCESS;
+
+    if (asdf_parser_has_error(parser)) {
+        fprintf(stderr, "error: %s\n", asdf_parser_get_error(parser));
+        ret = EXIT_FAILURE;
     }
 
-    asdf_event_destroy(&parser, &event);
-    asdf_parser_destroy(&parser);
-    return EXIT_SUCCESS;
+    asdf_parser_destroy(parser);
+    return ret;
 }
 // end events
 
