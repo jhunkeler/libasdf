@@ -87,7 +87,8 @@ MU_TEST(test_asdf_event_basic) {
 
     if (0 == strcmp(stream, "file")) {
         if (asdf_parser_set_input_file(parser, filename) != 0)
-            munit_error("failed to set asdf parser file");
+            munit_errorf("failed to set asdf parser file '%s'", filename);
+
     } else if (0 == strcmp(stream, "memory")) {
         file_contents = read_file(filename, &file_len);
         assert_not_null(file_contents);
@@ -211,7 +212,7 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
 
     if (0 == strcmp(stream, "file")) {
         if (asdf_parser_set_input_file(parser, filename) != 0)
-            munit_error("failed to set asdf parser file");
+            munit_errorf("failed to set asdf parser file '%s'", filename);
     } else if (0 == strcmp(stream, "memory")) {
         file_contents = read_file(filename, &file_len);
         assert_not_null(file_contents);
@@ -277,7 +278,7 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
 
     if (0 == strcmp(stream, "file")) {
         if (asdf_parser_set_input_file(parser, filename) != 0)
-            munit_error("failed to set asdf parser file");
+            munit_errorf("failed to set asdf parser file '%s'", filename);
     } else if (0 == strcmp(stream, "memory")) {
         file_contents = read_file(filename, &file_len);
         assert_not_null(file_contents);
@@ -346,7 +347,7 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
 
     if (0 == strcmp(stream, "file")) {
         if (asdf_parser_set_input_file(parser, filename) != 0)
-            munit_error("failed to set asdf parser file");
+            munit_errorf("failed to set asdf parser file '%s'", filename);
     } else if (0 == strcmp(stream, "memory")) {
         file_contents = read_file(filename, &file_len);
         assert_not_null(file_contents);

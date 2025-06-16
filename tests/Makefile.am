@@ -20,17 +20,17 @@ check_PROGRAMS = \
     test-parse-util.unit \
     test-stream.unit
 
-TESTS_ENVIRONMENT = SRCDIR=$(top_srcdir)
+TESTS_ENVIRONMENT = top_builddir=$(top_builddir) top_srcdir=$(top_srcdir)
 TESTS = $(check_PROGRAMS)
 
 unit_test_cppflags = \
     $(AM_CPPFLAGS) \
     -DREFERENCE_FILES_DIR=\"$(asdf_standard_dir)/reference_files\" \
-    -DFIXTURES_DIR=\"$(top_srcdir)/tests/fixtures\"
+    -DFIXTURES_DIR=\"$(srcdir)/fixtures\"
 
 unit_test_cflags = $(FYAML_CFLAGS) $(CODE_COVERAGE_CFLAGS)
 unit_test_ldflags = $(CODE_COVERAGE_LDFLAGS)
-unit_test_ldadd = $(top_srcdir)/libasdf.la
+unit_test_ldadd = $(top_builddir)/libasdf.la
 
 # Unit tests
 # test-event.unit
@@ -61,7 +61,7 @@ test_stream_unit_LDFLAGS = $(unit_test_ldflags)
 test_stream_unit_LDADD = $(FYAML_LIBS)
 
 # Shell tests
-TOOL_TESTS = test-info.sh test-events.sh
+TOOL_TESTS = test-events.sh test-info.sh
 
 if ASDF_BUILD_TOOL
 TESTS += $(TOOL_TESTS)
@@ -71,11 +71,45 @@ endif
 
 
 AUTOMAKE_OPTIONS = parallel-tests
-EXTRA_DIST = minunit.h
+
+EXTRA_DIST = $(TOOL_TESTS)
+EXTRA_DIST += \
+    munit.h \
+    shell-test.sh \
+    util.h \
+    fixtures/events/basic.events.txt \
+    fixtures/events/complex.events.txt \
+    fixtures/events/compressed.events.txt \
+    fixtures/events/int.events.txt \
+    fixtures/info/anchor.info.txt \
+    fixtures/info/ascii.info.txt \
+    fixtures/info/basic.info.txt \
+    fixtures/info/complex.info.txt \
+    fixtures/info/compressed.info.txt \
+    fixtures/info/endian.info.txt \
+    fixtures/info/exploded0000.info.txt \
+    fixtures/info/exploded.info.txt \
+    fixtures/info/float.info.txt \
+    fixtures/info/int.info.txt \
+    fixtures/info/scalars.info.txt \
+    fixtures/info/shared.info.txt \
+    fixtures/info/stream.info.txt \
+    fixtures/info/structured.info.txt \
+    fixtures/info/unicode_bmp.info.txt \
+    fixtures/info/unicode_spp.info.txt \
+    fixtures/parse-minimal.asdf \
+    fixtures/parse-minimal-extra-comment.asdf \
+    munit/COPYING \
+    munit/munit.c \
+    munit/munit.h
+
 
 # Bit of a hack to make syncing the submodule a prerequisite to make check
 check-am: $(asdf_standard_submodule)
 
+# Clean up temp files from tests
+distclean-local:
+	rm -rf $(builddir)/tmp
 
 update-fixtures:
 	./test-events.sh --update

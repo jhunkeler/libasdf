@@ -27,7 +27,7 @@ MU_TEST(test_asdf_parse_minimal) {
         munit_error("failed to initialize asdf parser");
 
     if (asdf_parser_set_input_file(parser, filename) != 0)
-        munit_error("failed to set asdf parser file");
+        munit_errorf("failed to set asdf parser file '%s'", filename);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
     assert_string_equal(event->payload.version->version, "1.0.0");
@@ -57,7 +57,7 @@ MU_TEST(test_asdf_parse_minimal_extra_comment) {
         munit_error("failed to initialize asdf parser");
 
     if (asdf_parser_set_input_file(parser, filename) != 0)
-        munit_error("failed to set asdf parser file");
+        munit_errorf("failed to set asdf parser file '%s'", filename);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
     assert_string_equal(event->payload.version->version, "1.0.0");
