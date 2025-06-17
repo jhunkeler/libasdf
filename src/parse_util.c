@@ -209,9 +209,11 @@ asdf_event_t *asdf_parse_event_alloc(asdf_parser_t *parser) {
 
 
 void asdf_parse_event_recycle(asdf_parser_t *parser, asdf_event_t *event) {
-    if (!parser || !event) return;
+    if (!parser || !event)
+        return;
 
-    struct asdf_event_p *event_p = (struct asdf_event_p *)((char *)event - offsetof(struct asdf_event_p, event));
+    struct asdf_event_p *event_p =
+        (struct asdf_event_p *)((char *)event - offsetof(struct asdf_event_p, event));
     event_p->next = parser->event_freelist;
     parser->event_freelist = event_p;
 

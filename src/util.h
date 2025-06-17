@@ -6,10 +6,10 @@
 
 
 #if defined(__GNUC__) || defined(__clang__)
-#define LIKELY(x)   __builtin_expect(!!(x), 1)
+#define LIKELY(x) __builtin_expect(!!(x), 1)
 #define UNLIKELY(x) __builtin_expect(!!(x), 0)
 #else
-#define LIKELY(x)   (x)
+#define LIKELY(x) (x)
 #define UNLIKELY(x) (x)
 #endif
 
@@ -21,10 +21,10 @@
 #endif
 
 
-#define FIELD_SIZEOF(t, f) (sizeof(((t*)0)->f))
+#define FIELD_SIZEOF(t, f) (sizeof(((t *)0)->f))
 
 
-/* Cast memset to volatile to prevent opt-away */ \
+/* Cast memset to volatile to prevent opt-away */
 #define ZERO_MEMORY(ptr, size) \
     do { \
         void *volatile _volatile_ptr = (ptr); \
