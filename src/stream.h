@@ -15,7 +15,13 @@
 #include "util.h"
 
 
-typedef enum { ASDF_STREAM_OK = 0, ASDF_STREAM_ERR_OOM } asdf_stream_error_t;
+// clang-format: off
+typedef enum {
+    ASDF_STREAM_OK = 0,
+    ASDF_STREAM_ERR_OOM,
+    ASDF_STREAM_ERR_EINVAL,
+} asdf_stream_error_t;
+// clang-format: on
 
 
 // TODO: Document this once things shake out
@@ -107,10 +113,6 @@ static inline int asdf_stream_scan(
 }
 
 
-static inline int asdf_stream_seek(asdf_stream_t *stream, off_t offset, int whence) {
-    return stream->seek(stream, offset, whence);
-}
-
 static inline off_t asdf_stream_tell(asdf_stream_t *stream) {
     return stream->tell(stream);
 }
@@ -125,6 +127,8 @@ static inline void asdf_stream_close(asdf_stream_t *stream) {
     return stream->close(stream);
 }
 
+
+ASDF_LOCAL int asdf_stream_seek(asdf_stream_t *stream, off_t offset, int whence);
 
 ASDF_LOCAL asdf_stream_t *asdf_stream_from_file(const char *filename);
 ASDF_LOCAL asdf_stream_t *asdf_stream_from_fp(FILE *file, const char *filename);

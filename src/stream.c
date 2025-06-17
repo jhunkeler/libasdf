@@ -95,6 +95,37 @@ void asdf_stream_set_capture(asdf_stream_t *stream, uint8_t **buf, size_t *size,
 
 
 /**
+ * Allows seeking forward unseekable files but only with ``SEEK_CUR`` with a positive offset,
+ * otherwise returns an error.
+ *
+ * For random access files it simply calls ``stream->seek``.
+ */
+int asdf_stream_seek(asdf_stream_t *stream, off_t offset, int whence) {
+    if (UNLIKELY(!stream->is_seekable && offset < 0 && whence != SEEK_CUR)) {
+        stream->error = ASDF_STREAM_ERR_EINVAL;
+        return -1;
+    }
+
+    if (stream->is_seekable)
+        return stream->seek(stream, offset, whence);
+
+    /* Case for non-seekable streams; just read and consume up to offset bytes */
+    off_t to_consume = offset;
+    size_t avail = 0;
+
+    while (to_consume > 0) {
+        stream->next(stream, 1, &avail);
+
+        if (avail == 0)
+            break;
+
+        stream->consume(stream, avail >= offset ? offset : avail);
+        to_consume -= avail;
+    }
+}
+
+
+/**
  * File-backed read handling
  */
 static const uint8_t *file_next(asdf_stream_t *stream, size_t count, size_t *avail) {
