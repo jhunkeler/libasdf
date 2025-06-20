@@ -103,6 +103,7 @@ typedef struct asdf_parser {
     struct fy_parser *yaml_parser;
     asdf_parser_tree_info_t tree;
     asdf_block_index_t *block_index;
+    size_t found_blocks;
     bool done;
 } asdf_parser_t;
 

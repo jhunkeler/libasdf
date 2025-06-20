@@ -21,19 +21,6 @@ typedef enum {
 } parse_result_t;
 
 
-static int check_stream(asdf_parser_t *parser) {
-    asdf_stream_error_t error = asdf_stream_error(parser->stream);
-
-    switch (error) {
-    case ASDF_STREAM_OK:
-        return 0;
-    case ASDF_STREAM_ERR_OOM:
-        asdf_parser_set_oom_error(parser);
-        return 1;
-    }
-}
-
-
 /**
  * Helper to consume bytes from the stream and immediately check the stream status
  * for any errors.
@@ -41,7 +28,7 @@ static int check_stream(asdf_parser_t *parser) {
 #define CONSUME_AND_CHECK(parser, count) \
     do { \
         asdf_stream_consume((parser)->stream, count); \
-        if (UNLIKELY(check_stream(parser) != 0)) { \
+        if (UNLIKELY(asdf_parser_check_stream(parser) != 0)) { \
             return ASDF_PARSE_ERROR; \
         } \
     } while (0);
@@ -53,7 +40,7 @@ static int check_stream(asdf_parser_t *parser) {
 #define CONSUME_AND_CHECK_INT(parser, count) \
     do { \
         asdf_stream_consume((parser)->stream, count); \
-        if (UNLIKELY(check_stream(parser) != 0)) { \
+        if (UNLIKELY(asdf_parser_check_stream(parser) != 0)) { \
             return 1; \
         } \
     } while (0);
@@ -496,106 +483,23 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
         header_pos = match_offset;
     }
 
-    // It's a block?
-    // TODO: ASDF 2.0.0 proposes adding a checksum to the block header
-    // Here we will want to check that as well.
-    // In fact we should probably ignore anything that starts with a block
-    // magic but then contains garbage.  But we will need some heuristics
-    // for what counts as "garbage"
-    // Go ahead and allocate storage for the block info
-    asdf_block_info_t *block = calloc(1, sizeof(asdf_block_info_t));
+    asdf_block_info_t *block_info = asdf_read_block_info(parser);
 
-    if (!block) {
-        asdf_parser_set_oom_error(parser);
+    if (!block_info)
         return ASDF_PARSE_ERROR;
-    }
-
-    asdf_stream_consume(parser->stream, ASDF_BLOCK_MAGIC_SIZE);
-    if (UNLIKELY(check_stream(parser) != 0)) {
-        free(block);
-        return ASDF_PARSE_ERROR;
-    }
-
-    buf = asdf_stream_next(parser->stream, FIELD_SIZEOF(asdf_block_header_t, header_size), &len);
-
-    if (!buf) {
-        asdf_parser_set_static_error(parser, "Failed to seek past block magic");
-        free(block);
-        return ASDF_PARSE_ERROR;
-    }
-
-    if (len < 2) {
-        asdf_parser_set_static_error(parser, "Failed to read block header size");
-        free(block);
-        return ASDF_PARSE_ERROR;
-    }
-
-    asdf_block_header_t *header = &block->header;
-    // NOLINTNEXTLINE(readability-magic-numbers)
-    header->header_size = (buf[0] << 8) | buf[1];
-    if (header->header_size < ASDF_BLOCK_HEADER_SIZE) {
-        asdf_parser_set_static_error(parser, "Invalid block header size");
-        free(block);
-        return ASDF_PARSE_ERROR;
-    }
-
-    asdf_stream_consume(parser->stream, FIELD_SIZEOF(asdf_block_header_t, header_size));
-    if (UNLIKELY(check_stream(parser) != 0)) {
-        free(block);
-        return ASDF_PARSE_ERROR;
-    }
-
-    buf = asdf_stream_next(parser->stream, header->header_size, &len);
-
-    if (len < header->header_size) {
-        asdf_parser_set_static_error(parser, "Failed to read full block header");
-        free(block);
-        return ASDF_PARSE_ERROR;
-    }
-
-    // Parse block fields
-    uint32_t flags =
-        // NOLINTNEXTLINE(readability-magic-numbers)
-        (((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | buf[3]);
-    strncpy(
-        header->compression,
-        (char *)buf + ASDF_BLOCK_COMPRESSION_OFFSET,
-        sizeof(header->compression));
-
-    uint64_t allocated_size = 0;
-    uint64_t used_size = 0;
-    uint64_t data_size = 0;
-    memcpy(&allocated_size, buf + ASDF_BLOCK_ALLOCATED_SIZE_OFFSET, sizeof(allocated_size));
-    memcpy(&used_size, buf + ASDF_BLOCK_USED_SIZE_OFFSET, sizeof(used_size));
-    memcpy(&data_size, buf + ASDF_BLOCK_DATA_SIZE_OFFSET, sizeof(data_size));
-
-    header->flags = flags;
-    header->allocated_size = be64toh(allocated_size);
-    header->used_size = be64toh(used_size);
-    header->data_size = be64toh(data_size);
-    memcpy(header->checksum, buf + ASDF_BLOCK_CHECKSUM_OFFSET, sizeof(header->checksum));
-
-    block->header_pos = header_pos;
-
-    asdf_stream_consume(parser->stream, header->header_size);
-    if (UNLIKELY(check_stream(parser) != 0)) {
-        free(block);
-        return ASDF_PARSE_ERROR;
-    }
-
-    block->data_pos = asdf_stream_tell(parser->stream);
 
     // Seek to end of the block (hopefully?)
-    if (asdf_stream_seek(parser->stream, header->allocated_size, SEEK_CUR)) {
+    if (asdf_stream_seek(parser->stream, block_info->header.allocated_size, SEEK_CUR)) {
         // TODO: When reading the file from a stream we will want the option to return a pointer
         // to the start of the block data, possibly with the option to copy it to a buffer.
         // For now it will suffice to skip past it.
-        free(block);
+        free(block_info);
         asdf_parser_set_static_error(parser, "Failed to seek past block data");
         return ASDF_PARSE_ERROR;
     }
+    parser->found_blocks += 1;
     event->type = ASDF_BLOCK_EVENT;
-    event->payload.block = block;
+    event->payload.block = block_info;
     return ASDF_PARSE_EVENT;
 }
 

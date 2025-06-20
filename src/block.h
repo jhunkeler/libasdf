@@ -13,6 +13,9 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include "parse.h"
+#include "util.h"
+
 
 #define ASDF_BLOCK_COMPRESSION_FIELD_SIZE 4
 #define ASDF_BLOCK_CHECKSUM_FIELD_SIZE 16
@@ -83,3 +86,6 @@ static inline bool is_block_magic(const char *buf, size_t len) {
 
     return memcmp(buf, asdf_block_magic, (size_t)ASDF_BLOCK_MAGIC_SIZE) == 0;
 }
+
+
+ASDF_LOCAL asdf_block_info_t *asdf_read_block_info(asdf_parser_t *parser);
