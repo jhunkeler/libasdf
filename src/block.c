@@ -6,3 +6,5 @@
 
 
 const unsigned char asdf_block_magic[] = {'\xd3', 'B', 'L', 'K'};
+
+const char asdf_block_index_header[] = "#ASDF BLOCK INDEX";

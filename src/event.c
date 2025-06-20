@@ -209,7 +209,19 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
         fprintf(file, "\n");
         break;
     }
-
+    case ASDF_BLOCK_INDEX_EVENT: {
+        const asdf_block_index_t *block_index = event->payload.block_index;
+        assert(block_index);
+        fprintf(file, "  Offsets: ");
+        for (size_t idx = 0; idx < block_index->size; idx++) {
+            if (0 != idx) {
+                fprintf(file, ", ");
+            }
+            fprintf(file, "%ld", block_index->offsets[idx]);
+        }
+        fprintf(file, "\n");
+        break;
+    }
     default:
         break;
     }

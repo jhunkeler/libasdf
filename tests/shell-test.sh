@@ -39,6 +39,18 @@ done
 
 fail=0
 
+if [ -z "${srcdir}" ]; then
+  srcdir="."
+fi
+
+if [ -z "${top_srcdir}" ]; then
+  top_srcdir=".."
+fi
+
+if [ -z "${top_builddir}" ]; then
+  top_builddir=".."
+fi
+
 fixtures_dir="${srcdir}/fixtures/${SUBCOMMAND}"
 
 for input in $@; do

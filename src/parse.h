@@ -81,6 +81,15 @@ struct asdf_event_p {
 };
 
 
+/* Structure for the block index, whether read from the actual block index in the file or
+ * reconstructed while parsing */
+typedef struct asdf_block_index {
+    off_t *offsets;
+    size_t size;
+    size_t cap;
+} asdf_block_index_t;
+
+
 typedef struct asdf_parser {
     const asdf_parser_cfg_t *config;
     asdf_parser_state_t state;
@@ -93,7 +102,7 @@ typedef struct asdf_parser {
     char standard_version[ASDF_STANDARD_VERSION_BUFFER_SIZE];
     struct fy_parser *yaml_parser;
     asdf_parser_tree_info_t tree;
-    size_t found_blocks;
+    asdf_block_index_t *block_index;
     bool done;
 } asdf_parser_t;
 

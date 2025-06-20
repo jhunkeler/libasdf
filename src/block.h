@@ -28,8 +28,13 @@
 #define ASDF_BLOCK_DATA_SIZE_OFFSET 24
 #define ASDF_BLOCK_CHECKSUM_OFFSET 32
 
+#define ASDF_BLOCK_INDEX_HEADER_SIZE 17
+
 
 extern const unsigned char asdf_block_magic[];
+
+
+extern const char asdf_block_index_header[];
 
 
 typedef struct asdf_block_header {

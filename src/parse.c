@@ -3,6 +3,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #include "block.h"
 #include "compat/endian.h"
@@ -157,7 +158,7 @@ static parse_result_t parse_comment(asdf_parser_t *parser, asdf_event_t *event) 
         break;
     }
 
-    parser->state = ASDF_PARSER_STATE_TREE_OR_BLOCK;
+    parser->state = ASDF_PARSER_STATE_BLOCK_INDEX;
     return ASDF_PARSE_CONTINUE;
 }
 
@@ -593,7 +594,6 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
         asdf_parser_set_static_error(parser, "Failed to seek past block data");
         return ASDF_PARSE_ERROR;
     }
-    parser->found_blocks += 1;
     event->type = ASDF_BLOCK_EVENT;
     event->payload.block = block;
     return ASDF_PARSE_EVENT;
@@ -607,10 +607,137 @@ static parse_result_t parse_padding(asdf_parser_t *parser, UNUSED(asdf_event_t *
 }
 
 
-static parse_result_t parse_block_index(asdf_parser_t *parser, UNUSED(asdf_event_t *event)) {
-    // TODO: For now, we skip block index and go to END
-    parser->state = ASDF_PARSER_STATE_END;
-    return ASDF_PARSE_CONTINUE;
+/* Helper for parse_block_index: Try seeking and if not return an EOF error condition */
+#define TRY_SEEK(parser, offset, whence) \
+    do { \
+        if (UNLIKELY(0 != asdf_stream_seek((parser)->stream, (offset), (whence)))) { \
+            asdf_parser_set_common_error((parser), ASDF_ERR_UNEXPECTED_EOF); \
+            return ASDF_PARSE_ERROR; \
+        } \
+    } while (0);
+
+
+// TODO: Per @braingram they have already encountered some ASDF files in the wild (catalogs?)
+// that have as many as 10000 blocks, so this might not even search backwards far enough.
+// Have to take a look at how other libraries are handling this.
+// TODO: Split this up a bit once it's working
+static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *event) {
+    parse_result_t res = ASDF_PARSE_CONTINUE;
+
+    if (UNLIKELY(!parser->stream->is_seekable)) {
+        // Stream is not seekable so we can't rely on the block index
+        goto next_state;
+    }
+
+    asdf_stream_t *stream = parser->stream;
+    off_t cur_offset = asdf_stream_tell(stream);
+
+    // Basically seek to the end of the file on page boundardies, then seek for the block index
+    // header
+    long page_size = sysconf(_SC_PAGESIZE);
+
+    if (UNLIKELY(page_size <= 0)) {
+        // Something bizarre happened here, skip block index parsing
+        goto next_state;
+    }
+
+    TRY_SEEK(parser, 0, SEEK_END);
+
+    off_t file_size = asdf_stream_tell(stream);
+
+    if (UNLIKELY(file_size < 0)) {
+        asdf_parser_set_common_error(parser, ASDF_ERR_UNEXPECTED_EOF);
+        return ASDF_PARSE_ERROR;
+    }
+
+    off_t aligned_offset =
+        (file_size > page_size) ? (file_size - page_size - (file_size % page_size)) : 0;
+    struct fy_document *doc = NULL;
+
+
+    TRY_SEEK(parser, aligned_offset, SEEK_SET);
+
+    const asdf_parse_token_id_t tokens[] = {ASDF_BLOCK_INDEX_HEADER_TOK, ASDF_LAST_TOK};
+    asdf_parse_token_id_t match_token = ASDF_LAST_TOK;
+    size_t match_offset = 0;
+
+    while (0 == asdf_parser_scan_tokens(parser, tokens, &match_offset, &match_token)) {
+        size_t avail = 0;
+        const uint8_t *buf = asdf_stream_next(stream, ASDF_BLOCK_INDEX_HEADER_SIZE + 1, &avail);
+
+        if (buf == NULL || avail < ASDF_BLOCK_INDEX_HEADER_SIZE + 1) {
+            goto cleanup;
+        }
+
+        if (ends_with_newline(buf, avail, ASDF_BLOCK_INDEX_HEADER_SIZE))
+            break;
+    }
+
+    if (match_token != ASDF_BLOCK_INDEX_HEADER_TOK)
+        goto cleanup;
+
+    // Block index found (assuming it's valid YAML)
+    off_t block_index_offset = asdf_stream_tell(stream);
+    off_t block_index_len = file_size - block_index_offset;
+
+    // Ensure the full block index is available to the stream
+    size_t avail = 0;
+    const uint8_t *buf = asdf_stream_next(stream, block_index_len, &avail);
+
+    if (UNLIKELY(!buf)) {
+        // TODO: (#5) Not necessarily an unrecoverable error but should produce a log message
+        asdf_parser_set_common_error(parser, ASDF_ERR_UNEXPECTED_EOF);
+        return ASDF_PARSE_ERROR;
+    }
+
+    off_t *offsets = NULL;
+    asdf_block_index_t *block_index = NULL;
+
+    // Try to read the block index document
+    doc = fy_document_build_from_string(NULL, buf, block_index_len);
+    struct fy_node *root = fy_document_root(doc);
+
+    if (!doc || !root || !fy_node_is_sequence(root)) {
+        // Invalid / corrupt block index
+        goto cleanup_on_error;
+    }
+
+    size_t count = fy_node_sequence_item_count(root);
+    offsets = calloc(count, sizeof(off_t));
+    block_index = malloc(sizeof(asdf_block_index_t));
+
+    if (UNLIKELY(!offsets || !block_index)) {
+        asdf_parser_set_oom_error(parser);
+        return ASDF_PARSE_ERROR;
+    }
+
+    struct fy_node *item = NULL;
+    int idx = 0;
+    void *iter = NULL;
+    while ((item = fy_node_sequence_iterate(root, &iter))) {
+        if (UNLIKELY(1 != fy_node_scanf(item, "/ %ld", &offsets[idx++]))) {
+            goto cleanup_on_error;
+        }
+    }
+
+    block_index->offsets = offsets;
+    block_index->size = count;
+    block_index->cap = count;
+    parser->block_index = block_index;
+    event->type = ASDF_BLOCK_INDEX_EVENT;
+    event->payload.block_index = block_index;
+    res = ASDF_PARSE_EVENT;
+    goto cleanup;
+
+cleanup_on_error:
+    free(offsets);
+    free(block_index);
+cleanup:
+    fy_document_destroy(doc);
+    TRY_SEEK(parser, cur_offset, SEEK_SET);
+next_state:
+    parser->state = ASDF_PARSER_STATE_TREE_OR_BLOCK;
+    return res;
 }
 
 
@@ -688,7 +815,6 @@ asdf_parser_t *asdf_parser_create(asdf_parser_cfg_t *config) {
     parser->state = ASDF_PARSER_STATE_INITIAL;
     parser->error = NULL;
     parser->error_type = ASDF_ERROR_NONE;
-    parser->found_blocks = false;
     parser->done = false;
     ZERO_MEMORY(parser->asdf_version, sizeof(parser->asdf_version));
     ZERO_MEMORY(parser->standard_version, sizeof(parser->standard_version));
@@ -765,5 +891,11 @@ void asdf_parser_destroy(asdf_parser_t *parser) {
 
     free(parser->tree.buf);
     asdf_parse_event_freelist_free(parser);
+
+    if (parser->block_index) {
+        free(parser->block_index->offsets);
+        free(parser->block_index);
+    }
+
     free(parser);
 }

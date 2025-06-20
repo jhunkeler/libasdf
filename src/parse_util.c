@@ -28,7 +28,8 @@ const asdf_parse_token_t asdf_parse_tokens[] = {
         {TOKEN(ASDF_YAML_DIRECTIVE_PREFIX), ASDF_YAML_DIRECTIVE_PREFIX_SIZE},
     [ASDF_YAML_DOCUMENT_END_TOK] =
         {TOKEN(ASDF_YAML_DOCUMENT_END_MARKER), ASDF_YAML_DOCUMENT_END_MARKER_SIZE},
-    [ASDF_BLOCK_MAGIC_TOK] = {asdf_block_magic, ASDF_BLOCK_MAGIC_SIZE}};
+    [ASDF_BLOCK_MAGIC_TOK] = {asdf_block_magic, ASDF_BLOCK_MAGIC_SIZE},
+    [ASDF_BLOCK_INDEX_HEADER_TOK] = {asdf_block_index_header, ASDF_BLOCK_INDEX_HEADER_SIZE}};
 
 
 static const char *const parser_error_messages[] = {
