@@ -37,7 +37,7 @@ unit_test_ldflags = $(CODE_COVERAGE_LDFLAGS)
 unit_test_ldadd = $(top_builddir)/libasdf.la libmunit.a
 
 # Unit tests
-noinst_LIBRARIES = libmunit.a
+check_LIBRARIES = libmunit.a
 libmunit_a_SOURCES = util.c munit/munit.c
 libmunit_a_CPPFLAGS = $(unit_test_cppflags)
 libmunit_a_CFLAGS = $(unit_test_cflags) -w
