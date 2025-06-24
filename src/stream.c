@@ -157,7 +157,6 @@ static const uint8_t *file_next(asdf_stream_t *stream, size_t count, size_t *ava
     if (buf_remain < count || data->buf_pos >= data->buf_avail) {
         size_t n = fread(data->buf + buf_remain, 1, data->buf_size - buf_remain, data->file);
         data->buf_avail += n;
-        data->offset += n;
         buf_remain = data->buf_avail - data->buf_pos;
     }
 
@@ -173,6 +172,7 @@ static void file_consume(asdf_stream_t *stream, size_t count) {
     stream_capture(stream, data->buf + data->buf_pos, count);
 
     data->buf_pos += count;
+    data->file_pos += count;
 
     if (data->buf_pos > data->buf_avail) {
         data->buf_pos = data->buf_avail;
@@ -256,7 +256,7 @@ static int file_scan(
 
         if (0 == res) {
             if (match_offset)
-                *match_offset = data->offset - data->buf_avail + offset;
+                *match_offset = data->file_pos + offset;
 
             if (match_token_idx)
                 *match_token_idx = token_idx;
@@ -270,8 +270,8 @@ static int file_scan(
         memmove(data->buf, data->buf + data->buf_avail - preserve, preserve);
         size_t n = fread(data->buf + preserve, 1, data->buf_size - preserve, data->file);
         size_t new_avail = preserve + n;
+        data->file_pos += (data->buf_avail - preserve);
         data->buf_avail = new_avail;
-        data->offset += n;
 
         if (new_avail < max_token_len) {
             data->buf_pos = new_avail;
@@ -289,7 +289,7 @@ static int file_seek(asdf_stream_t *stream, off_t offset, int whence) {
     int ret = -1;
 
     if (SEEK_CUR == whence) {
-        offset = data->offset - (data->buf_avail - data->buf_pos);
+        offset = data->file_pos + offset;
         ret = fseeko(data->file, offset, SEEK_SET);
     } else {
         ret = fseeko(data->file, offset, whence);
@@ -302,10 +302,10 @@ static int file_seek(asdf_stream_t *stream, off_t offset, int whence) {
         switch (whence) {
         case SEEK_SET:
         case SEEK_CUR:
-            data->offset = offset;
+            data->file_pos = offset;
             break;
         case SEEK_END:
-            data->offset = ftello(data->file);
+            data->file_pos = ftello(data->file);
             break;
         default:
             // Should never get here
@@ -319,13 +319,7 @@ static int file_seek(asdf_stream_t *stream, off_t offset, int whence) {
 
 static off_t file_tell(asdf_stream_t *stream) {
     file_userdata_t *data = stream->userdata;
-    off_t base = data->offset;
-
-    if (base < 0)
-        return base;
-
-    // Adjust for unconsumed buffer data
-    return base - (off_t)(data->buf_avail - data->buf_pos);
+    return data->file_pos;
 }
 
 
