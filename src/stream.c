@@ -537,10 +537,7 @@ static int mem_seek(asdf_stream_t *stream, off_t offset, int whence) {
         return -1;
     }
 
-    if (new_pos > data->size)
-        return -1;
-
-    data->pos = new_pos;
+    data->pos = new_pos > data->size ? data->size : new_pos;
     return 0;
 }
 

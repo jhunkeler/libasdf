@@ -6,7 +6,6 @@
 #include <unistd.h>
 
 #include "block.h"
-#include "compat/endian.h"
 #include "event.h"
 #include "parse.h"
 #include "parse_util.h"
@@ -42,6 +41,17 @@ typedef enum {
         asdf_stream_consume((parser)->stream, count); \
         if (UNLIKELY(asdf_parser_check_stream(parser) != 0)) { \
             return 1; \
+        } \
+    } while (0);
+
+
+/* Helper for several subroutines that need to seek and check for error:
+ * Try seeking and if not return an EOF error condition */
+#define TRY_SEEK(parser, offset, whence, error_retval) \
+    do { \
+        if (UNLIKELY(0 != asdf_stream_seek((parser)->stream, (offset), (whence)))) { \
+            asdf_parser_set_common_error((parser), ASDF_ERR_UNEXPECTED_EOF); \
+            return (error_retval); \
         } \
     } while (0);
 
@@ -186,7 +196,7 @@ static parse_result_t parse_tree_or_block(asdf_parser_t *parser, asdf_event_t *e
     }
 
     // Or may encounter an ASDF block magic esp. in case of an exploded ASDF file
-    if (is_block_magic((const char *)r, len)) {
+    if (is_block_magic(r, len)) {
         parser->state = ASDF_PARSER_STATE_BLOCK;
         return ASDF_PARSE_CONTINUE;
     }
@@ -450,52 +460,24 @@ static parse_result_t parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
         parser->tree.found = true;
         // Rewind the stream back to the end of the tree, as libfyaml will likely have read
         // past it for its own internal buffering.
-        asdf_stream_seek(parser->stream, parser->tree.end, SEEK_SET);
+        TRY_SEEK(parser, parser->tree.end, SEEK_SET, ASDF_PARSE_ERROR);
     }
 
     return ASDF_PARSE_EVENT;
 }
 
 
-static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
-    size_t len = 0;
-    const uint8_t *buf = asdf_stream_next(parser->stream, ASDF_BLOCK_MAGIC_SIZE, &len);
+/**
+ * Helper to scan ahead for the beginning of an ASDF block (valid block magic)
+ *
+ * Returns ``true`` if a block is found.
+ */
+static bool scan_for_block(asdf_parser_t *parser) {
+    const asdf_parse_token_id_t tokens[] = {ASDF_BLOCK_MAGIC_TOK, ASDF_LAST_TOK};
+    asdf_parse_token_id_t match_token = ASDF_LAST_TOK;
+    size_t match_offset = 0;
 
-    // If is_block_magic we are on the happy path, we are already pointing to the start of a block
-    // Otherwise scan for the first block magic we find, if any
-    if (!is_block_magic((const char *)buf, len)) {
-        const asdf_parse_token_id_t tokens[] = {ASDF_BLOCK_MAGIC_TOK, ASDF_LAST_TOK};
-        asdf_parse_token_id_t match_token = ASDF_LAST_TOK;
-        size_t match_offset = 0;
-
-        if (0 != asdf_parser_scan_tokens(parser, tokens, &match_offset, &match_token)) {
-            // No expected token found; may be the end of the file or just unparseable garbage
-            // TODO: May also encounter a block index, though if we didn't find a valid block
-            // up to this point it is either empty or invalid
-            parser->state = ASDF_PARSER_STATE_END;
-            // Should immediately emit the end event, not a block event
-            return ASDF_PARSE_CONTINUE;
-        }
-    }
-
-    asdf_block_info_t *block_info = asdf_block_read_info(parser);
-
-    if (!block_info)
-        return ASDF_PARSE_ERROR;
-
-    // Seek to end of the block (hopefully?)
-    if (asdf_stream_seek(parser->stream, block_info->header.allocated_size, SEEK_CUR)) {
-        // TODO: When reading the file from a stream we will want the option to return a pointer
-        // to the start of the block data, possibly with the option to copy it to a buffer.
-        // For now it will suffice to skip past it.
-        free(block_info);
-        asdf_parser_set_static_error(parser, "Failed to seek past block data");
-        return ASDF_PARSE_ERROR;
-    }
-    parser->found_blocks += 1;
-    event->type = ASDF_BLOCK_EVENT;
-    event->payload.block = block_info;
-    return ASDF_PARSE_EVENT;
+    return (0 == asdf_parser_scan_tokens(parser, tokens, &match_offset, &match_token));
 }
 
 
@@ -506,14 +488,107 @@ static parse_result_t parse_padding(asdf_parser_t *parser, UNUSED(asdf_event_t *
 }
 
 
-/* Helper for parse_block_index: Try seeking and if not return an EOF error condition */
-#define TRY_SEEK(parser, offset, whence) \
-    do { \
-        if (UNLIKELY(0 != asdf_stream_seek((parser)->stream, (offset), (whence)))) { \
-            asdf_parser_set_common_error((parser), ASDF_ERR_UNEXPECTED_EOF); \
-            return ASDF_PARSE_ERROR; \
-        } \
-    } while (0);
+/**
+ * Find a single block using the block index and validate its header
+ *
+ * Returns an ``asdf_block_info_t *`` if successfull otherwise ``NULL``.
+ */
+static asdf_block_info_t *validate_block(
+    asdf_parser_t *parser, asdf_block_index_t *block_index, size_t idx) {
+    off_t offset = block_index->offsets[idx];
+    size_t avail = 0;
+    TRY_SEEK(parser, offset, SEEK_SET, NULL);
+    const uint8_t *buf = asdf_stream_next(parser->stream, ASDF_BLOCK_MAGIC_SIZE, &avail);
+
+    if (!is_block_magic(buf, avail))
+        return NULL;
+
+    return asdf_block_read_info(parser);
+}
+
+
+/**
+ * Validate the block index once it has been read
+ *
+ * The ASDF Standard lays out some recommendations for checking the block index once read:
+ *
+ * > The following checks are recommended:
+ * >
+ * > Always ensure that the first offset entry matches the location of the first block in the file.
+ * > This will catch the common use case where the YAML tree was edited by hand without updating
+ * > the index. If they do not match, do not use the entire block index.
+ * >
+ * > Ensure that the last entry in the index refers to a block magic token, and that the end of the
+ * > allocated space in the last block is immediately followed by the block index. If they do not
+ * > match, do not use the entire block index.
+ *
+ * Also check the condition that:
+ *
+ * > The offsets in the block index must be monotonically increasing, and must, by definition, be
+ * > at least “block header size” apart. If they were allowed to appear in any order, it would be
+ * > impossible to rebuild the index by skipping blocks were the index to become damaged or
+ * > out-of-sync.
+ *
+ * Note that while the ASDF Standard technically allows block headers to be dynamically sized, the
+ * current version of the standard has a fixed size for all block headers, so minimally check that
+ * they are at least the minimum block header size apart.
+ *
+ * As performing these checks in a truly robust manner should require reading the full block header
+ * anyways, this also goes aheand the read block info (if valid) on the parser for future use,
+ * rather than require them to be read again.
+ */
+static bool validate_block_index(asdf_parser_t *parser, asdf_block_index_t *block_index) {
+    assert(parser);
+    assert(block_index);
+    assert(parser->stream->is_seekable);
+
+    size_t n_blocks = block_index->size;
+
+    // Block index shouldn't be empty, but it's not invalid if it is per se...
+    if (n_blocks < 1)
+        return true;
+
+    // Ensure that block index offsets are monotonically increasing and have a minimum distance
+    // between them
+    off_t prev = block_index->offsets[0];
+    for (size_t idx = 1; idx < n_blocks; idx++) {
+        off_t offset = block_index->offsets[idx];
+
+        if (offset <= prev || (offset - prev) < ASDF_BLOCK_HEADER_FULL_SIZE)
+            return false;
+    }
+
+    asdf_block_info_t *first_block = validate_block(parser, block_index, 0);
+    asdf_block_info_t *last_block = NULL;
+
+    if (!first_block)
+        return false;
+
+    if (n_blocks > 1) {
+        last_block = validate_block(parser, block_index, n_blocks - 1);
+
+        if (!last_block) {
+            free(first_block);
+            return false;
+        }
+    }
+
+    // Got the first and last blocks, great; let's save their info
+    asdf_block_info_t **block_infos = calloc(block_index->size, sizeof(asdf_block_info_t *));
+    if (!block_infos) {
+        asdf_parser_set_oom_error(parser);
+        return false;
+    }
+    block_infos[0] = first_block;
+
+    if (n_blocks > 1)
+        block_infos[n_blocks - 1] = last_block;
+
+    parser->blocks.block_infos = block_infos;
+    parser->blocks.n_blocks = n_blocks;
+    parser->blocks.cap = block_index->size;
+    return true;
+}
 
 
 // TODO: Per @braingram they have already encountered some ASDF files in the wild (catalogs?)
@@ -540,7 +615,7 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *eve
         goto next_state;
     }
 
-    TRY_SEEK(parser, 0, SEEK_END);
+    TRY_SEEK(parser, 0, SEEK_END, ASDF_PARSE_ERROR);
 
     off_t file_size = asdf_stream_tell(stream);
 
@@ -554,7 +629,7 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *eve
     struct fy_document *doc = NULL;
 
 
-    TRY_SEEK(parser, aligned_offset, SEEK_SET);
+    TRY_SEEK(parser, aligned_offset, SEEK_SET, ASDF_PARSE_ERROR);
 
     const asdf_parse_token_id_t tokens[] = {ASDF_BLOCK_INDEX_HEADER_TOK, ASDF_LAST_TOK};
     asdf_parse_token_id_t match_token = ASDF_LAST_TOK;
@@ -602,13 +677,14 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *eve
     }
 
     size_t count = fy_node_sequence_item_count(root);
-    offsets = calloc(count, sizeof(off_t));
-    block_index = malloc(sizeof(asdf_block_index_t));
+    block_index = asdf_block_index_init(count);
 
-    if (UNLIKELY(!offsets || !block_index)) {
+    if (UNLIKELY(!block_index)) {
         asdf_parser_set_oom_error(parser);
         return ASDF_PARSE_ERROR;
     }
+
+    offsets = block_index->offsets;
 
     struct fy_node *item = NULL;
     int idx = 0;
@@ -618,10 +694,13 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *eve
             goto cleanup_on_error;
         }
     }
+    block_index->size = idx;
 
-    block_index->offsets = offsets;
-    block_index->size = count;
-    block_index->cap = count;
+    if (!validate_block_index(parser, block_index)) {
+        // Inconsistent/invalid block index, so discard
+        goto cleanup_on_error;
+    }
+
     parser->block_index = block_index;
     event->type = ASDF_BLOCK_INDEX_EVENT;
     event->payload.block_index = block_index;
@@ -629,14 +708,129 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *eve
     goto cleanup;
 
 cleanup_on_error:
-    free(offsets);
-    free(block_index);
+    asdf_block_index_free(block_index);
 cleanup:
     fy_document_destroy(doc);
-    TRY_SEEK(parser, cur_offset, SEEK_SET);
+    TRY_SEEK(parser, cur_offset, SEEK_SET, ASDF_PARSE_ERROR);
 next_state:
     parser->state = ASDF_PARSER_STATE_TREE_OR_BLOCK;
     return res;
+}
+
+
+static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
+    size_t len = 0;
+    const uint8_t *buf = NULL;
+    asdf_block_index_t *block_index = parser->block_index;
+    size_t block_idx = parser->blocks.found_blocks;
+    asdf_block_info_t *block_info = NULL;
+
+    if (block_index && block_idx < block_index->size) {
+        // Seek to block using the block index; if the block index was validated we should
+        // also already have the first and last blocks parsed
+        if (parser->blocks.block_infos && block_idx < parser->blocks.n_blocks &&
+            parser->blocks.block_infos[block_idx] != NULL) {
+            block_info = parser->blocks.block_infos[block_idx];
+            // Seek past the header as if we already read it
+            TRY_SEEK(parser, block_info->data_pos, SEEK_SET, ASDF_PARSE_ERROR);
+        } else {
+            block_info = validate_block(parser, parser->block_index, block_idx);
+        }
+
+        if (!block_info) {
+            // Valid block not found at the index proposed by the block index; for now
+            // mark the entry in the block index invalid by setting it to -1
+            block_index->offsets[block_idx] = -1;
+        }
+    }
+
+    if (!block_info) {
+        // Case without block index (or invalid block index)
+        buf = asdf_stream_next(parser->stream, ASDF_BLOCK_MAGIC_SIZE, &len);
+        // Happy path, we are already pointing to the start of a block
+        // Otherwise scan for the first block magic we find, if any
+        if (buf && is_block_magic(buf, len)) {
+            block_info = asdf_block_read_info(parser);
+        } else {
+            if (!scan_for_block(parser)) {
+                parser->state = ASDF_PARSER_STATE_END;
+                // Should immediately emit the end event, not a block event
+                return ASDF_PARSE_CONTINUE;
+            }
+            block_info = asdf_block_read_info(parser);
+        }
+    }
+
+    if (!block_info) {
+        parser->state = ASDF_PARSER_STATE_END;
+        return ASDF_PARSE_CONTINUE;
+    }
+
+    parser->blocks.found_blocks += 1;
+
+    if (!block_index || block_index->cap < parser->blocks.found_blocks) {
+        size_t new_cap = block_index ? block_index->cap * 2 : ASDF_DEFAULT_BLOCK_INDEX_SIZE;
+        if (!(block_index = asdf_block_index_resize(block_index, new_cap))) {
+            asdf_parser_set_oom_error(parser);
+            return ASDF_PARSE_ERROR;
+        }
+        parser->block_index = block_index;
+    }
+
+
+    // TODO: Would be cleaner with some more subroutines for managing the block index
+    size_t block_index_cap = block_index->cap;
+    asdf_block_info_t **block_infos = parser->blocks.block_infos;
+    block_index->offsets[block_idx] = block_info->header_pos;
+
+    if (block_index->size < parser->blocks.found_blocks)
+        block_index->size = parser->blocks.found_blocks;
+
+    // TODO: So many cases of arrays with size/capacity info attached; should template that;
+    // maybe use STC
+    if (parser->blocks.cap < parser->blocks.found_blocks) {
+        if (!block_infos)
+            block_infos = calloc(block_index_cap, sizeof(asdf_block_info_t *));
+        else if (parser->blocks.cap < block_index_cap)
+            block_infos = realloc(block_infos, block_index_cap * sizeof(asdf_block_info_t *));
+
+        if (!block_infos) {
+            asdf_parser_set_oom_error(parser);
+            return ASDF_PARSE_ERROR;
+        }
+
+        parser->blocks.block_infos = block_infos;
+        parser->blocks.n_blocks = parser->blocks.found_blocks;
+        parser->blocks.cap = block_index_cap;
+    }
+
+    block_infos[block_idx] = block_info;
+
+    off_t offset;
+    int whence;
+
+    if (!(block_info->header.flags & ASDF_BLOCK_FLAG_STREAMED)) {
+        // Seek to the end of the block (hopefully?)
+        offset = block_info->header.allocated_size;
+        whence = SEEK_CUR;
+    } else {
+        // If the block is marked as streamed it must be assumed the last block
+        offset = 0;
+        whence = SEEK_END;
+    }
+
+    // Seek to end of the block (hopefully?)
+    if (asdf_stream_seek(parser->stream, offset, whence)) {
+        // TODO: When reading the file from a stream we will want the option to return a pointer
+        // to the start of the block data, possibly with the option to copy it to a buffer.
+        // For now it will suffice to skip past it.
+        free(block_info);
+        asdf_parser_set_static_error(parser, "Failed to seek past block data");
+        return ASDF_PARSE_ERROR;
+    }
+    event->type = ASDF_BLOCK_EVENT;
+    event->payload.block = block_info;
+    return ASDF_PARSE_EVENT;
 }
 
 
@@ -790,11 +984,11 @@ void asdf_parser_destroy(asdf_parser_t *parser) {
 
     free(parser->tree.buf);
     asdf_parse_event_freelist_free(parser);
+    asdf_block_index_free(parser->block_index);
 
-    if (parser->block_index) {
-        free(parser->block_index->offsets);
-        free(parser->block_index);
-    }
+    for (size_t idx = 0; idx < parser->blocks.n_blocks; idx++)
+        free(parser->blocks.block_infos[idx]);
 
+    free(parser->blocks.block_infos);
     free(parser);
 }

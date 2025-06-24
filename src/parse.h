@@ -11,6 +11,7 @@
 
 #include <asdf/parse.h>
 
+#include "block.h"
 #include "event.h"
 #include "stream.h"
 #include "util.h"
@@ -20,6 +21,9 @@
 #define ASDF_ASDF_VERSION_BUFFER_SIZE 16
 #define ASDF_STANDARD_VERSION_BUFFER_SIZE 16
 #define ASDF_PARSER_READ_BUFFER_INIT_SIZE 512
+
+
+#define ASDF_DEFAULT_BLOCK_INDEX_SIZE 8
 
 
 typedef enum {
@@ -81,13 +85,17 @@ struct asdf_event_p {
 };
 
 
-/* Structure for the block index, whether read from the actual block index in the file or
- * reconstructed while parsing */
-typedef struct asdf_block_index {
-    off_t *offsets;
-    size_t size;
+typedef struct asdf_parser_block_info {
+    // Array of block infos for all blocks
+    asdf_block_info_t **block_infos;
+    // Number of valid blocks
+    size_t n_blocks;
+    // Allocation for the block_infos array
     size_t cap;
-} asdf_block_index_t;
+    // Number of blocks found so far by the parser state machine
+    // This may exclude blocks that were already found during block index validation.
+    size_t found_blocks;
+} asdf_parser_block_info_t;
 
 
 typedef struct asdf_parser {
@@ -102,8 +110,8 @@ typedef struct asdf_parser {
     char standard_version[ASDF_STANDARD_VERSION_BUFFER_SIZE];
     struct fy_parser *yaml_parser;
     asdf_parser_tree_info_t tree;
+    asdf_parser_block_info_t blocks;
     asdf_block_index_t *block_index;
-    size_t found_blocks;
     bool done;
 } asdf_parser_t;
 

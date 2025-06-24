@@ -71,7 +71,6 @@ void asdf_event_cleanup(asdf_parser_t *parser, asdf_event_t *event) {
         free(event->payload.version);
         break;
     case ASDF_BLOCK_EVENT:
-        free(event->payload.block);
         break;
     case ASDF_COMMENT_EVENT:
         free(event->payload.comment);
