@@ -171,7 +171,7 @@ static tree_node_t *build_tree(asdf_parser_t *parser) {
     const char *tag = NULL;
     size_t tag_len = 0;
 
-    while (event = asdf_event_iterate(parser)) {
+    while ((event = asdf_event_iterate(parser))) {
         asdf_yaml_event_type_t type = asdf_yaml_event_type(event);
         tree_node_t *parent = stack_peek(stack);
         tree_node_t *node = NULL;
@@ -475,7 +475,7 @@ int asdf_info(FILE *in_file, FILE *out_file, const asdf_info_cfg_t *cfg) {
     asdf_event_t *event = NULL;
     size_t block_count = 0;
 
-    while (event = asdf_event_iterate(parser)) {
+    while ((event = asdf_event_iterate(parser))) {
         // Iterate events--if we hit a YAML event start building the tree (
         // build_tree takes over iteration from there) otherwise for block
         // events just show the block header details immediately, if the option

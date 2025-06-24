@@ -123,7 +123,7 @@ static error_t parse_info_opt(int key, char *arg, struct argp_state *state) {
 }
 
 
-static struct argp info_argp = {info_options, parse_info_opt, info_args_doc, info_doc};
+static struct argp info_argp = {info_options, parse_info_opt, info_args_doc, info_doc, 0, 0, 0};
 
 
 static int info_main(const char *filename, bool print_tree, bool print_blocks) {
@@ -202,7 +202,7 @@ static error_t parse_events_opt(int key, char *arg, struct argp_state *state) {
 }
 
 
-static struct argp events_argp = {events_options, parse_events_opt, events_args_doc, events_doc};
+static struct argp events_argp = {events_options, parse_events_opt, events_args_doc, events_doc, 0, 0, 0};
 
 
 int events_main(const char *filename, bool verbose, bool no_yaml, bool cap_tree) {
@@ -230,7 +230,7 @@ int events_main(const char *filename, bool verbose, bool no_yaml, bool cap_tree)
 
     asdf_event_t *event = NULL;
 
-    while (event = asdf_event_iterate(parser)) {
+    while ((event = asdf_event_iterate(parser))) {
         asdf_event_print(event, stdout, verbose);
     }
 
@@ -249,7 +249,7 @@ int events_main(const char *filename, bool verbose, bool no_yaml, bool cap_tree)
 
 int main(int argc, char *argv[]) {
     struct global_args global_args = {0};
-    struct argp global_argp = {global_options, parse_global_opt, args_doc, doc};
+    struct argp global_argp = {global_options, parse_global_opt, args_doc, doc, 0, 0, 0};
 
     argp_parse(&global_argp, argc, argv, ARGP_IN_ORDER, NULL, &global_args);
 

@@ -5,7 +5,14 @@
 #include "munit/munit.h"
 
 
-#define MU_TEST(name) MunitResult name(const MunitParameter params[], void *fixture)
+#if defined(__GNUC__) || defined(__clang__)
+#define UNUSED(x) x __attribute__((unused))
+#else
+#define UNUSED(x) (void)(x)
+#endif
+
+
+#define MU_TEST(name) MunitResult name(UNUSED(const MunitParameter params[]), UNUSED(void *fixture))
 
 
 #define __MU_RUN_TEST_DISPATCH(_1, _2, NAME, ...) NAME

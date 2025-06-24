@@ -110,18 +110,26 @@ int asdf_stream_seek(asdf_stream_t *stream, off_t offset, int whence) {
         return stream->seek(stream, offset, whence);
 
     /* Case for non-seekable streams; just read and consume up to offset bytes */
-    off_t to_consume = offset;
+    /* Cast to size_t is safe since offset should never be non-zero in this branch */
+    assert(offset >= 0);
+    size_t to_consume = (size_t)offset;
     size_t avail = 0;
 
     while (to_consume > 0) {
         stream->next(stream, 1, &avail);
 
+        if (stream->error)
+            return -1;
+
         if (avail == 0)
             break;
 
-        stream->consume(stream, avail >= offset ? offset : avail);
-        to_consume -= avail;
+        size_t count = avail >= to_consume ? to_consume : avail;
+        stream->consume(stream, count);
+        to_consume -= count;
     }
+
+    return 0;
 }
 
 

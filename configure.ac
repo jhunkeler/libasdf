@@ -46,6 +46,15 @@ AX_VALGRIND_CHECK
 # - make check-code-coverage generates coverage report
 AX_CODE_COVERAGE
 
+
+# Check and add compiler flags
+AX_CHECK_COMPILE_FLAG([-Wall],          [CFLAGS="$CFLAGS -Wall"])
+AX_CHECK_COMPILE_FLAG([-Wextra],        [CFLAGS="$CFLAGS -Wextra"])
+AX_CHECK_COMPILE_FLAG([-Wparentheses],  [CFLAGS="$CFLAGS -Wparentheses"])
+AX_CHECK_COMPILE_FLAG([-Wpointer-sign], [CFLAGS="$CFLAGS -Wpointer-sign"])
+AX_CHECK_COMPILE_FLAG([-Wshadow],       [CFLAGS="$CFLAGS -Wshadow"])
+
+
 # Additional enable flags
 # --enable-debug
 AC_ARG_ENABLE([debug],

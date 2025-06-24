@@ -88,4 +88,4 @@ static inline bool is_block_magic(const char *buf, size_t len) {
 }
 
 
-ASDF_LOCAL asdf_block_info_t *asdf_read_block_info(asdf_parser_t *parser);
+ASDF_LOCAL asdf_block_info_t *asdf_block_read_info(asdf_parser_t *parser);

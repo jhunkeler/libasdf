@@ -49,7 +49,6 @@ typedef enum {
 static int parse_version_comment(
     asdf_parser_t *parser, const char *expected, char *out_buf, size_t out_size) {
     size_t expected_len;
-    size_t val_len;
     size_t line_len = 0;
     const uint8_t *r = asdf_stream_readline(parser->stream, &line_len);
 
@@ -212,6 +211,7 @@ static parse_result_t parse_tree_or_block(asdf_parser_t *parser, asdf_event_t *e
             if (LIKELY(is_yaml_directive((const char *)r, len))) {
                 return emit_tree_start_event(parser, event);
             }
+            break;
         case ASDF_BLOCK_MAGIC_TOK:
             parser->state = ASDF_PARSER_STATE_BLOCK;
             return ASDF_PARSE_CONTINUE;
@@ -255,7 +255,7 @@ parse_result_t emit_tree_end_event(asdf_parser_t *parser, asdf_event_t *event) {
  * of the end of the tree (or EOF)
  */
 static int parse_tree_fast(asdf_parser_t *parser) {
-    const char *r = NULL;
+    const uint8_t *r = NULL;
     bool tree_end_found = false;
     off_t tree_end = 0;
     size_t len = 0;
@@ -269,8 +269,8 @@ static int parse_tree_fast(asdf_parser_t *parser) {
         // We got a match for either a document end marker or a block magic
         switch (match_token) {
         case ASDF_YAML_DOCUMENT_END_TOK: {
-            size_t len = 0;
-            const uint8_t *r = asdf_stream_next(parser->stream, 0, &len);
+            r = asdf_stream_next(parser->stream, 0, &len);
+
             if (LIKELY(is_yaml_document_end_marker((const char *)r, len))) {
                 // Read and consume the full line then set the tree end
                 // First chomp the leading newline of the document end marker, then consume
@@ -460,13 +460,10 @@ static parse_result_t parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
 static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     size_t len = 0;
     const uint8_t *buf = asdf_stream_next(parser->stream, ASDF_BLOCK_MAGIC_SIZE, &len);
-    size_t header_pos = 0;
 
-    // Happy path, we are already pointing to the start of a block
+    // If is_block_magic we are on the happy path, we are already pointing to the start of a block
     // Otherwise scan for the first block magic we find, if any
-    if (is_block_magic((const char *)buf, len)) {
-        header_pos = asdf_stream_tell(parser->stream);
-    } else {
+    if (!is_block_magic((const char *)buf, len)) {
         const asdf_parse_token_id_t tokens[] = {ASDF_BLOCK_MAGIC_TOK, ASDF_LAST_TOK};
         asdf_parse_token_id_t match_token = ASDF_LAST_TOK;
         size_t match_offset = 0;
@@ -479,11 +476,9 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
             // Should immediately emit the end event, not a block event
             return ASDF_PARSE_CONTINUE;
         }
-
-        header_pos = match_offset;
     }
 
-    asdf_block_info_t *block_info = asdf_read_block_info(parser);
+    asdf_block_info_t *block_info = asdf_block_read_info(parser);
 
     if (!block_info)
         return ASDF_PARSE_ERROR;
@@ -573,7 +568,7 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *eve
             goto cleanup;
         }
 
-        if (ends_with_newline(buf, avail, ASDF_BLOCK_INDEX_HEADER_SIZE))
+        if (ends_with_newline((const char *)buf, avail, ASDF_BLOCK_INDEX_HEADER_SIZE))
             break;
     }
 
@@ -598,7 +593,7 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *eve
     asdf_block_index_t *block_index = NULL;
 
     // Try to read the block index document
-    doc = fy_document_build_from_string(NULL, buf, block_index_len);
+    doc = fy_document_build_from_string(NULL, (const char *)buf, block_index_len);
     struct fy_node *root = fy_document_root(doc);
 
     if (!doc || !root || !fy_node_is_sequence(root)) {
