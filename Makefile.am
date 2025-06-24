@@ -12,8 +12,9 @@ src_headers = \
     src/yaml.h
 include_dir = $(top_srcdir)/include
 
-AM_CFLAGS = -fvisibility=hidden
-AM_CPPFLAGS = -I$(top_srcdir)/include
+AM_CFLAGS = $(ASDF_CFLAGS) -fvisibility=hidden
+AM_CPPFLAGS = $(ASDF_CPPFLAGS) -I$(top_srcdir)/include
+AM_LDFLAGS = $(ASDF_LDFLAGS)
 ACLOCAL_AMFLAGS = -Im4
 
 include_HEADERS = $(include_dir)/asdf.h

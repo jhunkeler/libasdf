@@ -48,11 +48,11 @@ AX_CODE_COVERAGE
 
 
 # Check and add compiler flags
-AX_CHECK_COMPILE_FLAG([-Wall],          [CFLAGS="$CFLAGS -Wall"])
-AX_CHECK_COMPILE_FLAG([-Wextra],        [CFLAGS="$CFLAGS -Wextra"])
-AX_CHECK_COMPILE_FLAG([-Wparentheses],  [CFLAGS="$CFLAGS -Wparentheses"])
-AX_CHECK_COMPILE_FLAG([-Wpointer-sign], [CFLAGS="$CFLAGS -Wpointer-sign"])
-AX_CHECK_COMPILE_FLAG([-Wshadow],       [CFLAGS="$CFLAGS -Wshadow"])
+AX_CHECK_COMPILE_FLAG([-Wall],          [ASDF_CFLAGS="$ASDF_CFLAGS -Wall"])
+AX_CHECK_COMPILE_FLAG([-Wextra],        [ASDF_CFLAGS="$ASDF_CFLAGS -Wextra"])
+AX_CHECK_COMPILE_FLAG([-Wparentheses],  [ASDF_CFLAGS="$ASDF_CFLAGS -Wparentheses"])
+AX_CHECK_COMPILE_FLAG([-Wpointer-sign], [ASDF_CFLAGS="$ASDF_CFLAGS -Wpointer-sign"])
+AX_CHECK_COMPILE_FLAG([-Wshadow],       [ASDF_CFLAGS="$ASDF_CFLAGS -Wshadow"])
 
 
 # Additional enable flags
@@ -64,7 +64,7 @@ AC_ARG_ENABLE([debug],
 )
 
 if test "x$enable_debug" = "xyes"; then
-  CFLAGS="$CFLAGS -g -O0"
+  ASDF_CFLAGS="$ASDF_CFLAGS -g -O0"
   AC_DEFINE([DEBUG], [1], [Define if debugging is enabled])
 fi
 
@@ -85,8 +85,8 @@ AC_ARG_WITH([asan],
   [with_asan=no])
 
 if test "x$with_asan" = "xyes"; then
-  CFLAGS="$CFLAGS -O1 -g -fsanitize=address -fno-omit-frame-pointer"
-  LDFLAGS="$LDFLAGS -fsanitize=address"
+  ASDF_CFLAGS="$ASDF_CFLAGS -O1 -g -fsanitize=address -fno-omit-frame-pointer"
+  ASDF_LDFLAGS="$ASDF_LDFLAGS -fsanitize=address"
   AC_DEFINE([WITH_ASAN], [1], [Defined if building with AddressSanitizer])
 fi
 
@@ -111,6 +111,8 @@ AS_IF([test "x$asdf_build_tool" = "xyes"], [
   ])
 ])
 
+AC_SUBST([ASDF_CFLAGS])
+AC_SUBST([ASDF_LDFLAGS])
 AC_CONFIG_HEADERS([config.h]) # use config.h instead of passing -D in the command line
 AC_CONFIG_FILES([Makefile tests/Makefile])
 
