@@ -13,11 +13,16 @@
 #include <string.h>
 #include <sys/types.h>
 
+#include "parse.h"
+#include "util.h"
+
 
 #define ASDF_BLOCK_COMPRESSION_FIELD_SIZE 4
 #define ASDF_BLOCK_CHECKSUM_FIELD_SIZE 16
 // Currently always 48, but may be expanded on different versions of the standard
 #define ASDF_BLOCK_HEADER_SIZE 48
+// Size of the *full* block header including the block magic and header size fields.
+#define ASDF_BLOCK_HEADER_FULL_SIZE (ASDF_BLOCK_HEADER_SIZE + ASDF_BLOCK_MAGIC_SIZE + 2)
 #define ASDF_BLOCK_MAGIC_SIZE 4
 
 // Offsets starting from after header_size
@@ -28,8 +33,18 @@
 #define ASDF_BLOCK_DATA_SIZE_OFFSET 24
 #define ASDF_BLOCK_CHECKSUM_OFFSET 32
 
+#define ASDF_BLOCK_INDEX_HEADER_SIZE 17
+
 
 extern const unsigned char asdf_block_magic[];
+
+
+extern const char asdf_block_index_header[];
+
+
+typedef enum {
+    ASDF_BLOCK_FLAG_STREAMED = 0x1,
+} asdf_block_flag_t;
 
 
 typedef struct asdf_block_header {
@@ -69,12 +84,28 @@ typedef struct asdf_block_info {
 } asdf_block_info_t;
 
 
+/* Structure for the block index, whether read from the actual block index in the file or
+ * reconstructed while parsing */
+typedef struct asdf_block_index {
+    off_t *offsets;
+    size_t size;
+    size_t cap;
+} asdf_block_index_t;
+
+
 /**
  * Returns `true` if the given buffer begins with the ASDF block magic
  */
-static inline bool is_block_magic(const char *buf, size_t len) {
+static inline bool is_block_magic(const uint8_t *buf, size_t len) {
     if (len < ASDF_BLOCK_MAGIC_SIZE)
         return false;
 
     return memcmp(buf, asdf_block_magic, (size_t)ASDF_BLOCK_MAGIC_SIZE) == 0;
 }
+
+
+ASDF_LOCAL asdf_block_info_t *asdf_block_read_info(asdf_parser_t *parser);
+ASDF_LOCAL asdf_block_index_t *asdf_block_index_init(size_t size);
+ASDF_LOCAL asdf_block_index_t *asdf_block_index_resize(
+    asdf_block_index_t *block_index, size_t size);
+ASDF_LOCAL void asdf_block_index_free(asdf_block_index_t *block_index);

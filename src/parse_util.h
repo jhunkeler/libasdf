@@ -49,6 +49,7 @@ typedef enum {
     ASDF_YAML_DIRECTIVE_TOK = 0,
     ASDF_YAML_DOCUMENT_END_TOK,
     ASDF_BLOCK_MAGIC_TOK,
+    ASDF_BLOCK_INDEX_HEADER_TOK,
     ASDF_LAST_TOK
 } asdf_parse_token_id_t;
 
@@ -82,19 +83,31 @@ ASDF_LOCAL bool is_generic_yaml_directive(const char *buf, size_t len);
 
 
 /* Inline helper functions */
+static inline bool ends_with_newline(const char *buf, size_t buf_size, size_t len) {
+    if (UNLIKELY(len == 0 || buf_size == 0 || buf_size < len + 1))
+        return false;
+
+    return buf[len] == '\n' || (buf[len] == '\r' && buf_size >= len + 2 && buf[len + 1] == '\n');
+}
+
+
+static inline bool is_string_with_newline(
+    const char *buf, size_t buf_size, const char *s, size_t len) {
+    if (buf_size < len + 1)
+        return false;
+
+    if (buf == NULL)
+        return false;
+
+    if (0 != strncmp(buf, s, len))
+        return false;
+
+    return ends_with_newline(buf, buf_size, len);
+}
+
+
 static inline bool is_yaml_1_1_directive(const char *buf, size_t len) {
-    if (len < ASDF_YAML_DIRECTIVE_SIZE + 1)
-        return false;
-
-    if (strncmp(buf, asdf_yaml_directive, ASDF_YAML_DIRECTIVE_SIZE) != 0)
-        return false;
-
-    if (buf[ASDF_YAML_DIRECTIVE_SIZE] == '\n' ||
-        (buf[ASDF_YAML_DIRECTIVE_SIZE] == '\r' && len >= ASDF_YAML_DIRECTIVE_SIZE + 2 &&
-         buf[ASDF_YAML_DIRECTIVE_SIZE + 1] == '\n'))
-        return true;
-
-    return false;
+    return is_string_with_newline(buf, len, asdf_yaml_directive, ASDF_YAML_DIRECTIVE_SIZE);
 }
 
 
@@ -118,16 +131,11 @@ static inline bool is_yaml_directive(const char *buf, size_t len) {
  * newline)
  */
 static inline bool is_yaml_document_end_marker(const char *buf, size_t len) {
-    return (
-        (len >= ASDF_YAML_DOCUMENT_END_MARKER_SIZE + 1) &&
-        strncmp(buf, asdf_yaml_document_end_marker, ASDF_YAML_DOCUMENT_END_MARKER_SIZE) == 0 &&
-        (buf[ASDF_YAML_DOCUMENT_END_MARKER_SIZE] == '\n' ||
-         (len >= ASDF_YAML_DOCUMENT_END_MARKER_SIZE + 2 &&
-          buf[ASDF_YAML_DOCUMENT_END_MARKER_SIZE] == '\r' &&
-          buf[ASDF_YAML_DOCUMENT_END_MARKER_SIZE + 1] == '\n')));
+    return is_string_with_newline(
+        buf, len, asdf_yaml_document_end_marker, ASDF_YAML_DOCUMENT_END_MARKER_SIZE);
 }
 
-
+ASDF_LOCAL asdf_stream_error_t asdf_parser_check_stream(asdf_parser_t *parser);
 asdf_event_t *asdf_parse_event_alloc(asdf_parser_t *parser);
 void asdf_parse_event_recycle(asdf_parser_t *parser, asdf_event_t *event);
 void asdf_parse_event_freelist_free(asdf_parser_t *parser);

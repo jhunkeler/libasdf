@@ -71,7 +71,6 @@ void asdf_event_cleanup(asdf_parser_t *parser, asdf_event_t *event) {
         free(event->payload.version);
         break;
     case ASDF_BLOCK_EVENT:
-        free(event->payload.block);
         break;
     case ASDF_COMMENT_EVENT:
         free(event->payload.comment);
@@ -209,7 +208,19 @@ void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
         fprintf(file, "\n");
         break;
     }
-
+    case ASDF_BLOCK_INDEX_EVENT: {
+        const asdf_block_index_t *block_index = event->payload.block_index;
+        assert(block_index);
+        fprintf(file, "  Offsets: ");
+        for (size_t idx = 0; idx < block_index->size; idx++) {
+            if (0 != idx) {
+                fprintf(file, ", ");
+            }
+            fprintf(file, "%ld", block_index->offsets[idx]);
+        }
+        fprintf(file, "\n");
+        break;
+    }
     default:
         break;
     }
@@ -222,9 +233,11 @@ void asdf_event_free(asdf_parser_t *parser, asdf_event_t *event) {
     if (!event)
         return;
 
-    if (!event) return;
+    if (!event)
+        return;
 
-    struct asdf_event_p *event_p = (struct asdf_event_p *)((char *)event - offsetof(struct asdf_event_p, event));
+    struct asdf_event_p *event_p =
+        (struct asdf_event_p *)((char *)event - offsetof(struct asdf_event_p, event));
     asdf_event_cleanup(parser, &event_p->event);
     free(event_p);
     parser->current_event_p = NULL;

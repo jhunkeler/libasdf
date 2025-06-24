@@ -9,6 +9,7 @@
 
 #include "block.h"
 #include "event.h"
+#include "parse.h"
 #include "yaml.h"
 
 
@@ -70,6 +71,9 @@
     )(__VA_ARGS__)
 
 
+const off_t expected_offsets[] = {664};
+
+
 MU_TEST(test_asdf_event_basic) {
     // TODO: Move all of this setup into setup/teardown functions; lots of repetition here
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
@@ -103,6 +107,10 @@ MU_TEST(test_asdf_event_basic) {
 
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
     assert_string_equal(event->payload.version->version, "1.6.0");
+
+    CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_INDEX_EVENT);
+    assert_int(event->payload.block_index->size, ==, 1);
+    assert_memory_equal(1, event->payload.block_index->offsets, expected_offsets);
 
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
     assert_int(event->payload.tree->start, ==, 0x21);
@@ -228,6 +236,10 @@ MU_TEST(test_asdf_event_basic_no_yaml) {
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
     assert_string_equal(event->payload.version->version, "1.6.0");
 
+    CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_INDEX_EVENT);
+    assert_int(event->payload.block_index->size, ==, 1);
+    assert_memory_equal(1, event->payload.block_index->offsets, expected_offsets);
+
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
     assert_int(event->payload.tree->start, ==, 0x21);
 
@@ -290,6 +302,7 @@ MU_TEST(test_asdf_event_basic_no_yaml_buffer_yaml) {
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
+    CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_INDEX_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_END_EVENT);
     assert_int(event->payload.tree->start, ==, 0x21);
@@ -359,6 +372,7 @@ MU_TEST(test_asdf_event_basic_buffer_yaml) {
 
     CHECK_NEXT_EVENT_TYPE(ASDF_ASDF_VERSION_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_STANDARD_VERSION_EVENT);
+    CHECK_NEXT_EVENT_TYPE(ASDF_BLOCK_INDEX_EVENT);
     CHECK_NEXT_EVENT_TYPE(ASDF_TREE_START_EVENT);
     assert_int(event->payload.tree->start, ==, 0x21);
 

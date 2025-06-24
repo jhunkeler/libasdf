@@ -28,7 +28,9 @@ const asdf_parse_token_t asdf_parse_tokens[] = {
         {TOKEN(ASDF_YAML_DIRECTIVE_PREFIX), ASDF_YAML_DIRECTIVE_PREFIX_SIZE},
     [ASDF_YAML_DOCUMENT_END_TOK] =
         {TOKEN(ASDF_YAML_DOCUMENT_END_MARKER), ASDF_YAML_DOCUMENT_END_MARKER_SIZE},
-    [ASDF_BLOCK_MAGIC_TOK] = {asdf_block_magic, ASDF_BLOCK_MAGIC_SIZE}};
+    [ASDF_BLOCK_MAGIC_TOK] = {asdf_block_magic, ASDF_BLOCK_MAGIC_SIZE},
+    [ASDF_BLOCK_INDEX_HEADER_TOK] = {
+        (const uint8_t *)asdf_block_index_header, ASDF_BLOCK_INDEX_HEADER_SIZE}};
 
 
 static const char *const parser_error_messages[] = {
@@ -43,6 +45,28 @@ static const char *const parser_error_messages[] = {
     [ASDF_ERR_YAML_PARSE_FAILED] = "YAML parsing failed",
     [ASDF_ERR_OUT_OF_MEMORY] = "Out of memory",
 };
+
+
+/**
+ * Check if there is an error condition on the parser's stream, setting an error on the parser
+ * if there is.
+ */
+asdf_stream_error_t asdf_parser_check_stream(asdf_parser_t *parser) {
+    asdf_stream_error_t error = asdf_stream_error(parser->stream);
+
+    switch (error) {
+    case ASDF_STREAM_OK:
+        break;
+    case ASDF_STREAM_ERR_OOM:
+        asdf_parser_set_oom_error(parser);
+        break;
+    case ASDF_STREAM_ERR_EINVAL:
+        asdf_parser_set_common_error(parser, ASDF_ERR_UNEXPECTED_EOF);
+        break;
+    }
+
+    return error;
+}
 
 
 /* Parsing helpers */
@@ -146,7 +170,7 @@ void asdf_parser_set_static_error(asdf_parser_t *parser, const char *error) {
 }
 
 
-void inline asdf_parser_set_common_error(asdf_parser_t *parser, asdf_parser_error_code_t code) {
+inline void asdf_parser_set_common_error(asdf_parser_t *parser, asdf_parser_error_code_t code) {
     asdf_parser_set_static_error(parser, ASDF_ERR(code));
 }
 
@@ -209,9 +233,11 @@ asdf_event_t *asdf_parse_event_alloc(asdf_parser_t *parser) {
 
 
 void asdf_parse_event_recycle(asdf_parser_t *parser, asdf_event_t *event) {
-    if (!parser || !event) return;
+    if (!parser || !event)
+        return;
 
-    struct asdf_event_p *event_p = (struct asdf_event_p *)((char *)event - offsetof(struct asdf_event_p, event));
+    struct asdf_event_p *event_p =
+        (struct asdf_event_p *)((char *)event - offsetof(struct asdf_event_p, event));
     event_p->next = parser->event_freelist;
     parser->event_freelist = event_p;
 

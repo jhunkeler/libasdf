@@ -2,6 +2,8 @@ Event: ASDF_ASDF_VERSION_EVENT
   ASDF Version: 1.0.0
 Event: ASDF_STANDARD_VERSION_EVENT
   Standard Version: 1.6.0
+Event: ASDF_BLOCK_INDEX_EVENT
+  Offsets: 757, 1022
 Event: ASDF_TREE_START_EVENT
   Tree start position: 33 (0x21)
 Event: ASDF_YAML_EVENT

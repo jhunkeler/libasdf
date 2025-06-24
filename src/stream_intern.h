@@ -15,7 +15,7 @@ typedef struct {
     size_t buf_size;
     size_t buf_avail;
     size_t buf_pos;
-    off_t offset;
+    off_t file_pos;
 } file_userdata_t;
 
 

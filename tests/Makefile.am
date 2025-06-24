@@ -27,38 +27,48 @@ unit_test_cppflags = \
     $(AM_CPPFLAGS) \
     -DREFERENCE_FILES_DIR=\"$(asdf_standard_dir)/reference_files\" \
     -DFIXTURES_DIR=\"$(srcdir)/fixtures\"
-
 unit_test_cflags = $(FYAML_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+
+if DEBUG
+unit_test_cflags += -DMUNIT_NO_FORK
+endif
+
 unit_test_ldflags = $(CODE_COVERAGE_LDFLAGS)
-unit_test_ldadd = $(top_builddir)/libasdf.la
+unit_test_ldadd = $(top_builddir)/libasdf.la libmunit.a
 
 # Unit tests
+noinst_LIBRARIES = libmunit.a
+libmunit_a_SOURCES = util.c munit/munit.c
+libmunit_a_CPPFLAGS = $(unit_test_cppflags)
+libmunit_a_CFLAGS = $(unit_test_cflags) -w
+
 # test-event.unit
-test_event_unit_SOURCES = test-event.c util.c munit/munit.c
+test_event_unit_SOURCES = test-event.c
 test_event_unit_CPPFLAGS = $(unit_test_cppflags)
 test_event_unit_CFLAGS = $(unit_test_cflags)
 test_event_unit_LDFLAGS = $(unit_test_ldflags)
 test_event_unit_LDADD = $(unit_test_ldadd)
 
 # test-parse.unit
-test_parse_unit_SOURCES = test-parse.c util.c munit/munit.c
+test_parse_unit_SOURCES = test-parse.c
 test_parse_unit_CPPFLAGS = $(unit_test_cppflags)
 test_parse_unit_CFLAGS = $(unit_test_cflags)
 test_parse_unit_LDFLAGS = $(unit_test_ldflags)
 test_parse_unit_LDADD = $(unit_test_ldadd)
 
 # test-parse-util.unit
-test_parse_util_unit_SOURCES = test-parse-util.c $(top_srcdir)/src/block.c $(top_srcdir)/src/parse_util.c util.c munit/munit.c
+test_parse_util_unit_SOURCES = test-parse-util.c $(top_srcdir)/src/block.c $(top_srcdir)/src/parse_util.c
 test_parse_util_unit_CPPFLAGS = $(unit_test_cppflags)
 test_parse_util_unit_CFLAGS = $(unit_test_cflags)
 test_parse_util_unit_LDFLAGS = $(unit_test_ldflags)
+test_parse_util_unit_LDADD = libmunit.a
 
 # test-stream.unit
-test_stream_unit_SOURCES = test-stream.c $(top_srcdir)/src/stream.c util.c munit/munit.c
+test_stream_unit_SOURCES = test-stream.c $(top_srcdir)/src/stream.c
 test_stream_unit_CPPFLAGS = $(unit_test_cppflags)
 test_stream_unit_CFLAGS = $(unit_test_cflags)
 test_stream_unit_LDFLAGS = $(unit_test_ldflags)
-test_stream_unit_LDADD = $(FYAML_LIBS)
+test_stream_unit_LDADD = $(FYAML_LIBS) libmunit.a
 
 # Shell tests
 TOOL_TESTS = test-events.sh test-info.sh
