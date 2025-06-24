@@ -68,6 +68,8 @@ if test "x$enable_debug" = "xyes"; then
   AC_DEFINE([DEBUG], [1], [Define if debugging is enabled])
 fi
 
+AM_CONDITIONAL([DEBUG], [test "x$enable_debug" = "xyes"])
+
 # --disable-tool
 AC_ARG_ENABLE([tool],
   [AS_HELP_STRING([--disable-tool], [Do not build the asdf command-line tool])],
