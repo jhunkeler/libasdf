@@ -1,7 +1,19 @@
-src_files = src/block.c src/event.c src/info.c src/parse.c src/parse_util.c src/stream.c src/yaml.c
+src_files = \
+    src/block.c \
+    src/context.c \
+    src/error.c \
+    src/event.c \
+    src/info.c \
+    src/parse.c \
+    src/parse_util.c \
+    src/stream.c \
+    src/yaml.c
+
 src_headers = \
     src/block.h \
     src/compat/endian.h \
+    src/context.h \
+    src/error.h \
     src/event.h \
     src/info.h \
     src/parse.h \
@@ -10,6 +22,7 @@ src_headers = \
     src/stream_intern.h \
     src/util.h \
     src/yaml.h
+
 include_dir = $(top_srcdir)/include
 
 AM_CFLAGS = $(ASDF_CFLAGS) -fvisibility=hidden

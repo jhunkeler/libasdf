@@ -71,13 +71,6 @@ ASDF_LOCAL int asdf_parser_scan_tokens(
     asdf_parse_token_id_t *match_token);
 
 
-/* Internal error helper functions */
-ASDF_LOCAL void asdf_parser_set_oom_error(asdf_parser_t *parser);
-ASDF_LOCAL void asdf_parser_set_error(asdf_parser_t *parser, const char *fmt, ...);
-ASDF_LOCAL void asdf_parser_set_static_error(asdf_parser_t *parser, const char *error);
-ASDF_LOCAL void asdf_parser_set_common_error(asdf_parser_t *parser, asdf_parser_error_code_t code);
-
-
 /* Additional helper functions */
 ASDF_LOCAL bool is_generic_yaml_directive(const char *buf, size_t len);
 

@@ -2,6 +2,7 @@
 #include <ctype.h>
 
 #include "block.h"
+#include "error.h"
 #include "event.h"
 #include "parse.h"
 #include "parse_util.h"
@@ -33,20 +34,6 @@ const asdf_parse_token_t asdf_parse_tokens[] = {
         (const uint8_t *)asdf_block_index_header, ASDF_BLOCK_INDEX_HEADER_SIZE}};
 
 
-static const char *const parser_error_messages[] = {
-    [ASDF_ERR_NONE] = NULL,
-    [ASDF_ERR_UNKNOWN_STATE] = "Unknown parser state",
-    [ASDF_ERR_STREAM_INIT_FAILED] = "Failed to initialize stream",
-    [ASDF_ERR_UNEXPECTED_EOF] = "Unexpected end of file",
-    [ASDF_ERR_INVALID_ASDF_HEADER] = "Invalid ASDF header",
-    [ASDF_ERR_INVALID_BLOCK_HEADER] = "Invalid block header",
-    [ASDF_ERR_BLOCK_MAGIC_MISMATCH] = "Block magic mismatch",
-    [ASDF_ERR_YAML_PARSER_INIT_FAILED] = "YAML parser initialization failed",
-    [ASDF_ERR_YAML_PARSE_FAILED] = "YAML parsing failed",
-    [ASDF_ERR_OUT_OF_MEMORY] = "Out of memory",
-};
-
-
 /**
  * Check if there is an error condition on the parser's stream, setting an error on the parser
  * if there is.
@@ -58,10 +45,10 @@ asdf_stream_error_t asdf_parser_check_stream(asdf_parser_t *parser) {
     case ASDF_STREAM_OK:
         break;
     case ASDF_STREAM_ERR_OOM:
-        asdf_parser_set_oom_error(parser);
+        ASDF_ERROR_OOM(parser);
         break;
     case ASDF_STREAM_ERR_EINVAL:
-        asdf_parser_set_common_error(parser, ASDF_ERR_UNEXPECTED_EOF);
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_UNEXPECTED_EOF);
         break;
     }
 
@@ -110,68 +97,6 @@ int asdf_parser_scan_tokens(
     }
 
     return ret;
-}
-
-
-/* Error helpers */
-#define ASDF_ERR(code) (parser_error_messages[(code)])
-
-
-void asdf_parser_set_oom_error(asdf_parser_t *parser) {
-    parser->error = ASDF_ERR(ASDF_ERR_OUT_OF_MEMORY);
-    parser->error_type = ASDF_ERROR_STATIC;
-}
-
-
-void asdf_parser_set_error(asdf_parser_t *parser, const char *fmt, ...) {
-    va_list args;
-    int size;
-    assert(parser);
-
-    if (parser->error_type == ASDF_ERROR_HEAP)
-        // Heap-allocated errors can be safely cast to (void *)
-        // and freed.
-        free((void *)parser->error);
-
-    parser->error = NULL;
-    parser->state = ASDF_PARSER_STATE_ERROR;
-
-    va_start(args, fmt);
-
-    // Bug in clang-tidy: https://github.com/llvm/llvm-project/issues/40656
-    // Should be fixed in newer versions though...
-    // NOLINTNEXTLINE(clang-analyzer-valist.Uninitialized)
-    size = vsnprintf(NULL, 0, fmt, args);
-    va_end(args);
-
-    // Ensure space for null termination
-    char *error = malloc(size + 1);
-
-    if (!error) {
-        asdf_parser_set_oom_error(parser);
-        return;
-    }
-
-    va_start(args, fmt);
-    vsnprintf(error, size + 1, fmt, args);
-    va_end(args);
-    parser->error = error; // implicit char* -> const char*; OK
-    parser->error_type = ASDF_ERROR_HEAP;
-}
-
-
-void asdf_parser_set_static_error(asdf_parser_t *parser, const char *error) {
-    if (parser->error_type == ASDF_ERROR_HEAP)
-        free((void *)parser->error);
-
-    parser->error = error;
-    parser->error_type = ASDF_ERROR_STATIC;
-    parser->state = ASDF_PARSER_STATE_ERROR;
-}
-
-
-inline void asdf_parser_set_common_error(asdf_parser_t *parser, asdf_parser_error_code_t code) {
-    asdf_parser_set_static_error(parser, ASDF_ERR(code));
 }
 
 

@@ -6,6 +6,8 @@
 #include <unistd.h>
 
 #include "block.h"
+#include "context.h"
+#include "error.h"
 #include "event.h"
 #include "parse.h"
 #include "parse_util.h"
@@ -50,7 +52,7 @@ typedef enum {
 #define TRY_SEEK(parser, offset, whence, error_retval) \
     do { \
         if (UNLIKELY(0 != asdf_stream_seek((parser)->stream, (offset), (whence)))) { \
-            asdf_parser_set_common_error((parser), ASDF_ERR_UNEXPECTED_EOF); \
+            ASDF_ERROR_COMMON((parser), ASDF_ERR_UNEXPECTED_EOF); \
             return (error_retval); \
         } \
     } while (0);
@@ -63,14 +65,14 @@ static int parse_version_comment(
     const uint8_t *r = asdf_stream_readline(parser->stream, &line_len);
 
     if (!r) {
-        asdf_parser_set_common_error(parser, ASDF_ERR_UNEXPECTED_EOF);
-        return ASDF_PARSE_ERROR;
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_UNEXPECTED_EOF);
+        return 1;
     }
 
     expected_len = strlen(expected);
 
     if (line_len < expected_len || strncmp((const char *)r, expected, expected_len) != 0) {
-        asdf_parser_set_common_error(parser, ASDF_ERR_INVALID_ASDF_HEADER);
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_INVALID_ASDF_HEADER);
         return 1;
     }
 
@@ -139,7 +141,7 @@ static parse_result_t parse_comment(asdf_parser_t *parser, asdf_event_t *event) 
             r = asdf_stream_readline(parser->stream, &len);
 
             if (!r) {
-                asdf_parser_set_common_error(parser, ASDF_ERR_UNEXPECTED_EOF);
+                ASDF_ERROR_COMMON(parser, ASDF_ERR_UNEXPECTED_EOF);
                 return 1;
             }
 
@@ -227,7 +229,7 @@ static parse_result_t parse_tree_or_block(asdf_parser_t *parser, asdf_event_t *e
             return ASDF_PARSE_CONTINUE;
         default:
             /* Shouldn't happen */
-            asdf_parser_set_common_error(parser, ASDF_ERR_UNKNOWN_STATE);
+            ASDF_ERROR_COMMON(parser, ASDF_ERR_UNKNOWN_STATE);
             return 1;
         }
     }
@@ -246,7 +248,7 @@ parse_result_t emit_tree_end_event(asdf_parser_t *parser, asdf_event_t *event) {
     event->payload.tree = calloc(1, sizeof(asdf_tree_info_t));
 
     if (!event->payload.tree) {
-        asdf_parser_set_oom_error(parser);
+        ASDF_ERROR_OOM(parser);
         return ASDF_PARSE_ERROR;
     }
 
@@ -303,7 +305,7 @@ static int parse_tree_fast(asdf_parser_t *parser) {
             break;
         default:
             /* should happen */
-            asdf_parser_set_common_error(parser, ASDF_ERR_UNKNOWN_STATE);
+            ASDF_ERROR_COMMON(parser, ASDF_ERR_UNKNOWN_STATE);
             return 1;
         }
 
@@ -342,7 +344,7 @@ static int initialize_yaml_parser(asdf_parser_t *parser) {
     int ret = 0;
 
     if (!(parser->yaml_parser = fy_parser_create(&default_fy_parse_cfg))) {
-        asdf_parser_set_common_error(parser, ASDF_ERR_YAML_PARSER_INIT_FAILED);
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_YAML_PARSER_INIT_FAILED);
     }
 
     if (buffer_tree) {
@@ -353,7 +355,7 @@ static int initialize_yaml_parser(asdf_parser_t *parser) {
     }
 
     if (0 != ret)
-        asdf_parser_set_common_error(parser, ASDF_ERR_YAML_PARSER_INIT_FAILED);
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_YAML_PARSER_INIT_FAILED);
 
     return ret;
 }
@@ -379,7 +381,7 @@ static parse_result_t parse_tree(asdf_parser_t *parser, asdf_event_t *event) {
         // Initialize the tree buffer and set up the stream to capture to it
         parser->tree.buf = malloc(ASDF_PARSER_READ_BUFFER_INIT_SIZE);
         if (!parser->tree.buf) {
-            asdf_parser_set_oom_error(parser);
+            ASDF_ERROR_OOM(parser);
             return ASDF_PARSE_ERROR;
         }
         parser->tree.size = 0;
@@ -434,7 +436,7 @@ static parse_result_t parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
     struct fy_event *yaml = fy_parser_parse(parser->yaml_parser);
 
     if (fy_parser_get_stream_error(parser->yaml_parser)) {
-        asdf_parser_set_common_error(parser, ASDF_ERR_YAML_PARSE_FAILED);
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_YAML_PARSE_FAILED);
         return ASDF_PARSE_ERROR;
     }
 
@@ -576,7 +578,7 @@ static bool validate_block_index(asdf_parser_t *parser, asdf_block_index_t *bloc
     // Got the first and last blocks, great; let's save their info
     asdf_block_info_t **block_infos = calloc(block_index->size, sizeof(asdf_block_info_t *));
     if (!block_infos) {
-        asdf_parser_set_oom_error(parser);
+        ASDF_ERROR_OOM(parser);
         return false;
     }
     block_infos[0] = first_block;
@@ -620,7 +622,7 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *eve
     off_t file_size = asdf_stream_tell(stream);
 
     if (UNLIKELY(file_size < 0)) {
-        asdf_parser_set_common_error(parser, ASDF_ERR_UNEXPECTED_EOF);
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_UNEXPECTED_EOF);
         return ASDF_PARSE_ERROR;
     }
 
@@ -660,7 +662,7 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *eve
 
     if (UNLIKELY(!buf)) {
         // TODO: (#5) Not necessarily an unrecoverable error but should produce a log message
-        asdf_parser_set_common_error(parser, ASDF_ERR_UNEXPECTED_EOF);
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_UNEXPECTED_EOF);
         return ASDF_PARSE_ERROR;
     }
 
@@ -680,7 +682,7 @@ static parse_result_t parse_block_index(asdf_parser_t *parser, asdf_event_t *eve
     block_index = asdf_block_index_init(count);
 
     if (UNLIKELY(!block_index)) {
-        asdf_parser_set_oom_error(parser);
+        ASDF_ERROR_OOM(parser);
         return ASDF_PARSE_ERROR;
     }
 
@@ -771,7 +773,7 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
     if (!block_index || block_index->cap < parser->blocks.found_blocks) {
         size_t new_cap = block_index ? block_index->cap * 2 : ASDF_DEFAULT_BLOCK_INDEX_SIZE;
         if (!(block_index = asdf_block_index_resize(block_index, new_cap))) {
-            asdf_parser_set_oom_error(parser);
+            ASDF_ERROR_OOM(parser);
             return ASDF_PARSE_ERROR;
         }
         parser->block_index = block_index;
@@ -795,7 +797,7 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
             block_infos = realloc(block_infos, block_index_cap * sizeof(asdf_block_info_t *));
 
         if (!block_infos) {
-            asdf_parser_set_oom_error(parser);
+            ASDF_ERROR_OOM(parser);
             return ASDF_PARSE_ERROR;
         }
 
@@ -825,7 +827,7 @@ static parse_result_t parse_block(asdf_parser_t *parser, asdf_event_t *event) {
         // to the start of the block data, possibly with the option to copy it to a buffer.
         // For now it will suffice to skip past it.
         free(block_info);
-        asdf_parser_set_static_error(parser, "Failed to seek past block data");
+        ASDF_ERROR_STATIC(parser, "Failed to seek past block data");
         return ASDF_PARSE_ERROR;
     }
     event->type = ASDF_BLOCK_EVENT;
@@ -883,12 +885,21 @@ asdf_event_t *asdf_parser_parse(asdf_parser_t *parser) {
         case ASDF_PARSER_STATE_ERROR:
             return NULL;
         default:
-            asdf_parser_set_common_error(parser, ASDF_ERR_UNKNOWN_STATE);
-            return NULL;
+            ASDF_ERROR_COMMON(parser, ASDF_ERR_UNKNOWN_STATE);
+            break;
         }
     }
 
-    return res == ASDF_PARSE_EVENT ? event : NULL;
+    switch (res) {
+    case ASDF_PARSE_EVENT:
+        return event;
+    case ASDF_PARSE_ERROR:
+        parser->state = ASDF_PARSER_STATE_ERROR;
+        return NULL;
+    case ASDF_PARSE_CONTINUE:
+    default:
+        UNREACHABLE();
+    }
 }
 
 
@@ -904,10 +915,16 @@ asdf_parser_t *asdf_parser_create(asdf_parser_cfg_t *config) {
     if (!parser)
         return parser;
 
+    asdf_context_t *ctx = asdf_context_create();
+
+    if (!ctx) {
+        free(parser);
+        return NULL;
+    }
+
+    parser->base.ctx = ctx;
     parser->config = config ? config : &default_asdf_parser_cfg;
     parser->state = ASDF_PARSER_STATE_INITIAL;
-    parser->error = NULL;
-    parser->error_type = ASDF_ERROR_NONE;
     parser->done = false;
     ZERO_MEMORY(parser->asdf_version, sizeof(parser->asdf_version));
     ZERO_MEMORY(parser->standard_version, sizeof(parser->standard_version));
@@ -922,7 +939,7 @@ int asdf_parser_set_input_file(asdf_parser_t *parser, const char *filename) {
     if (!parser->stream) {
         // TODO: Better error handling for file opening errors
         // For now just use this generic error
-        asdf_parser_set_common_error(parser, ASDF_ERR_STREAM_INIT_FAILED);
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_STREAM_INIT_FAILED);
         return 1;
     }
     parser->state = ASDF_PARSER_STATE_ASDF_VERSION;
@@ -937,7 +954,7 @@ int asdf_parser_set_input_fp(asdf_parser_t *parser, FILE *file, const char *file
     if (!parser->stream) {
         // TODO: Better error handling for file opening errors
         // For now just use this generic error
-        asdf_parser_set_common_error(parser, ASDF_ERR_STREAM_INIT_FAILED);
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_STREAM_INIT_FAILED);
         return 1;
     }
     parser->state = ASDF_PARSER_STATE_ASDF_VERSION;
@@ -952,7 +969,7 @@ int asdf_parser_set_input_mem(asdf_parser_t *parser, const void *buf, size_t siz
     if (!parser->stream) {
         // TODO: Better error handling for file opening errors
         // For now just use this generic error
-        asdf_parser_set_common_error(parser, ASDF_ERR_STREAM_INIT_FAILED);
+        ASDF_ERROR_COMMON(parser, ASDF_ERR_STREAM_INIT_FAILED);
         return 1;
     }
     parser->state = ASDF_PARSER_STATE_ASDF_VERSION;
@@ -961,12 +978,12 @@ int asdf_parser_set_input_mem(asdf_parser_t *parser, const void *buf, size_t siz
 
 
 bool asdf_parser_has_error(const asdf_parser_t *parser) {
-    return parser->error != NULL;
+    return parser->base.ctx->error != NULL;
 }
 
 
 const char *asdf_parser_get_error(const asdf_parser_t *parser) {
-    return parser->error ? parser->error : "";
+    return parser->base.ctx->error ? parser->base.ctx->error : "";
 }
 
 
@@ -975,9 +992,6 @@ void asdf_parser_destroy(asdf_parser_t *parser) {
         return;
 
     fy_parser_destroy(parser->yaml_parser);
-
-    if (parser->error_type == ASDF_ERROR_HEAP)
-        free((void *)parser->error);
 
     if (parser->stream)
         parser->stream->close(parser->stream);
@@ -990,5 +1004,6 @@ void asdf_parser_destroy(asdf_parser_t *parser) {
         free(parser->blocks.block_infos[idx]);
 
     free(parser->blocks.block_infos);
+    asdf_context_destroy(parser->base.ctx);
     free(parser);
 }

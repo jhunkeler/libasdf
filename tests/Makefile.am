@@ -57,7 +57,11 @@ test_parse_unit_LDFLAGS = $(unit_test_ldflags)
 test_parse_unit_LDADD = $(unit_test_ldadd)
 
 # test-parse-util.unit
-test_parse_util_unit_SOURCES = test-parse-util.c $(top_srcdir)/src/block.c $(top_srcdir)/src/parse_util.c
+test_parse_util_unit_SOURCES = \
+    test-parse-util.c \
+    $(top_srcdir)/src/block.c \
+    $(top_srcdir)/src/error.c \
+    $(top_srcdir)/src/parse_util.c
 test_parse_util_unit_CPPFLAGS = $(unit_test_cppflags)
 test_parse_util_unit_CFLAGS = $(unit_test_cflags)
 test_parse_util_unit_LDFLAGS = $(unit_test_ldflags)
