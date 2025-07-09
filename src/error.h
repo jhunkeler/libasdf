@@ -19,16 +19,21 @@ typedef enum {
 
 
 /* Internal error helper functions */
+ASDF_LOCAL const char *asdf_context_error_get(asdf_context_t *ctx);
 ASDF_LOCAL void asdf_context_error_set(asdf_context_t *ctx, const char *fmt, ...);
 ASDF_LOCAL void asdf_context_error_set_oom(asdf_context_t *ctx);
 ASDF_LOCAL void asdf_context_error_set_static(asdf_context_t *ctx, const char *error);
 ASDF_LOCAL void asdf_context_error_set_common(asdf_context_t *ctx, asdf_error_code_t code);
+ASDF_LOCAL void asdf_context_error_set_errno(asdf_context_t *ctx, int errnum);
 
 /**
  * Macros for setting errors on arbitrary ASDF base types
  *
  * These should be used more generally than the ``asdf_context_error_*`` functions.
  */
+#define ASDF_ERROR_GET(obj) asdf_context_error_get(((asdf_base_t *)(obj))->ctx)
+
+
 #define ASDF_ERROR(obj, fmt, ...) \
     do { \
         __ASDF_GET_CONTEXT(obj); \
@@ -54,4 +59,11 @@ ASDF_LOCAL void asdf_context_error_set_common(asdf_context_t *ctx, asdf_error_co
     do { \
         __ASDF_GET_CONTEXT(obj); \
         asdf_context_error_set_common(__ctx, (code)); \
+    } while (0)
+
+
+#define ASDF_ERROR_ERRNO(obj, errnum) \
+    do { \
+        __ASDF_GET_CONTEXT(obj); \
+        asdf_context_error_set_errno(__ctx, (errnum)); \
     } while (0)

@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "error.h"
 
@@ -22,6 +23,14 @@ static const char *const asdf_error_common_messages[] = {
 
 /* Error helpers */
 #define ASDF_ERROR_COMMON_MESSAGE(code) (asdf_error_common_messages[(code)])
+
+
+const char *asdf_context_error_get(asdf_context_t *ctx) {
+    if (!ctx)
+        return NULL;
+
+    return ctx->error;
+}
 
 
 void asdf_context_error_set_oom(asdf_context_t *ctx) {
@@ -77,4 +86,10 @@ void asdf_context_error_set_static(asdf_context_t *ctx, const char *error) {
 
 void asdf_context_error_set_common(asdf_context_t *ctx, asdf_error_code_t code) {
     asdf_context_error_set_static(ctx, ASDF_ERROR_COMMON_MESSAGE(code));
+}
+
+
+void asdf_context_error_set_errno(asdf_context_t *ctx, int errnum) {
+    ctx->error = strdup(strerror(errnum));
+    ctx->error_type = ASDF_ERROR_HEAP;
 }

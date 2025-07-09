@@ -34,28 +34,6 @@ const asdf_parse_token_t asdf_parse_tokens[] = {
         (const uint8_t *)asdf_block_index_header, ASDF_BLOCK_INDEX_HEADER_SIZE}};
 
 
-/**
- * Check if there is an error condition on the parser's stream, setting an error on the parser
- * if there is.
- */
-asdf_stream_error_t asdf_parser_check_stream(asdf_parser_t *parser) {
-    asdf_stream_error_t error = asdf_stream_error(parser->stream);
-
-    switch (error) {
-    case ASDF_STREAM_OK:
-        break;
-    case ASDF_STREAM_ERR_OOM:
-        ASDF_ERROR_OOM(parser);
-        break;
-    case ASDF_STREAM_ERR_EINVAL:
-        ASDF_ERROR_COMMON(parser, ASDF_ERR_UNEXPECTED_EOF);
-        break;
-    }
-
-    return error;
-}
-
-
 /* Parsing helpers */
 
 /**

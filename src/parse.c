@@ -29,7 +29,7 @@ typedef enum {
 #define CONSUME_AND_CHECK(parser, count) \
     do { \
         asdf_stream_consume((parser)->stream, count); \
-        if (UNLIKELY(asdf_parser_check_stream(parser) != 0)) { \
+        if (UNLIKELY(ASDF_ERROR_GET(parser) != NULL)) { \
             return ASDF_PARSE_ERROR; \
         } \
     } while (0);
@@ -41,7 +41,7 @@ typedef enum {
 #define CONSUME_AND_CHECK_INT(parser, count) \
     do { \
         asdf_stream_consume((parser)->stream, count); \
-        if (UNLIKELY(asdf_parser_check_stream(parser) != 0)) { \
+        if (UNLIKELY(ASDF_ERROR_GET(parser) != NULL)) { \
             return 1; \
         } \
     } while (0);
@@ -934,7 +934,7 @@ asdf_parser_t *asdf_parser_create(asdf_parser_cfg_t *config) {
 
 int asdf_parser_set_input_file(asdf_parser_t *parser, const char *filename) {
     assert(parser);
-    parser->stream = asdf_stream_from_file(filename);
+    parser->stream = asdf_stream_from_file(parser->base.ctx, filename);
 
     if (!parser->stream) {
         // TODO: Better error handling for file opening errors
@@ -949,7 +949,7 @@ int asdf_parser_set_input_file(asdf_parser_t *parser, const char *filename) {
 
 int asdf_parser_set_input_fp(asdf_parser_t *parser, FILE *file, const char *filename) {
     assert(parser);
-    parser->stream = asdf_stream_from_fp(file, filename);
+    parser->stream = asdf_stream_from_fp(parser->base.ctx, file, filename);
 
     if (!parser->stream) {
         // TODO: Better error handling for file opening errors
@@ -964,7 +964,7 @@ int asdf_parser_set_input_fp(asdf_parser_t *parser, FILE *file, const char *file
 
 int asdf_parser_set_input_mem(asdf_parser_t *parser, const void *buf, size_t size) {
     assert(parser);
-    parser->stream = asdf_stream_from_memory(buf, size);
+    parser->stream = asdf_stream_from_memory(parser->base.ctx, buf, size);
 
     if (!parser->stream) {
         // TODO: Better error handling for file opening errors
@@ -1004,6 +1004,6 @@ void asdf_parser_destroy(asdf_parser_t *parser) {
         free(parser->blocks.block_infos[idx]);
 
     free(parser->blocks.block_infos);
-    asdf_context_destroy(parser->base.ctx);
+    asdf_context_release(parser->base.ctx);
     free(parser);
 }

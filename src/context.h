@@ -9,6 +9,8 @@
 #include "config.h"
 #endif
 
+#include <stdatomic.h>
+
 #include "util.h"
 
 
@@ -20,6 +22,7 @@ typedef enum {
 
 
 typedef struct {
+    atomic_uint refcount;
     asdf_error_type_t error_type;
     const char *error;
 } asdf_context_t;
@@ -35,6 +38,8 @@ typedef struct {
 
 ASDF_LOCAL asdf_context_t *asdf_context_create(void);
 ASDF_LOCAL void asdf_context_destroy(asdf_context_t *ctx);
+ASDF_LOCAL void asdf_context_retain(asdf_context_t *ctx);
+ASDF_LOCAL void asdf_context_release(asdf_context_t *ctx);
 
 
 #ifdef DEBUG

@@ -1,8 +1,11 @@
 #include <assert.h>
+#include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "context.h"
+#include "error.h"
 #include "stream.h"
 #include "stream_intern.h"
 #include "util.h"
@@ -70,7 +73,7 @@ static void stream_capture(asdf_stream_t *stream, const uint8_t *buf, size_t siz
         uint8_t *new_buf = realloc(capture_buf, new_cap);
 
         if (!new_buf) {
-            stream->error = ASDF_STREAM_ERR_OOM;
+            ASDF_ERROR_OOM(stream);
             return;
         }
 
@@ -102,7 +105,7 @@ void asdf_stream_set_capture(asdf_stream_t *stream, uint8_t **buf, size_t *size,
  */
 int asdf_stream_seek(asdf_stream_t *stream, off_t offset, int whence) {
     if (UNLIKELY(!stream->is_seekable && offset < 0 && whence != SEEK_CUR)) {
-        stream->error = ASDF_STREAM_ERR_EINVAL;
+        ASDF_ERROR_ERRNO(stream, EINVAL);
         return -1;
     }
 
@@ -118,7 +121,7 @@ int asdf_stream_seek(asdf_stream_t *stream, off_t offset, int whence) {
     while (to_consume > 0) {
         stream->next(stream, 1, &avail);
 
-        if (stream->error)
+        if (ASDF_ERROR_GET(stream))
             return -1;
 
         if (avail == 0)
@@ -148,7 +151,7 @@ static const uint8_t *file_next(asdf_stream_t *stream, size_t count, size_t *ava
         uint8_t *new_buf = realloc(data->buf, count);
         if (!new_buf) {
             *avail = 0;
-            stream->error = ASDF_STREAM_ERR_OOM;
+            ASDF_ERROR_OOM(stream);
             return NULL;
         }
         data->buf = new_buf;
@@ -339,6 +342,7 @@ static void file_close(asdf_stream_t *stream) {
 
     free(data->buf);
     free(data);
+    asdf_context_release(stream->base.ctx);
     free(stream);
 }
 
@@ -371,7 +375,7 @@ static int file_fy_parser_set_input(asdf_stream_t *stream, struct fy_parser *fyp
 }
 
 
-asdf_stream_t *asdf_stream_from_fp(FILE *file, const char *filename) {
+asdf_stream_t *asdf_stream_from_fp(asdf_context_t *ctx, FILE *file, const char *filename) {
     if (!file)
         return NULL;
 
@@ -399,7 +403,21 @@ asdf_stream_t *asdf_stream_from_fp(FILE *file, const char *filename) {
         return NULL;
     }
 
-    stream->error = ASDF_STREAM_OK;
+    if (!ctx) {
+        ctx = asdf_context_create();
+
+        if (!ctx) {
+            free(data->buf);
+            free(data);
+            free(stream);
+            return NULL;
+        }
+    } else {
+        // Share an existing reference to the context
+        asdf_context_retain(ctx);
+    }
+
+    stream->base.ctx = ctx;
     stream->is_seekable = file_is_seekable(file);
     stream->userdata = data;
     stream->next = file_next;
@@ -422,13 +440,13 @@ asdf_stream_t *asdf_stream_from_fp(FILE *file, const char *filename) {
 }
 
 
-asdf_stream_t *asdf_stream_from_file(const char *filename) {
+asdf_stream_t *asdf_stream_from_file(asdf_context_t *ctx, const char *filename) {
     FILE *file = fopen(filename, "rb");
 
     if (!file)
         return NULL;
 
-    asdf_stream_t *stream = asdf_stream_from_fp(file, filename);
+    asdf_stream_t *stream = asdf_stream_from_fp(ctx, file, filename);
 
     if (!stream) {
         fclose(file);
@@ -550,6 +568,7 @@ static off_t mem_tell(asdf_stream_t *stream) {
 
 static void mem_close(asdf_stream_t *stream) {
     free(stream->userdata);
+    asdf_context_release(stream->base.ctx);
     free(stream);
 }
 
@@ -561,7 +580,7 @@ static int mem_fy_parser_set_input(asdf_stream_t *stream, struct fy_parser *fyp)
 
 
 // TODO: mmap opener
-asdf_stream_t *asdf_stream_from_memory(const void *buf, size_t size) {
+asdf_stream_t *asdf_stream_from_memory(asdf_context_t *ctx, const void *buf, size_t size) {
     mem_userdata_t *data = malloc(sizeof(mem_userdata_t));
 
     if (!data) {
@@ -579,7 +598,20 @@ asdf_stream_t *asdf_stream_from_memory(const void *buf, size_t size) {
         return NULL;
     }
 
-    stream->error = ASDF_STREAM_OK;
+    if (!ctx) {
+        ctx = asdf_context_create();
+
+        if (!ctx) {
+            free(data);
+            free(stream);
+            return NULL;
+        }
+    } else {
+        // Share existing reference to the context
+        asdf_context_retain(ctx);
+    }
+
+    stream->base.ctx = ctx;
     stream->is_seekable = true;
     stream->userdata = data;
     stream->next = mem_next;

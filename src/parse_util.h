@@ -128,7 +128,6 @@ static inline bool is_yaml_document_end_marker(const char *buf, size_t len) {
         buf, len, asdf_yaml_document_end_marker, ASDF_YAML_DOCUMENT_END_MARKER_SIZE);
 }
 
-ASDF_LOCAL asdf_stream_error_t asdf_parser_check_stream(asdf_parser_t *parser);
 asdf_event_t *asdf_parse_event_alloc(asdf_parser_t *parser);
 void asdf_parse_event_recycle(asdf_parser_t *parser, asdf_event_t *event);
 void asdf_parse_event_freelist_free(asdf_parser_t *parser);

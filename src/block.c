@@ -44,7 +44,7 @@ asdf_block_info_t *asdf_block_read_info(asdf_parser_t *parser) {
 
     asdf_stream_consume(stream, ASDF_BLOCK_MAGIC_SIZE);
 
-    if (UNLIKELY(asdf_parser_check_stream(parser) != 0))
+    if (UNLIKELY(ASDF_ERROR_GET(parser) != NULL))
         goto error;
 
     buf = asdf_stream_next(stream, FIELD_SIZEOF(asdf_block_header_t, header_size), &avail);
@@ -69,7 +69,7 @@ asdf_block_info_t *asdf_block_read_info(asdf_parser_t *parser) {
 
     asdf_stream_consume(stream, FIELD_SIZEOF(asdf_block_header_t, header_size));
 
-    if (UNLIKELY(asdf_parser_check_stream(parser) != 0)) {
+    if (UNLIKELY(ASDF_ERROR_GET(parser) != NULL)) {
         goto error;
     }
 
@@ -104,7 +104,7 @@ asdf_block_info_t *asdf_block_read_info(asdf_parser_t *parser) {
 
     asdf_stream_consume(stream, header->header_size);
 
-    if (UNLIKELY(asdf_parser_check_stream(parser) != 0)) {
+    if (UNLIKELY(ASDF_ERROR_GET(parser) != NULL)) {
         goto error;
     }
 
