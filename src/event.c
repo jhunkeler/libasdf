@@ -110,6 +110,83 @@ const char *asdf_event_type_name(asdf_event_type_t event_type) {
 }
 
 
+char *asdf_event_summary(const asdf_event_t *event) {
+    assert(event);
+
+    char *buf = NULL;
+    size_t size = 0;
+    FILE *stream = open_memstream(&buf, &size);
+
+    if (!stream)
+        return NULL;
+
+    fprintf(stream, "event: %s", asdf_event_type_name(event->type));
+
+    switch (event->type) {
+    case ASDF_ASDF_VERSION_EVENT:
+        fprintf(stream, " (ASDF v%s)", event->payload.version->version);
+        break;
+
+    case ASDF_STANDARD_VERSION_EVENT:
+        fprintf(stream, " (Standard v%s)", event->payload.version->version);
+        break;
+
+    case ASDF_COMMENT_EVENT:
+        // Truncate long comments
+        fprintf(stream, " (Comment: %.30s)", event->payload.comment);
+        break;
+
+    case ASDF_YAML_EVENT: {
+        const char *type = asdf_yaml_event_type_text(event);
+        fprintf(stream, " (YAML: %s", type);
+
+        size_t len = 0;
+        const char *tag = asdf_yaml_event_tag(event, &len);
+        if (len > 0)
+            fprintf(stream, ", Tag: %.*s", (int)len, tag);
+
+        const char *val = asdf_yaml_event_scalar_value(event, &len);
+
+        if (len > 0)
+            fprintf(stream, ", Value: %.20s", val); // Truncate long scalars
+
+        fprintf(stream, ")");
+        break;
+    }
+
+    case ASDF_TREE_START_EVENT:
+        fprintf(stream, " (Tree start: %zu)", event->payload.tree->start);
+        break;
+
+    case ASDF_TREE_END_EVENT:
+        fprintf(stream, " (Tree end: %zu)", event->payload.tree->end);
+        break;
+
+    case ASDF_BLOCK_EVENT: {
+        const asdf_block_info_t *block = event->payload.block;
+        const asdf_block_header_t header = block->header;
+        fprintf(
+            stream,
+            " (Block @ %" PRId64 ", size: %" PRIu64 ")",
+            (int64_t)block->header_pos,
+            header.data_size);
+        break;
+    }
+
+    case ASDF_BLOCK_INDEX_EVENT:
+        fprintf(stream, " (Block index: %zu offsets)", event->payload.block_index->size);
+        break;
+
+    default:
+        fprintf(stream, " (Unknown or unhandled)");
+        break;
+    }
+
+    fclose(stream);
+    return buf;
+}
+
+
 void asdf_event_print(const asdf_event_t *event, FILE *file, bool verbose) {
     assert(file);
     assert(event);

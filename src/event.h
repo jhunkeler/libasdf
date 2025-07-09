@@ -56,3 +56,6 @@ typedef struct asdf_event {
         asdf_block_index_t *block_index;
     } payload;
 } asdf_event_t;
+
+
+ASDF_LOCAL char *asdf_event_summary(const asdf_event_t *event);

@@ -9,6 +9,7 @@
 #include "context.h"
 #include "error.h"
 #include "event.h"
+#include "log.h"
 #include "parse.h"
 #include "parse_util.h"
 #include "util.h"
@@ -883,16 +884,28 @@ asdf_event_t *asdf_parser_parse(asdf_parser_t *parser) {
             }
             return NULL;
         case ASDF_PARSER_STATE_ERROR:
+            ASDF_LOG(parser, ASDF_LOG_ERROR, ASDF_ERROR_GET(parser));
             return NULL;
         default:
             ASDF_ERROR_COMMON(parser, ASDF_ERR_UNKNOWN_STATE);
+            ASDF_LOG(parser, ASDF_LOG_FATAL, ASDF_ERROR_GET(parser));
             break;
         }
     }
 
     switch (res) {
-    case ASDF_PARSE_EVENT:
+    case ASDF_PARSE_EVENT: {
+#ifdef ASDF_LOG_ENABLED
+        if (ASDF_LOG_LEVEL(parser) == ASDF_LOG_TRACE) {
+            char *summary = asdf_event_summary(event);
+            if (summary) {
+                ASDF_LOG(parser, ASDF_LOG_TRACE, "%s", summary);
+                free(summary);
+            }
+        }
+#endif
         return event;
+    }
     case ASDF_PARSE_ERROR:
         parser->state = ASDF_PARSER_STATE_ERROR;
         return NULL;

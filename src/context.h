@@ -10,6 +10,9 @@
 #endif
 
 #include <stdatomic.h>
+#include <stdio.h>
+
+#include <asdf/log.h>
 
 #include "util.h"
 
@@ -22,9 +25,16 @@ typedef enum {
 
 
 typedef struct {
+    asdf_log_level_t level;
+    FILE *stream; /* Currently just defaults to stderr */
+} asdf_log_config_t;
+
+
+typedef struct {
     atomic_uint refcount;
     asdf_error_type_t error_type;
     const char *error;
+    asdf_log_config_t log;
 } asdf_context_t;
 
 

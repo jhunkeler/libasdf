@@ -1,8 +1,10 @@
 #include <stdatomic.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "context.h"
 #include "error.h"
+#include "log.h"
 #include "util.h"
 
 
@@ -15,6 +17,10 @@ asdf_context_t *asdf_context_create() {
     atomic_init(&ctx->refcount, 1);
     ctx->error = NULL;
     ctx->error_type = ASDF_ERROR_NONE;
+
+    /* Initialize log configuration to defaults; later should allow overriding */
+    ctx->log.level = ASDF_LOG_DEFAULT_LEVEL;
+    ctx->log.stream = stderr;
     return ctx;
 }
 

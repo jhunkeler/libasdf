@@ -4,6 +4,7 @@ src_files = \
     src/error.c \
     src/event.c \
     src/info.c \
+    src/log.c \
     src/parse.c \
     src/parse_util.c \
     src/stream.c \
@@ -16,6 +17,7 @@ src_headers = \
     src/error.h \
     src/event.h \
     src/info.h \
+    src/log.h \
     src/parse.h \
     src/parse_util.h \
     src/stream.h \
