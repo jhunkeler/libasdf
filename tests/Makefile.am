@@ -72,6 +72,7 @@ test_stream_unit_SOURCES = \
     test-stream.c \
     $(top_srcdir)/src/context.c \
     $(top_srcdir)/src/error.c \
+    $(top_srcdir)/src/log.c \
     $(top_srcdir)/src/stream.c
 test_stream_unit_CPPFLAGS = $(unit_test_cppflags)
 test_stream_unit_CFLAGS = $(unit_test_cflags)
