@@ -1,15 +1,30 @@
-src_files = src/block.c src/event.c src/info.c src/parse.c src/parse_util.c src/stream.c src/yaml.c
+src_files = \
+    src/block.c \
+    src/context.c \
+    src/error.c \
+    src/event.c \
+    src/info.c \
+    src/log.c \
+    src/parse.c \
+    src/parse_util.c \
+    src/stream.c \
+    src/yaml.c
+
 src_headers = \
     src/block.h \
     src/compat/endian.h \
+    src/context.h \
+    src/error.h \
     src/event.h \
     src/info.h \
+    src/log.h \
     src/parse.h \
     src/parse_util.h \
     src/stream.h \
     src/stream_intern.h \
     src/util.h \
     src/yaml.h
+
 include_dir = $(top_srcdir)/include
 
 AM_CFLAGS = $(ASDF_CFLAGS) -fvisibility=hidden
@@ -20,6 +35,7 @@ ACLOCAL_AMFLAGS = -Im4
 include_HEADERS = $(include_dir)/asdf.h
 nobase_include_HEADERS = \
     $(include_dir)/asdf/event.h \
+    $(include_dir)/asdf/log.h \
     $(include_dir)/asdf/parse.h \
     $(include_dir)/asdf/util.h \
     $(include_dir)/asdf/yaml.h

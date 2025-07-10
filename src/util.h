@@ -1,5 +1,6 @@
 #pragma once
 
+#include <assert.h>
 #include <string.h>
 
 #include <asdf/util.h>
@@ -18,6 +19,15 @@
 #define UNUSED(x) x __attribute__((unused))
 #else
 #define UNUSED(x) (void)(x)
+#endif
+
+
+#if defined(__GNUC__) || defined(__clang__)
+#define UNREACHABLE() \
+    assert(false && "unreachable"); \
+    __builtin_unreachable()
+#else
+#define UNREACHABLE() assert(false && "unreachable")
 #endif
 
 

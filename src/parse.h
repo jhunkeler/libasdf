@@ -12,6 +12,7 @@
 #include <asdf/parse.h>
 
 #include "block.h"
+#include "context.h"
 #include "event.h"
 #include "stream.h"
 #include "util.h"
@@ -46,28 +47,6 @@ typedef enum {
 } asdf_parser_state_t;
 
 
-typedef enum {
-    ASDF_ERROR_NONE,
-    ASDF_ERROR_STATIC,
-    ASDF_ERROR_HEAP,
-} asdf_error_type_t;
-
-
-typedef enum {
-    ASDF_ERR_NONE = 0,
-
-    ASDF_ERR_UNKNOWN_STATE,
-    ASDF_ERR_STREAM_INIT_FAILED,
-    ASDF_ERR_INVALID_ASDF_HEADER,
-    ASDF_ERR_UNEXPECTED_EOF,
-    ASDF_ERR_INVALID_BLOCK_HEADER,
-    ASDF_ERR_BLOCK_MAGIC_MISMATCH,
-    ASDF_ERR_YAML_PARSER_INIT_FAILED,
-    ASDF_ERR_YAML_PARSE_FAILED,
-    ASDF_ERR_OUT_OF_MEMORY,
-} asdf_parser_error_code_t;
-
-
 typedef struct asdf_parser_tree_info {
     off_t start;
     off_t end;
@@ -99,11 +78,10 @@ typedef struct asdf_parser_block_info {
 
 
 typedef struct asdf_parser {
+    asdf_base_t base;
     const asdf_parser_cfg_t *config;
     asdf_parser_state_t state;
     asdf_stream_t *stream;
-    asdf_error_type_t error_type;
-    const char *error;
     struct asdf_event_p *event_freelist;
     struct asdf_event_p *current_event_p;
     char asdf_version[ASDF_ASDF_VERSION_BUFFER_SIZE];

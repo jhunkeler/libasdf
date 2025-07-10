@@ -20,7 +20,7 @@ static size_t token_lens[] = {TOKEN_LEN("dummy"), TOKEN_LEN("asdf")};
 MU_TEST(test_file_scan_token_no_match) {
     char buffer[] = "fdsa and some other garbage";
     FILE *file = fmemopen(buffer, strlen(buffer), "r");
-    asdf_stream_t *stream = asdf_stream_from_fp(file, NULL);
+    asdf_stream_t *stream = asdf_stream_from_fp(NULL, file, NULL);
     size_t match_offset = 0;
     size_t match_idx = 0;
     int ret = asdf_stream_scan(stream, tokens, token_lens, 2, &match_offset, &match_idx);
@@ -39,7 +39,7 @@ MU_TEST(test_file_scan_token_no_match) {
 MU_TEST(test_file_scan_token_at_beginning) {
     char buffer[] = "asdf and some other garbage";
     FILE *file = fmemopen(buffer, strlen(buffer), "r");
-    asdf_stream_t *stream = asdf_stream_from_fp(file, NULL);
+    asdf_stream_t *stream = asdf_stream_from_fp(NULL, file, NULL);
     size_t match_offset = 0;
     size_t match_idx = 0;
     int ret = asdf_stream_scan(stream, tokens, token_lens, 2, &match_offset, &match_idx);
@@ -59,7 +59,7 @@ MU_TEST(test_file_scan_token_at_beginning) {
 MU_TEST(test_file_scan_token_at_end) {
     char buffer[] = "and some other garbage asdf";
     FILE *file = fmemopen(buffer, strlen(buffer), "r");
-    asdf_stream_t *stream = asdf_stream_from_fp(file, NULL);
+    asdf_stream_t *stream = asdf_stream_from_fp(NULL, file, NULL);
     size_t match_offset = 0;
     size_t match_idx = 0;
     int ret = asdf_stream_scan(stream, tokens, token_lens, 2, &match_offset, &match_idx);
@@ -80,7 +80,7 @@ MU_TEST(test_file_scan_token_at_end) {
 MU_TEST(test_file_scan_token_in_middle) {
     char buffer[] = "fdsa and some asdf other garbage";
     FILE *file = fmemopen(buffer, strlen(buffer), "r");
-    asdf_stream_t *stream = asdf_stream_from_fp(file, NULL);
+    asdf_stream_t *stream = asdf_stream_from_fp(NULL, file, NULL);
     size_t match_offset = 0;
     size_t match_idx = 0;
     int ret = asdf_stream_scan(stream, tokens, token_lens, 2, &match_offset, &match_idx);
@@ -105,7 +105,7 @@ MU_TEST(test_file_scan_token_spans_buffers) {
     // TODO item is still to make an option to configure the read buffer size explicitly
     for (size_t buf_size = 15; buf_size < 18; buf_size++) {
         FILE *file = fmemopen(buffer, strlen(buffer), "r");
-        asdf_stream_t *stream = asdf_stream_from_fp(file, NULL);
+        asdf_stream_t *stream = asdf_stream_from_fp(NULL, file, NULL);
         file_userdata_t *data = stream->userdata;
         data->buf_size = buf_size;
 

@@ -27,7 +27,7 @@ unit_test_cppflags = \
     $(AM_CPPFLAGS) \
     -DREFERENCE_FILES_DIR=\"$(asdf_standard_dir)/reference_files\" \
     -DFIXTURES_DIR=\"$(srcdir)/fixtures\"
-unit_test_cflags = $(FYAML_CFLAGS) $(CODE_COVERAGE_CFLAGS)
+unit_test_cflags = $(FYAML_CFLAGS) $(CODE_COVERAGE_CFLAGS) $(ASDF_CFLAGS)
 
 if DEBUG
 unit_test_cflags += -DMUNIT_NO_FORK
@@ -57,14 +57,23 @@ test_parse_unit_LDFLAGS = $(unit_test_ldflags)
 test_parse_unit_LDADD = $(unit_test_ldadd)
 
 # test-parse-util.unit
-test_parse_util_unit_SOURCES = test-parse-util.c $(top_srcdir)/src/block.c $(top_srcdir)/src/parse_util.c
+test_parse_util_unit_SOURCES = \
+    test-parse-util.c \
+    $(top_srcdir)/src/block.c \
+    $(top_srcdir)/src/error.c \
+    $(top_srcdir)/src/parse_util.c
 test_parse_util_unit_CPPFLAGS = $(unit_test_cppflags)
 test_parse_util_unit_CFLAGS = $(unit_test_cflags)
 test_parse_util_unit_LDFLAGS = $(unit_test_ldflags)
 test_parse_util_unit_LDADD = libmunit.a
 
 # test-stream.unit
-test_stream_unit_SOURCES = test-stream.c $(top_srcdir)/src/stream.c
+test_stream_unit_SOURCES = \
+    test-stream.c \
+    $(top_srcdir)/src/context.c \
+    $(top_srcdir)/src/error.c \
+    $(top_srcdir)/src/log.c \
+    $(top_srcdir)/src/stream.c
 test_stream_unit_CPPFLAGS = $(unit_test_cppflags)
 test_stream_unit_CFLAGS = $(unit_test_cflags)
 test_stream_unit_LDFLAGS = $(unit_test_ldflags)

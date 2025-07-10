@@ -71,13 +71,6 @@ ASDF_LOCAL int asdf_parser_scan_tokens(
     asdf_parse_token_id_t *match_token);
 
 
-/* Internal error helper functions */
-ASDF_LOCAL void asdf_parser_set_oom_error(asdf_parser_t *parser);
-ASDF_LOCAL void asdf_parser_set_error(asdf_parser_t *parser, const char *fmt, ...);
-ASDF_LOCAL void asdf_parser_set_static_error(asdf_parser_t *parser, const char *error);
-ASDF_LOCAL void asdf_parser_set_common_error(asdf_parser_t *parser, asdf_parser_error_code_t code);
-
-
 /* Additional helper functions */
 ASDF_LOCAL bool is_generic_yaml_directive(const char *buf, size_t len);
 
@@ -135,7 +128,6 @@ static inline bool is_yaml_document_end_marker(const char *buf, size_t len) {
         buf, len, asdf_yaml_document_end_marker, ASDF_YAML_DOCUMENT_END_MARKER_SIZE);
 }
 
-ASDF_LOCAL asdf_stream_error_t asdf_parser_check_stream(asdf_parser_t *parser);
 asdf_event_t *asdf_parse_event_alloc(asdf_parser_t *parser);
 void asdf_parse_event_recycle(asdf_parser_t *parser, asdf_event_t *event);
 void asdf_parse_event_freelist_free(asdf_parser_t *parser);

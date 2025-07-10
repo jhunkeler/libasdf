@@ -6,6 +6,7 @@
 
 #include "block.h"
 #include "compat/endian.h"
+#include "error.h"
 #include "parse.h"
 #include "parse_util.h"
 #include "stream.h"
@@ -37,24 +38,24 @@ asdf_block_info_t *asdf_block_read_info(asdf_parser_t *parser) {
     asdf_block_info_t *block = calloc(1, sizeof(asdf_block_info_t));
 
     if (!block) {
-        asdf_parser_set_oom_error(parser);
+        ASDF_ERROR_OOM(parser);
         goto error;
     }
 
     asdf_stream_consume(stream, ASDF_BLOCK_MAGIC_SIZE);
 
-    if (UNLIKELY(asdf_parser_check_stream(parser) != 0))
+    if (UNLIKELY(ASDF_ERROR_GET(parser) != NULL))
         goto error;
 
     buf = asdf_stream_next(stream, FIELD_SIZEOF(asdf_block_header_t, header_size), &avail);
 
     if (!buf) {
-        asdf_parser_set_static_error(parser, "Failed to seek past block magic");
+        ASDF_ERROR_STATIC(parser, "Failed to seek past block magic");
         goto error;
     }
 
     if (avail < 2) {
-        asdf_parser_set_static_error(parser, "Failed to read block header size");
+        ASDF_ERROR_STATIC(parser, "Failed to read block header size");
         goto error;
     }
 
@@ -62,20 +63,20 @@ asdf_block_info_t *asdf_block_read_info(asdf_parser_t *parser) {
     // NOLINTNEXTLINE(readability-magic-numbers)
     header->header_size = (buf[0] << 8) | buf[1];
     if (header->header_size < ASDF_BLOCK_HEADER_SIZE) {
-        asdf_parser_set_static_error(parser, "Invalid block header size");
+        ASDF_ERROR_STATIC(parser, "Invalid block header size");
         goto error;
     }
 
     asdf_stream_consume(stream, FIELD_SIZEOF(asdf_block_header_t, header_size));
 
-    if (UNLIKELY(asdf_parser_check_stream(parser) != 0)) {
+    if (UNLIKELY(ASDF_ERROR_GET(parser) != NULL)) {
         goto error;
     }
 
     buf = asdf_stream_next(stream, header->header_size, &avail);
 
     if (avail < header->header_size) {
-        asdf_parser_set_static_error(parser, "Failed to read full block header");
+        ASDF_ERROR_STATIC(parser, "Failed to read full block header");
         goto error;
     }
 
@@ -103,7 +104,7 @@ asdf_block_info_t *asdf_block_read_info(asdf_parser_t *parser) {
 
     asdf_stream_consume(stream, header->header_size);
 
-    if (UNLIKELY(asdf_parser_check_stream(parser) != 0)) {
+    if (UNLIKELY(ASDF_ERROR_GET(parser) != NULL)) {
         goto error;
     }
 

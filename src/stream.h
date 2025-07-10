@@ -12,22 +12,14 @@
 
 #include <libfyaml.h>
 
+#include "context.h"
 #include "util.h"
-
-
-// clang-format: off
-typedef enum {
-    ASDF_STREAM_OK = 0,
-    ASDF_STREAM_ERR_OOM,
-    ASDF_STREAM_ERR_EINVAL,
-} asdf_stream_error_t;
-// clang-format: on
 
 
 // TODO: Document this once things shake out
 typedef struct asdf_stream {
+    asdf_base_t base;
     bool is_seekable;
-    asdf_stream_error_t error;
 
     void *userdata;
 
@@ -118,11 +110,6 @@ static inline off_t asdf_stream_tell(asdf_stream_t *stream) {
 }
 
 
-static inline asdf_stream_error_t asdf_stream_error(asdf_stream_t *stream) {
-    return stream->error;
-}
-
-
 static inline void asdf_stream_close(asdf_stream_t *stream) {
     return stream->close(stream);
 }
@@ -130,9 +117,11 @@ static inline void asdf_stream_close(asdf_stream_t *stream) {
 
 ASDF_LOCAL int asdf_stream_seek(asdf_stream_t *stream, off_t offset, int whence);
 
-ASDF_LOCAL asdf_stream_t *asdf_stream_from_file(const char *filename);
-ASDF_LOCAL asdf_stream_t *asdf_stream_from_fp(FILE *file, const char *filename);
-ASDF_LOCAL asdf_stream_t *asdf_stream_from_memory(const void *buf, size_t size);
+ASDF_LOCAL asdf_stream_t *asdf_stream_from_file(asdf_context_t *ctx, const char *filename);
+ASDF_LOCAL asdf_stream_t *asdf_stream_from_fp(
+    asdf_context_t *ctx, FILE *file, const char *filename);
+ASDF_LOCAL asdf_stream_t *asdf_stream_from_memory(
+    asdf_context_t *ctx, const void *buf, size_t size);
 
 ASDF_LOCAL void asdf_stream_set_capture(
     asdf_stream_t *stream, uint8_t **buf, size_t *size, size_t capacity);
