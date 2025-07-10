@@ -35,6 +35,7 @@ ACLOCAL_AMFLAGS = -Im4
 include_HEADERS = $(include_dir)/asdf.h
 nobase_include_HEADERS = \
     $(include_dir)/asdf/event.h \
+    $(include_dir)/asdf/log.h \
     $(include_dir)/asdf/parse.h \
     $(include_dir)/asdf/util.h \
     $(include_dir)/asdf/yaml.h
