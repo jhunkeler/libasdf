@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <stdlib.h>
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -21,6 +22,8 @@
 #define COLOR(color, str) color str ANSI_RESET
 #define DIM(str) ANSI_DIM str ANSI_RESET
 
+#define ASDF_LOG_LEVEL_ENV_VAR "ASDF_LOG_LEVEL"
+
 
 static const char *level_names[] = {"NONE", "TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL"};
 
@@ -37,6 +40,27 @@ _Static_assert(
     (ASDF_LOG_FATAL + 1) == (sizeof(level_colors) / sizeof(level_colors[0])),
     "Mismatch between log level enum and level_strings array");
 #endif
+
+
+static asdf_log_level_t asdf_log_level_from_string(const char *s) {
+    for (unsigned int idx = 1; idx < sizeof(level_names); idx++) {
+        if (0 == strcasecmp(s, level_names[idx]))
+            return (asdf_log_level_t)idx;
+    }
+
+    // Fallback
+    return ASDF_LOG_DEFAULT_LEVEL;
+}
+
+
+asdf_log_level_t asdf_log_level_from_env() {
+    const char *env = getenv(ASDF_LOG_LEVEL_ENV_VAR);
+
+    if (!env)
+        return ASDF_LOG_DEFAULT_LEVEL;
+
+    return asdf_log_level_from_string(env);
+}
 
 
 void asdf_log(

@@ -53,3 +53,5 @@ ASDF_LOCAL void asdf_log(
     int lineno,
     const char *fmt,
     ...);
+
+ASDF_LOCAL asdf_log_level_t asdf_log_level_from_env(void);

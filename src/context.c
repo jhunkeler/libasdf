@@ -18,8 +18,8 @@ asdf_context_t *asdf_context_create() {
     ctx->error = NULL;
     ctx->error_type = ASDF_ERROR_NONE;
 
-    /* Initialize log configuration to defaults; later should allow overriding */
-    ctx->log.level = ASDF_LOG_DEFAULT_LEVEL;
+    // Maybe initialize from ASDF_LOG_LEVEL environment variable, or fallback to default
+    ctx->log.level = asdf_log_level_from_env();
     ctx->log.stream = stderr;
     return ctx;
 }

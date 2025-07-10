@@ -128,7 +128,7 @@ AC_ARG_WITH([log-min],
   [AS_CASE([$with_log_min],
     [TRACE|DEBUG|INFO|WARN|ERROR|FATAL|NONE], [],
     [AC_MSG_ERROR([Invalid min log level: $with_log_min])])],
-  [with_log_min=DEBUG]
+  [with_log_min=TRACE]
 )
 
 AC_DEFINE_UNQUOTED([ASDF_LOG_MIN_LEVEL], [ASDF_LOG_$with_log_min],
