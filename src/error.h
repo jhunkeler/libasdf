@@ -37,7 +37,7 @@ ASDF_LOCAL void asdf_context_error_set_errno(asdf_context_t *ctx, int errnum);
 #define ASDF_ERROR(obj, fmt, ...) \
     do { \
         __ASDF_GET_CONTEXT(obj); \
-        asdf_context_error_set(__ctx, (fmt), ...); \
+        asdf_context_error_set(__ctx, (fmt), ##__VA_ARGS__); \
     } while (0)
 
 

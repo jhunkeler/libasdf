@@ -3,6 +3,7 @@ src_files = \
     src/context.c \
     src/error.c \
     src/event.c \
+    src/file.c \
     src/info.c \
     src/log.c \
     src/parse.c \
@@ -16,6 +17,7 @@ src_headers = \
     src/context.h \
     src/error.h \
     src/event.h \
+    src/file.h \
     src/info.h \
     src/log.h \
     src/parse.h \
@@ -34,7 +36,9 @@ ACLOCAL_AMFLAGS = -Im4
 
 include_HEADERS = $(include_dir)/asdf.h
 nobase_include_HEADERS = \
+    $(include_dir)/asdf.h \
     $(include_dir)/asdf/event.h \
+    $(include_dir)/asdf/file.h \
     $(include_dir)/asdf/log.h \
     $(include_dir)/asdf/parse.h \
     $(include_dir)/asdf/util.h \

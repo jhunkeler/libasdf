@@ -195,11 +195,13 @@ static parse_result_t parse_tree_or_block(asdf_parser_t *parser, asdf_event_t *e
 
     // Likeliest case--we encounter a %YAML directive indicating beginning of the YAML tree
     if (LIKELY(is_yaml_directive((const char *)r, len))) {
+        parser->tree.has_tree = 1;
         return emit_tree_start_event(parser, event);
     }
 
     // Or may encounter an ASDF block magic esp. in case of an exploded ASDF file
     if (is_block_magic(r, len)) {
+        parser->tree.has_tree = 0;
         parser->state = ASDF_PARSER_STATE_BLOCK;
         return ASDF_PARSE_CONTINUE;
     }
@@ -222,10 +224,12 @@ static parse_result_t parse_tree_or_block(asdf_parser_t *parser, asdf_event_t *e
             // TODO: Technically this should be either at the start of the file or begin
             // with a newline; should be more careful about that.
             if (LIKELY(is_yaml_directive((const char *)r, len))) {
+                parser->tree.has_tree = 1;
                 return emit_tree_start_event(parser, event);
             }
             break;
         case ASDF_BLOCK_MAGIC_TOK:
+            parser->tree.has_tree = 0;
             parser->state = ASDF_PARSER_STATE_BLOCK;
             return ASDF_PARSE_CONTINUE;
         default:
@@ -376,10 +380,30 @@ static parse_result_t parse_tree(asdf_parser_t *parser, asdf_event_t *event) {
     // adding a method to push data back onto the buffered stream.  But the
     // ASDF_PARSER_OPT_EMIT_YAML_EVENTS option is primarily just for debugging purposes
     // so for now we don't do anything too crazy.
-    buffer_tree |= (emit_yaml_events && !parser->stream->is_seekable);
+    if (buffer_tree) {
+        ASDF_LOG(
+            parser,
+            ASDF_LOG_DEBUG,
+            "enabling tree buffering due to "
+            "ASDF_PARSER_OPT_BUFFER_TREE parser flag");
+    }
+
+    if (emit_yaml_events && !parser->stream->is_seekable) {
+        ASDF_LOG(
+            parser,
+            ASDF_LOG_DEBUG,
+            "enabling tree buffering due to "
+            "ASDF_PARSER_OPT_EMIT_YAML_EVENTS parser flag");
+        buffer_tree |= emit_yaml_events;
+    }
 
     if (buffer_tree) {
         // Initialize the tree buffer and set up the stream to capture to it
+        ASDF_LOG(
+            parser,
+            ASDF_LOG_DEBUG,
+            "allocating an initial %zu bytes for the tree buffer",
+            (size_t)ASDF_PARSER_READ_BUFFER_INIT_SIZE);
         parser->tree.buf = malloc(ASDF_PARSER_READ_BUFFER_INIT_SIZE);
         if (!parser->tree.buf) {
             ASDF_ERROR_OOM(parser);
@@ -936,11 +960,13 @@ asdf_parser_t *asdf_parser_create(asdf_parser_cfg_t *config) {
     }
 
     parser->base.ctx = ctx;
-    parser->config = config ? config : &default_asdf_parser_cfg;
+    parser->config = config ? *config : default_asdf_parser_cfg;
     parser->state = ASDF_PARSER_STATE_INITIAL;
     parser->done = false;
+    parser->tree.has_tree = -1;
     ZERO_MEMORY(parser->asdf_version, sizeof(parser->asdf_version));
     ZERO_MEMORY(parser->standard_version, sizeof(parser->standard_version));
+    ASDF_LOG(parser, ASDF_LOG_DEBUG, "parser config flags: 0x%x", parser->config.flags);
     return parser;
 }
 
@@ -960,9 +986,9 @@ int asdf_parser_set_input_file(asdf_parser_t *parser, const char *filename) {
 }
 
 
-int asdf_parser_set_input_fp(asdf_parser_t *parser, FILE *file, const char *filename) {
+int asdf_parser_set_input_fp(asdf_parser_t *parser, FILE *fp, const char *filename) {
     assert(parser);
-    parser->stream = asdf_stream_from_fp(parser->base.ctx, file, filename);
+    parser->stream = asdf_stream_from_fp(parser->base.ctx, fp, filename);
 
     if (!parser->stream) {
         // TODO: Better error handling for file opening errors
