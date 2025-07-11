@@ -16,6 +16,7 @@ $(asdf_standard_submodule) $(munit_submodule):
 
 check_PROGRAMS = \
     test-event.unit \
+    test-file.unit \
     test-parse.unit \
     test-parse-util.unit \
     test-stream.unit
@@ -48,6 +49,18 @@ test_event_unit_CPPFLAGS = $(unit_test_cppflags)
 test_event_unit_CFLAGS = $(unit_test_cflags)
 test_event_unit_LDFLAGS = $(unit_test_ldflags)
 test_event_unit_LDADD = $(unit_test_ldadd)
+
+# test-file.unit
+test_file_unit_SOURCES = \
+    test-file.c \
+    $(top_srcdir)/src/context.c \
+    $(top_srcdir)/src/error.c \
+    $(top_srcdir)/src/file.c \
+    $(top_srcdir)/src/log.c
+test_file_unit_CPPFLAGS = $(unit_test_cppflags)
+test_file_unit_CFLAGS = $(unit_test_cflags)
+test_file_unit_LDFLAGS = $(unit_test_ldflags)
+test_file_unit_LDADD = $(unit_test_ldadd) $(FYAML_LIBS)
 
 # test-parse.unit
 test_parse_unit_SOURCES = test-parse.c

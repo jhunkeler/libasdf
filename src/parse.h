@@ -54,6 +54,10 @@ typedef struct asdf_parser_tree_info {
     size_t size;
     // Found the full YAML tree
     bool found;
+    // Indicates whether the file even has a YAML tree; rare to be false but possible
+    // in the case of exploded files.  This is a trinary value with a negative indicating
+    // unknown, 0 false, >= 1 true.
+    int8_t has_tree;
 } asdf_parser_tree_info_t;
 
 
@@ -79,7 +83,7 @@ typedef struct asdf_parser_block_info {
 
 typedef struct asdf_parser {
     asdf_base_t base;
-    const asdf_parser_cfg_t *config;
+    asdf_parser_cfg_t config;
     asdf_parser_state_t state;
     asdf_stream_t *stream;
     struct asdf_event_p *event_freelist;
@@ -96,5 +100,5 @@ typedef struct asdf_parser {
 
 static inline bool asdf_parser_has_opt(asdf_parser_t *parser, asdf_parser_opt_t opt) {
     assert(parser);
-    return (parser->config && ((parser->config->flags & opt) == opt));
+    return ((parser->config.flags & opt) == opt);
 }
