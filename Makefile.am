@@ -30,7 +30,7 @@ src_headers = \
 include_dir = $(top_srcdir)/include
 
 AM_CFLAGS = $(ASDF_CFLAGS) -fvisibility=hidden
-AM_CPPFLAGS = $(ASDF_CPPFLAGS) -I$(top_srcdir)/include
+AM_CPPFLAGS = $(ASDF_CPPFLAGS) -I$(top_srcdir)/third_party/STC/include -I$(top_srcdir)/include
 AM_LDFLAGS = $(ASDF_LDFLAGS)
 ACLOCAL_AMFLAGS = -Im4
 
@@ -44,6 +44,22 @@ nobase_include_HEADERS = \
     $(include_dir)/asdf/util.h \
     $(include_dir)/asdf/yaml.h
 noinst_HEADERS = $(src_headers)
+
+# third_party headers to include
+stc_dir = $(top_srcdir)/third_party/STC
+stc_headers = \
+    $(stc_dir)/include/stc/hmap.h
+
+nobase_pkginclude_HEADERS = $(stc_headers)
+
+stc_submodule = $(stc_dir)/.git
+$(stc_submodule):
+	echo "Initializing submodules $@ ..."
+	git submodule update --init --recursive
+
+
+$(stc_headers): $(stc_submodule)
+
 
 # libasdf library
 #include .c and .h in SOURCES so that both appear in dist
