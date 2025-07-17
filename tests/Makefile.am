@@ -5,11 +5,16 @@ AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src
 asdf_standard_dir = $(top_srcdir)/asdf-standard
 asdf_standard_submodule = $(asdf_standard_dir)/.git
 munit_submodule = $(srcdir)/tests/munit.git
+submodules = $(asdf_standard_submodule) $(munit_submodule)
 
 $(asdf_standard_submodule) $(munit_submodule):
-	echo "Initializing submodules..."
-	git submodule update --init --recursive
-	git config submodule.tests/munit.ignore untracked
+	@if test -d $(top_srcdir)/.git; then \
+	    echo "Initializing submodules $@ ..."; \
+	    git submodule update --init --recursive; \
+	    git config submodule.tests/munit.ignore untracked; \
+	else \
+	    echo "Skipping submodule init: not in a Git repository"; \
+	fi
 
 
 @VALGRIND_CHECK_RULES@
@@ -137,7 +142,7 @@ EXTRA_DIST += \
 
 
 # Bit of a hack to make syncing the submodule a prerequisite to make check
-check-am: $(asdf_standard_submodule)
+check-am: $(submodules)
 
 # Clean up temp files from tests
 distclean-local:
