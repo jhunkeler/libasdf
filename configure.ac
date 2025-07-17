@@ -135,6 +135,14 @@ AC_DEFINE_UNQUOTED([ASDF_LOG_MIN_LEVEL], [ASDF_LOG_$with_log_min],
                    [Compile-time minimum log level])
 
 
+# Initalize submodules needed for the build
+AS_IF([test ! -f "$srcdir/third_party/STC/LICENSE"],
+  [AC_MSG_NOTICE([Initializing submodule third_party/STC...])
+   (cd "$srcdir" && git submodule update --init third_party/STC && \
+     git config submodule.third_party/STC.ignore untracked || \
+     AC_MSG_ERROR([Failed to init submodule third_party/STC]))])
+
+
 # Checks for libraries.
 # Preferably using pkg-config, could fall back on AC_SEARCH_LIBS if not
 AC_PATH_PROG([PKG_CONFIG], [pkg-config], [no])
@@ -159,7 +167,7 @@ AS_IF([test "x$asdf_build_tool" = "xyes"], [
 AC_SUBST([ASDF_CFLAGS])
 AC_SUBST([ASDF_LDFLAGS])
 AC_CONFIG_HEADERS([config.h]) # use config.h instead of passing -D in the command line
-AC_CONFIG_FILES([Makefile tests/Makefile])
+AC_CONFIG_FILES([Makefile tests/Makefile third_party/Makefile])
 
 AC_OUTPUT
 

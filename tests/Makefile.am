@@ -1,6 +1,9 @@
 # Tests
 # 'check' comes from 'make check'
-AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src
+AM_CPPFLAGS = \
+    -I$(top_srcdir)/include \
+    -I$(top_srcdir)/third_party/STC/include \
+    -I$(top_srcdir)/src
 
 asdf_standard_dir = $(top_srcdir)/asdf-standard
 asdf_standard_submodule = $(asdf_standard_dir)/.git
@@ -24,7 +27,8 @@ check_PROGRAMS = \
     test-file.unit \
     test-parse.unit \
     test-parse-util.unit \
-    test-stream.unit
+    test-stream.unit \
+    test-value.unit
 
 TESTS_ENVIRONMENT = top_builddir=$(top_builddir) top_srcdir=$(top_srcdir)
 TESTS = $(check_PROGRAMS)
@@ -96,6 +100,15 @@ test_stream_unit_CPPFLAGS = $(unit_test_cppflags)
 test_stream_unit_CFLAGS = $(unit_test_cflags)
 test_stream_unit_LDFLAGS = $(unit_test_ldflags)
 test_stream_unit_LDADD = $(FYAML_LIBS) libmunit.a
+
+# test-value.unit
+test_value_unit_SOURCES = \
+    test-value.c \
+    $(top_srcdir)/src/value.c
+test_value_unit_CPPFLAGS = $(unit_test_cppflags)
+test_value_unit_CFLAGS = $(unit_test_cflags)
+test_value_unit_LDFLAGS = $(unit_test_ldflags)
+test_value_unit_LDADD = $(FYAML_LIBS) libmunit.a $(top_srcdir)/third_party/libstc.la
 
 # Shell tests
 TOOL_TESTS = test-events.sh test-info.sh
