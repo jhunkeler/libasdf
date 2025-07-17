@@ -60,16 +60,11 @@ test_event_unit_LDFLAGS = $(unit_test_ldflags)
 test_event_unit_LDADD = $(unit_test_ldadd)
 
 # test-file.unit
-test_file_unit_SOURCES = \
-    test-file.c \
-    $(top_srcdir)/src/context.c \
-    $(top_srcdir)/src/error.c \
-    $(top_srcdir)/src/file.c \
-    $(top_srcdir)/src/log.c
+test_file_unit_SOURCES = test-file.c
 test_file_unit_CPPFLAGS = $(unit_test_cppflags)
 test_file_unit_CFLAGS = $(unit_test_cflags)
 test_file_unit_LDFLAGS = $(unit_test_ldflags)
-test_file_unit_LDADD = $(unit_test_ldadd) $(FYAML_LIBS)
+test_file_unit_LDADD = $(unit_test_ldadd)
 
 # test-parse.unit
 test_parse_unit_SOURCES = test-parse.c
@@ -102,13 +97,11 @@ test_stream_unit_LDFLAGS = $(unit_test_ldflags)
 test_stream_unit_LDADD = $(FYAML_LIBS) libmunit.a
 
 # test-value.unit
-test_value_unit_SOURCES = \
-    test-value.c \
-    $(top_srcdir)/src/value.c
+test_value_unit_SOURCES = test-value.c
 test_value_unit_CPPFLAGS = $(unit_test_cppflags)
 test_value_unit_CFLAGS = $(unit_test_cflags)
 test_value_unit_LDFLAGS = $(unit_test_ldflags)
-test_value_unit_LDADD = $(FYAML_LIBS) libmunit.a $(top_srcdir)/third_party/libstc.la
+test_value_unit_LDADD = $(unit_test_ldadd)
 
 # Shell tests
 TOOL_TESTS = test-events.sh test-info.sh

@@ -12,6 +12,7 @@
 #include "log.h"
 #include "parse.h"
 #include "util.h"
+#include "value.h"
 
 
 /* Internal helper to allocate and set up a new asdf_file_t */
@@ -87,6 +88,33 @@ void asdf_close(asdf_file_t *file) {
     /* Clean up */
     ZERO_MEMORY(file, sizeof(asdf_file_t));
     free(file);
+}
+
+
+asdf_value_t *asdf_get(asdf_file_t *file, const char *path) {
+    struct fy_document *tree = asdf_file_get_tree_document(file);
+
+    if (UNLIKELY(!tree))
+        return NULL;
+
+    struct fy_node *root = fy_document_root(tree);
+
+    if (UNLIKELY(!root))
+        return NULL;
+
+    struct fy_node *node = fy_node_by_path(root, path, -1, FYNWF_PTR_DEFAULT);
+
+    if (!node)
+        return NULL;
+
+    asdf_value_t *value = asdf_value_create(file, node);
+
+    if (UNLIKELY(!value)) {
+        ASDF_ERROR_OOM(file);
+        return NULL;
+    }
+
+    return value;
 }
 
 
