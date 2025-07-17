@@ -28,7 +28,8 @@ check_PROGRAMS = \
     test-parse.unit \
     test-parse-util.unit \
     test-stream.unit \
-    test-value.unit
+    test-value.unit \
+    test-value-util.unit
 
 TESTS_ENVIRONMENT = top_builddir=$(top_builddir) top_srcdir=$(top_srcdir)
 TESTS = $(check_PROGRAMS)
@@ -102,6 +103,16 @@ test_value_unit_CPPFLAGS = $(unit_test_cppflags)
 test_value_unit_CFLAGS = $(unit_test_cflags)
 test_value_unit_LDFLAGS = $(unit_test_ldflags)
 test_value_unit_LDADD = $(unit_test_ldadd)
+
+# test-value-util.unit
+test_value_util_unit_SOURCES = \
+    test-value-util.c \
+    $(top_srcdir)/src/value_util.c \
+    $(top_srcdir)/third_party/STC/src/cstr_core.c
+test_value_util_unit_CPPFLAGS = $(unit_test_cppflags)
+test_value_util_unit_CFLAGS = $(unit_test_cflags)
+test_value_util_unit_LDFLAGS = $(unit_test_ldflags)
+test_value_util_unit_LDADD = libmunit.a
 
 # Shell tests
 TOOL_TESTS = test-events.sh test-info.sh

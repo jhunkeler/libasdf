@@ -1,5 +1,4 @@
 #include <errno.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -7,13 +6,9 @@
 #include <libfyaml.h>
 
 #include "log.h"
-#include "types/asdf_common_tag_map.h"
 #include "util.h"
 #include "value.h"
-
-
-static asdf_common_tag_map_t tag_map = {0};
-static atomic_bool tag_map_initialized = false;
+#include "value_util.h"
 
 
 /* TODO: Create or return from a freelist that lives on the file */
@@ -56,16 +51,6 @@ void asdf_value_destroy(asdf_value_t *value) {
     fy_node_free(value->node);
     ZERO_MEMORY(value, sizeof(asdf_value_t));
     free(value);
-}
-
-
-asdf_yaml_common_tag_t asdf_common_tag_get(const char *tagstr) {
-    const asdf_common_tag_map_value *tag = asdf_common_tag_map_get(&tag_map, tagstr);
-
-    if (!tag)
-        return ASDF_YAML_COMMON_TAG_UNKNOWN;
-
-    return tag->second;
 }
 
 
@@ -396,29 +381,5 @@ asdf_value_err_t asdf_value_as_int64(asdf_value_t *value, int64_t *out) {
         return ASDF_VALUE_OK;
     default:
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
-    }
-}
-
-
-__attribute__((constructor)) static void asdf_common_tag_map_create() {
-    if (atomic_load_explicit(&tag_map_initialized, memory_order_acquire))
-        return;
-
-    tag_map = c_make(
-        asdf_common_tag_map,
-        {{"tag:yaml.org,2002:null", ASDF_YAML_COMMON_TAG_NULL},
-         {"tag:yaml.org,2002:bool", ASDF_YAML_COMMON_TAG_BOOL},
-         {"tag:yaml.org,2002:int", ASDF_YAML_COMMON_TAG_INT},
-         {"tag:yaml.org,2002:float", ASDF_YAML_COMMON_TAG_FLOAT},
-         {"tag:yaml.org,2002:str", ASDF_YAML_COMMON_TAG_STR}});
-    atomic_store_explicit(&tag_map_initialized, true, memory_order_release);
-}
-
-
-__attribute__((destructor)) static void asdf_common_tag_map_destroy(void) {
-    if (atomic_load_explicit(&tag_map_initialized, memory_order_acquire)) {
-        asdf_common_tag_map_drop(&tag_map);
-        atomic_store_explicit(&tag_map_initialized, false, memory_order_release);
-        tag_map_initialized = 0;
     }
 }

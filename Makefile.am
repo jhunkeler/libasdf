@@ -10,6 +10,7 @@ src_files = \
     src/parse_util.c \
     src/stream.c \
     src/value.c \
+    src/value_util.c \
     src/yaml.c
 
 src_headers = \
@@ -28,6 +29,7 @@ src_headers = \
     src/types/asdf_common_tag_map.h \
     src/util.h \
     src/value.h \
+    src/value_util.h \
     src/yaml.h
 
 include_dir = $(top_srcdir)/include
