@@ -78,8 +78,8 @@ static bool is_yaml_bool(const char *s, size_t len, bool *value) {
         }
     }
 
-    if (len == 5 && ((0 == strncmp(s, "true", len)) || (0 == strncmp(s, "True", len)) ||
-                     (0 == strncmp(s, "TRUE", len)))) {
+    if (len == 5 && ((0 == strncmp(s, "false", len)) || (0 == strncmp(s, "False", len)) ||
+                     (0 == strncmp(s, "FALSE", len)))) {
         *value = false;
         return true;
     } else if (
@@ -369,14 +369,28 @@ static asdf_value_err_t asdf_value_infer_scalar_type(asdf_value_t *value) {
         return ASDF_VALUE_OK;
     }
 
-    if (ASDF_VALUE_OK == asdf_value_infer_int(value, s, len)) {
-        ASDF_LOG(value->file, ASDF_LOG_DEBUG, "inferred %.*s as int", len, s);
-        return ASDF_VALUE_OK;
+    asdf_value_err_t err = asdf_value_infer_int(value, s, len);
+
+    if (ASDF_VALUE_OK == err || ASDF_VALUE_ERR_OVERFLOW == err) {
+#ifdef ASDF_LOG_ENABLED
+        if (ASDF_VALUE_ERR_OVERFLOW == err)
+            ASDF_LOG(value->file, ASDF_LOG_DEBUG, "inferred %.*s as int (with overflow)", len, s);
+        else
+            ASDF_LOG(value->file, ASDF_LOG_DEBUG, "inferred %.*s as int", len, s);
+#endif
+        return err;
     }
 
-    if (ASDF_VALUE_OK == asdf_value_infer_float(value, s, len)) {
-        ASDF_LOG(value->file, ASDF_LOG_DEBUG, "inferred %.*s as float", len, s);
-        return ASDF_VALUE_OK;
+    err = asdf_value_infer_float(value, s, len);
+
+    if (ASDF_VALUE_OK == err || ASDF_VALUE_ERR_OVERFLOW == err) {
+#ifdef ASDF_LOG_ENABLED
+        if (ASDF_VALUE_ERR_OVERFLOW == err)
+            ASDF_LOG(value->file, ASDF_LOG_DEBUG, "inferred %.*s as float (with overflow)", len, s);
+        else
+            ASDF_LOG(value->file, ASDF_LOG_DEBUG, "inferred %.*s as float", len, s);
+#endif
+        return err;
     }
 
     /* Otherwise treat as a string */
@@ -413,21 +427,68 @@ asdf_value_err_t asdf_value_as_string0(asdf_value_t *value, char **out) {
 }
 
 
+/**
+ * Like `asdf_value_as_string` but returns the unparsed text of a scalar value, ignoring type
+ * inference entirely
+ */
+asdf_value_err_t asdf_value_as_scalar(asdf_value_t *value, const char **out, size_t *len) {
+    if (!value)
+        return ASDF_VALUE_ERR_UNKNOWN;
+
+    switch (value->type) {
+    case ASDF_VALUE_MAPPING:
+    case ASDF_VALUE_SEQUENCE:
+        return ASDF_VALUE_ERR_TYPE_MISMATCH;
+    default:
+        break;
+    }
+
+    *out = fy_node_get_scalar(value->node, len);
+    return ASDF_VALUE_OK;
+}
+
+
+asdf_value_err_t asdf_value_as_scalar0(asdf_value_t *value, char **out) {
+    if (!value)
+        return ASDF_VALUE_ERR_UNKNOWN;
+
+    switch (value->type) {
+    case ASDF_VALUE_MAPPING:
+    case ASDF_VALUE_SEQUENCE:
+        return ASDF_VALUE_ERR_TYPE_MISMATCH;
+    default:
+        break;
+    }
+
+    *out = (char *)fy_node_get_scalar0(value->node);
+    return ASDF_VALUE_OK;
+}
+
+
 asdf_value_err_t asdf_value_as_bool(asdf_value_t *value, bool *out) {
     asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
     if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
         return err;
 
-    if (value->type != ASDF_VALUE_BOOL)
+    /* Allow casting plain 0/1 (strictly) to bool */
+    if (value->type == ASDF_VALUE_UINT8) {
+        if (value->scalar.u == 0) {
+            *out = value->scalar.b;
+            return ASDF_VALUE_OK;
+        } else if (value->scalar.u == 1) {
+            *out = value->scalar.b;
+            return ASDF_VALUE_OK;
+        }
+    } else if (value->type != ASDF_VALUE_BOOL) {
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
+    }
 
     *out = value->scalar.b;
     return ASDF_VALUE_OK;
 }
 
 
-// TODO: This is kind of pointless.  I wonder if we shouldn't define some asdf_null_t?
-asdf_value_err_t asdf_value_as_null(asdf_value_t *value, const void **out) {
+asdf_value_err_t asdf_value_is_null(asdf_value_t *value) {
     asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
     if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
         return err;
@@ -435,7 +496,6 @@ asdf_value_err_t asdf_value_as_null(asdf_value_t *value, const void **out) {
     if (value->type != ASDF_VALUE_NULL)
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
 
-    *out = NULL;
     return ASDF_VALUE_OK;
 }
 

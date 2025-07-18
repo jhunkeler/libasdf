@@ -59,8 +59,12 @@ typedef struct asdf_value asdf_value_t;
 ASDF_EXPORT void asdf_value_destroy(asdf_value_t *value);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_string(asdf_value_t *value, const char **out, size_t *out_len);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_string0(asdf_value_t *value, char **out);
+
+ASDF_EXPORT asdf_value_err_t asdf_value_as_scalar(asdf_value_t *value, const char **out, size_t* out_len);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_scalar0(asdf_value_t *value, char **out);
+
 ASDF_EXPORT asdf_value_err_t asdf_value_as_bool(asdf_value_t *value, bool *out);
-ASDF_EXPORT asdf_value_err_t asdf_value_as_null(asdf_value_t *value, const void **out);
+ASDF_EXPORT asdf_value_err_t asdf_value_is_null(asdf_value_t *value);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_int8(asdf_value_t *value, int8_t *out);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_int16(asdf_value_t *value, int16_t *out);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_int32(asdf_value_t *value, int32_t *out);
