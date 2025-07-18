@@ -80,6 +80,49 @@ MU_TEST(test_asdf_value_as_string0) {
 }
 
 
+MU_TEST(test_asdf_value_as_scalar) {
+    const char *path = get_fixture_file_path("scalars.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    const char *s = NULL;
+    size_t len = 0;
+    int8_t i = 0;
+    asdf_value_t *value = asdf_get(file, "int8");
+    assert_not_null(value); \
+    asdf_value_err_t err = asdf_value_as_int8(value, &i);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_int(i, ==, 127);
+    err = asdf_value_as_scalar(value, &s, &len);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_not_null(s);
+    assert_string_equal(s, "127");
+    asdf_value_destroy(value);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_asdf_value_as_scalar0) {
+    const char *path = get_fixture_file_path("scalars.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    char *s = NULL;
+    int8_t i = 0;
+    asdf_value_t *value = asdf_get(file, "int8");
+    assert_not_null(value); \
+    asdf_value_err_t err = asdf_value_as_int8(value, &i);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_int(i, ==, 127);
+    err = asdf_value_as_scalar0(value, &s);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_not_null(s);
+    assert_string_equal(s, "127");
+    asdf_value_destroy(value);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 /* Helpers for bool conversion test */
 #define CHECK_BOOL_VALUE(key, expected_value) \
     do { \
@@ -325,6 +368,8 @@ MU_TEST_SUITE(
     test_asdf_value,
     MU_RUN_TEST(test_asdf_value_as_string),
     MU_RUN_TEST(test_asdf_value_as_string0),
+    MU_RUN_TEST(test_asdf_value_as_scalar),
+    MU_RUN_TEST(test_asdf_value_as_scalar0),
     MU_RUN_TEST(test_asdf_value_as_bool),
     MU_RUN_TEST(test_asdf_value_is_null),
     MU_RUN_TEST(test_asdf_value_as_int8),
