@@ -59,22 +59,18 @@ typedef struct asdf_value asdf_value_t;
 ASDF_EXPORT void asdf_value_destroy(asdf_value_t *value);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_string(asdf_value_t *value, const char **out, size_t *out_len);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_string0(asdf_value_t *value, char **out);
-/*
-asdf_value_err_t asdf_value_as_bool(asdf_value_t *value, bool *out);
-asdf_value_err_t asdf_value_as_null(asdf_value_t *value, const void **out);
-asdf_value_err_t asdf_value_as_int8(asdf_value_t *value, int8_t *out);
-asdf_value_err_t asdf_value_as_int16(asdf_value_t *value, int16_t *out);
-asdf_value_err_t asdf_value_as_int32(asdf_value_t *value, int32_t *out);
-*/
+ASDF_EXPORT asdf_value_err_t asdf_value_as_bool(asdf_value_t *value, bool *out);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_null(asdf_value_t *value, const void **out);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_int8(asdf_value_t *value, int8_t *out);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_int16(asdf_value_t *value, int16_t *out);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_int32(asdf_value_t *value, int32_t *out);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_int64(asdf_value_t *value, int64_t *out);
-/*
-asdf_value_err_t asdf_value_as_uint8(asdf_value_t *value, uint8_t *out);
-asdf_value_err_t asdf_value_as_uint16(asdf_value_t *value, uint16_t *out);
-asdf_value_err_t asdf_value_as_uint32(asdf_value_t *value, uint32_t *out);
-asdf_value_err_t asdf_value_as_uint64(asdf_value_t *value, uint64_t *out);
-asdf_value_err_t asdf_value_as_float(asdf_value_t *value, float *out);
-asdf_value_err_t asdf_value_as_double(asdf_value_t *value, double *out);
-*/
+ASDF_EXPORT asdf_value_err_t asdf_value_as_uint8(asdf_value_t *value, uint8_t *out);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_uint16(asdf_value_t *value, uint16_t *out);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_uint32(asdf_value_t *value, uint32_t *out);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_uint64(asdf_value_t *value, uint64_t *out);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_float(asdf_value_t *value, float *out);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_double(asdf_value_t *value, double *out);
 
 
 #endif /* ASDF_VALUE_H */
