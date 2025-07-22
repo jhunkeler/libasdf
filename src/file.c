@@ -187,6 +187,8 @@ asdf_value_t *asdf_get_value(asdf_file_t *file, const char *path) {
     }
 
 
+__ASDF_IS_TYPE(mapping)
+__ASDF_IS_TYPE(sequence)
 __ASDF_IS_TYPE(string)
 __ASDF_IS_TYPE(scalar)
 __ASDF_IS_TYPE(bool)
@@ -202,6 +204,38 @@ __ASDF_IS_TYPE(uint32)
 __ASDF_IS_TYPE(uint64)
 __ASDF_IS_TYPE(float)
 __ASDF_IS_TYPE(double)
+
+
+asdf_value_err_t asdf_get_mapping(asdf_file_t *file, const char *path, asdf_value_t **out) {
+    asdf_value_t *value = asdf_get_value(file, path);
+
+    if (!value)
+        return ASDF_VALUE_ERR_NOT_FOUND;
+
+    if (value->type != ASDF_VALUE_MAPPING) {
+        asdf_value_destroy(value);
+        return ASDF_VALUE_ERR_TYPE_MISMATCH;
+    }
+
+    *out = value;
+    return ASDF_VALUE_OK;
+}
+
+
+asdf_value_err_t asdf_get_sequence(asdf_file_t *file, const char *path, asdf_value_t **out) {
+    asdf_value_t *value = asdf_get_value(file, path);
+
+    if (!value)
+        return ASDF_VALUE_ERR_NOT_FOUND;
+
+    if (value->type != ASDF_VALUE_SEQUENCE) {
+        asdf_value_destroy(value);
+        return ASDF_VALUE_ERR_TYPE_MISMATCH;
+    }
+
+    *out = value;
+    return ASDF_VALUE_OK;
+}
 
 
 asdf_value_err_t asdf_get_string(

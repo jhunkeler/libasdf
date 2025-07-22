@@ -42,7 +42,7 @@ MU_TEST(test_asdf_open_file) {
 
 
 /* Test the high-level asdf_is_* and asdf_get_* helpers */
-MU_TEST(test_asdf_getters) {
+MU_TEST(test_asdf_scalar_getters) {
     const char *filename = get_fixture_file_path("scalars.asdf");
     asdf_file_t *file = asdf_open_file(filename, "r");
     assert_not_null(file);
@@ -86,10 +86,48 @@ MU_TEST(test_asdf_getters) {
 }
 
 
+MU_TEST(test_asdf_get_mapping) {
+    const char *filename = get_fixture_file_path("value-types.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    assert_true(asdf_is_mapping(file, "mapping"));
+    assert_false(asdf_is_mapping(file, "scalar"));
+    asdf_value_t *value = NULL;
+    asdf_value_err_t err = asdf_get_mapping(file, "mapping", &value);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_true(asdf_value_is_mapping(value));
+    asdf_value_destroy(value);
+    err = asdf_get_mapping(file, "scalar", &value);
+    assert_int(err, ==, ASDF_VALUE_ERR_TYPE_MISMATCH);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_asdf_get_sequence) {
+    const char *filename = get_fixture_file_path("value-types.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    assert_true(asdf_is_sequence(file, "sequence"));
+    assert_false(asdf_is_sequence(file, "scalar"));
+    asdf_value_t *value = NULL;
+    asdf_value_err_t err = asdf_get_sequence(file, "sequence", &value);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_true(asdf_value_is_sequence(value));
+    asdf_value_destroy(value);
+    err = asdf_get_sequence(file, "scalar", &value);
+    assert_int(err, ==, ASDF_VALUE_ERR_TYPE_MISMATCH);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_file,
     MU_RUN_TEST(test_asdf_open_file),
-    MU_RUN_TEST(test_asdf_getters)
+    MU_RUN_TEST(test_asdf_scalar_getters),
+    MU_RUN_TEST(test_asdf_get_mapping),
+    MU_RUN_TEST(test_asdf_get_sequence)
 );
 
 

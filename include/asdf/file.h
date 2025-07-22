@@ -22,15 +22,26 @@ inline asdf_file_t *asdf_open(const char *filename, const char *mode) {
 
 /* Value getters */
 ASDF_EXPORT asdf_value_t *asdf_get_value(asdf_file_t *file, const char *path);
+
+ASDF_EXPORT bool asdf_is_mapping(asdf_file_t *file, const char *path);
+ASDF_EXPORT asdf_value_err_t asdf_get_mapping(asdf_file_t *file, const char *path, asdf_value_t **value);
+
+ASDF_EXPORT bool asdf_is_sequence(asdf_file_t *file, const char *path);
+ASDF_EXPORT asdf_value_err_t asdf_get_sequence(asdf_file_t *file, const char *path, asdf_value_t **value);
+
 ASDF_EXPORT bool asdf_is_string(asdf_file_t *file, const char *path);
 ASDF_EXPORT asdf_value_err_t asdf_get_string(asdf_file_t *file, const char *path, const char **out, size_t *out_len);
 ASDF_EXPORT asdf_value_err_t asdf_get_string0(asdf_file_t *file, const char *path, const char **out);
 ASDF_EXPORT bool asdf_is_scalar(asdf_file_t *file, const char *path);
+
 ASDF_EXPORT asdf_value_err_t asdf_get_scalar(asdf_file_t *file, const char *path, const char **out, size_t *out_len);
 ASDF_EXPORT asdf_value_err_t asdf_get_scalar0(asdf_file_t *file, const char *path, const char **out);
+
 ASDF_EXPORT bool asdf_is_bool(asdf_file_t *file, const char *path);
 ASDF_EXPORT asdf_value_err_t asdf_get_bool(asdf_file_t *file, const char *path, bool *out);
+
 ASDF_EXPORT bool asdf_is_null(asdf_file_t *file, const char *path);
+
 ASDF_EXPORT bool asdf_is_int(asdf_file_t *file, const char *path);
 ASDF_EXPORT bool asdf_is_int8(asdf_file_t *file, const char *path);
 ASDF_EXPORT asdf_value_err_t asdf_get_int8(asdf_file_t *file, const char *path, int8_t *out);
@@ -48,6 +59,7 @@ ASDF_EXPORT bool asdf_is_uint32(asdf_file_t *file, const char *path);
 ASDF_EXPORT asdf_value_err_t asdf_get_uint32(asdf_file_t *file, const char *path, uint32_t *out);
 ASDF_EXPORT bool asdf_is_uint64(asdf_file_t *file, const char *path);
 ASDF_EXPORT asdf_value_err_t asdf_get_uint64(asdf_file_t *file, const char *path, uint64_t *out);
+
 ASDF_EXPORT bool asdf_is_float(asdf_file_t *file, const char *path);
 ASDF_EXPORT asdf_value_err_t asdf_get_float(asdf_file_t *file, const char *path, float *out);
 ASDF_EXPORT bool asdf_is_double(asdf_file_t *file, const char *path);

@@ -54,6 +54,16 @@ void asdf_value_destroy(asdf_value_t *value) {
 }
 
 
+bool asdf_value_is_mapping(asdf_value_t *value) {
+    return value->type == ASDF_VALUE_MAPPING;
+}
+
+
+bool asdf_value_is_sequence(asdf_value_t *value) {
+    return value->type == ASDF_VALUE_SEQUENCE;
+}
+
+
 static bool is_yaml_null(const char *s, size_t len) {
     return (
         !s || len == 0 ||
@@ -416,7 +426,7 @@ asdf_value_type_t asdf_value_get_type(asdf_value_t *value) {
 
 
 /* Helper to define the asdf_value_is_(type) checkers */
-#define __ASDF_VALUE_IS_TYPE(typ, value_type) \
+#define __ASDF_VALUE_IS_SCALAR_TYPE(typ, value_type) \
     bool asdf_value_is_##typ(asdf_value_t *value) { \
         if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK) \
             return false; \
@@ -424,7 +434,7 @@ asdf_value_type_t asdf_value_get_type(asdf_value_t *value) {
     }
 
 
-__ASDF_VALUE_IS_TYPE(string, ASDF_VALUE_STRING)
+__ASDF_VALUE_IS_SCALAR_TYPE(string, ASDF_VALUE_STRING)
 
 
 asdf_value_err_t asdf_value_as_string(asdf_value_t *value, const char **out, size_t *len) {
@@ -496,7 +506,7 @@ asdf_value_err_t asdf_value_as_scalar0(asdf_value_t *value, const char **out) {
 }
 
 
-__ASDF_VALUE_IS_TYPE(bool, ASDF_VALUE_BOOL)
+__ASDF_VALUE_IS_SCALAR_TYPE(bool, ASDF_VALUE_BOOL)
 
 
 asdf_value_err_t asdf_value_as_bool(asdf_value_t *value, bool *out) {
@@ -522,7 +532,7 @@ asdf_value_err_t asdf_value_as_bool(asdf_value_t *value, bool *out) {
 }
 
 
-__ASDF_VALUE_IS_TYPE(null, ASDF_VALUE_NULL)
+__ASDF_VALUE_IS_SCALAR_TYPE(null, ASDF_VALUE_NULL)
 
 
 bool asdf_value_is_int(asdf_value_t *value) {
@@ -1039,7 +1049,7 @@ asdf_value_err_t asdf_value_as_float(asdf_value_t *value, float *out) {
 }
 
 
-__ASDF_VALUE_IS_TYPE(double, ASDF_VALUE_DOUBLE)
+__ASDF_VALUE_IS_SCALAR_TYPE(double, ASDF_VALUE_DOUBLE)
 
 
 asdf_value_err_t asdf_value_as_double(asdf_value_t *value, double *out) {
