@@ -33,11 +33,13 @@ MU_TEST(test_asdf_value_get_type) {
     CHECK_VALUE_TYPE("false", ASDF_VALUE_BOOL);
     CHECK_VALUE_TYPE("False", ASDF_VALUE_BOOL);
     CHECK_VALUE_TYPE("FALSE", ASDF_VALUE_BOOL);
-    CHECK_VALUE_TYPE("false0", ASDF_VALUE_BOOL);
+    // Parsed as uint8 but can be read as bool
+    CHECK_VALUE_TYPE("false0", ASDF_VALUE_UINT8);
     CHECK_VALUE_TYPE("true", ASDF_VALUE_BOOL);
     CHECK_VALUE_TYPE("True", ASDF_VALUE_BOOL);
     CHECK_VALUE_TYPE("TRUE", ASDF_VALUE_BOOL);
-    CHECK_VALUE_TYPE("true1", ASDF_VALUE_BOOL);
+    // Parsed as uint8 but can be read as bool
+    CHECK_VALUE_TYPE("true1", ASDF_VALUE_UINT8);
     CHECK_VALUE_TYPE("null", ASDF_VALUE_NULL);
     CHECK_VALUE_TYPE("Null", ASDF_VALUE_NULL);
     CHECK_VALUE_TYPE("NULL", ASDF_VALUE_NULL);
@@ -539,6 +541,35 @@ MU_TEST(test_asdf_mapping_iter) {
 }
 
 
+MU_TEST(test_asdf_sequence_iter) {
+    const char *path = get_fixture_file_path("value-types.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    asdf_value_t *sequence = NULL;
+    asdf_value_err_t err = asdf_get_sequence(file, "sequence", &sequence);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_int(asdf_sequence_size(sequence), ==, 2);
+    asdf_sequence_iter_t iter = asdf_sequence_iter_init();
+
+    asdf_value_t *item = asdf_sequence_iter(sequence, &iter);
+    assert_not_null(item);
+    int8_t i8 = -1;
+    assert_int(asdf_value_as_int8(item, &i8), ==, ASDF_VALUE_OK);
+    assert_int(i8, ==, 0);
+
+    item = asdf_sequence_iter(sequence, &iter);
+    assert_not_null(item);
+    assert_int(asdf_value_as_int8(item, &i8), ==, ASDF_VALUE_OK);
+    assert_int(i8, ==, 1);
+
+    assert_null(asdf_sequence_iter(sequence, &iter));
+    assert_null((void *)iter);
+    asdf_value_destroy(sequence);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_value,
     MU_RUN_TEST(test_asdf_value_get_type),
@@ -560,7 +591,8 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_value_as_float),
     MU_RUN_TEST(test_asdf_value_as_double),
     MU_RUN_TEST(test_asdf_value_tagged_strings),
-    MU_RUN_TEST(test_asdf_mapping_iter)
+    MU_RUN_TEST(test_asdf_mapping_iter),
+    MU_RUN_TEST(test_asdf_sequence_iter)
 );
 
 

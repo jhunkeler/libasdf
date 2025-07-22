@@ -77,6 +77,13 @@ ASDF_EXPORT asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_m
 
 /* Sequence-related definitions */
 ASDF_EXPORT bool asdf_value_is_sequence(asdf_value_t *value);
+ASDF_EXPORT int asdf_sequence_size(asdf_value_t *value);
+
+typedef struct _asdf_sequence_iter_impl _asdf_sequence_iter_impl_t;
+typedef _asdf_sequence_iter_impl_t* asdf_sequence_iter_t;
+
+ASDF_EXPORT asdf_sequence_iter_t asdf_sequence_iter_init(void);
+ASDF_EXPORT asdf_value_t *asdf_sequence_iter(asdf_value_t *sequence, asdf_sequence_iter_t *iter);
 
 
 /* Scalar-related definitions */

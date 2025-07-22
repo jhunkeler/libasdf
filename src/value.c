@@ -174,6 +174,67 @@ bool asdf_value_is_sequence(asdf_value_t *value) {
 }
 
 
+int asdf_sequence_size(asdf_value_t *sequence) {
+    if (UNLIKELY(!sequence) || !asdf_value_is_sequence(sequence))
+        return -1;
+
+    return fy_node_sequence_item_count(sequence->node);
+}
+
+
+asdf_sequence_iter_t asdf_sequence_iter_init() {
+    return NULL;
+}
+
+
+asdf_value_t *asdf_sequence_iter(asdf_value_t *sequence, asdf_sequence_iter_t *iter) {
+    if (sequence->type != ASDF_VALUE_SEQUENCE) {
+#ifdef ASDF_LOG_ENABLED
+        ASDF_LOG(sequence->file, ASDF_LOG_WARN, "%s is not a sequence", asdf_value_path(sequence));
+#endif
+        return NULL;
+    }
+
+    _asdf_sequence_iter_impl_t *impl = *iter;
+
+    if (NULL == impl) {
+        impl = calloc(1, sizeof(_asdf_sequence_iter_impl_t));
+
+        if (!impl) {
+            ASDF_ERROR_OOM(sequence->file);
+            return false;
+        }
+
+        *iter = impl;
+    }
+
+    struct fy_node *value_node = fy_node_sequence_iterate(sequence->node, &impl->iter);
+
+    if (!value_node) {
+        /* Cleanup and end iteration */
+        goto cleanup;
+    }
+
+    asdf_value_t *value = asdf_value_create(sequence->file, value_node);
+
+    if (!value) {
+        goto cleanup;
+    }
+
+    // Destroy previous value if any
+    asdf_value_destroy(impl->value);
+    impl->value = value;
+    return value;
+
+cleanup:
+    asdf_value_destroy(impl->value);
+    impl->value = NULL;
+    free(impl);
+    *iter = NULL;
+    return NULL;
+}
+
+
 /* Scalar functions */
 static bool is_yaml_null(const char *s, size_t len) {
     return (
@@ -488,11 +549,6 @@ static asdf_value_err_t asdf_value_infer_scalar_type(asdf_value_t *value) {
         return ASDF_VALUE_OK;
     }
 
-    if (ASDF_VALUE_OK == asdf_value_infer_bool(value, s, len)) {
-        ASDF_LOG(value->file, ASDF_LOG_DEBUG, "inferred %.*s as bool", len, s);
-        return ASDF_VALUE_OK;
-    }
-
     asdf_value_err_t err = asdf_value_infer_int(value, s, len);
 
     if (ASDF_VALUE_OK == err || ASDF_VALUE_ERR_OVERFLOW == err) {
@@ -503,6 +559,11 @@ static asdf_value_err_t asdf_value_infer_scalar_type(asdf_value_t *value) {
             ASDF_LOG(value->file, ASDF_LOG_DEBUG, "inferred %.*s as int", len, s);
 #endif
         return err;
+    }
+
+    if (ASDF_VALUE_OK == asdf_value_infer_bool(value, s, len)) {
+        ASDF_LOG(value->file, ASDF_LOG_DEBUG, "inferred %.*s as bool", len, s);
+        return ASDF_VALUE_OK;
     }
 
     err = asdf_value_infer_float(value, s, len);
@@ -618,7 +679,27 @@ asdf_value_err_t asdf_value_as_scalar0(asdf_value_t *value, const char **out) {
 }
 
 
-__ASDF_VALUE_IS_SCALAR_TYPE(bool, ASDF_VALUE_BOOL)
+bool asdf_value_is_bool(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_BOOL:
+        return true;
+    case ASDF_VALUE_UINT8:
+    case ASDF_VALUE_UINT16:
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_UINT64:
+        return value->scalar.u == 0 || value->scalar.u == 1;
+    case ASDF_VALUE_INT8:
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_INT64:
+        return value->scalar.i == 0 || value->scalar.i == 1;
+    default:
+        return false;
+    }
+}
 
 
 asdf_value_err_t asdf_value_as_bool(asdf_value_t *value, bool *out) {
