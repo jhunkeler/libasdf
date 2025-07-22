@@ -13,7 +13,7 @@
 
 #define CHECK_VALUE_TYPE(key, expected_type) \
     do { \
-        asdf_value_t *__value = asdf_get(file, (key)); \
+        asdf_value_t *__value = asdf_get_value(file, (key)); \
         assert_not_null(__value); \
         asdf_value_type_t __type = asdf_value_get_type(__value); \
         assert_int(__type, ==, (expected_type)); \
@@ -64,8 +64,9 @@ MU_TEST(test_asdf_value_get_type) {
     do { \
         const char *__v = NULL; \
         size_t __len = 0; \
-        asdf_value_t *__value = asdf_get(file, (key)); \
+        asdf_value_t *__value = asdf_get_value(file, (key)); \
         assert_not_null(__value); \
+        assert_true(asdf_value_is_string(__value)); \
         asdf_value_err_t __err = asdf_value_as_string(__value, &__v, &__len); \
         assert_int(__err, ==, ASDF_VALUE_OK); \
         char *__vs = strndup(__v, __len); \
@@ -80,8 +81,9 @@ MU_TEST(test_asdf_value_get_type) {
     do { \
         const char *__v = NULL; \
         size_t __len = 0; \
-        asdf_value_t *__value = asdf_get(file, (key)); \
+        asdf_value_t *__value = asdf_get_value(file, (key)); \
         assert_not_null(__value); \
+        assert_false(asdf_value_is_string(__value)); \
         asdf_value_err_t __err = asdf_value_as_string(__value, &__v, &__len); \
         assert_int(__err, ==, ASDF_VALUE_ERR_TYPE_MISMATCH); \
         asdf_value_destroy(__value); \
@@ -115,8 +117,8 @@ MU_TEST(test_asdf_value_as_string0) {
     const char *path = get_fixture_file_path("scalars.asdf");
     asdf_file_t *file = asdf_open_file(path, "r");
     assert_not_null(file);
-    char *s = NULL;
-    asdf_value_t *value = asdf_get(file, "plain");
+    const char *s = NULL;
+    asdf_value_t *value = asdf_get_value(file, "plain");
     assert_not_null(value); \
     asdf_value_err_t err = asdf_value_as_string0(value, &s);
     assert_int(err, ==, ASDF_VALUE_OK);
@@ -135,8 +137,9 @@ MU_TEST(test_asdf_value_as_scalar) {
     const char *s = NULL;
     size_t len = 0;
     int8_t i = 0;
-    asdf_value_t *value = asdf_get(file, "int8");
+    asdf_value_t *value = asdf_get_value(file, "int8");
     assert_not_null(value); \
+    assert_true(asdf_value_is_scalar(value));
     asdf_value_err_t err = asdf_value_as_int8(value, &i);
     assert_int(err, ==, ASDF_VALUE_OK);
     assert_int(i, ==, 127);
@@ -154,9 +157,9 @@ MU_TEST(test_asdf_value_as_scalar0) {
     const char *path = get_fixture_file_path("scalars.asdf");
     asdf_file_t *file = asdf_open_file(path, "r");
     assert_not_null(file);
-    char *s = NULL;
+    const char *s = NULL;
     int8_t i = 0;
-    asdf_value_t *value = asdf_get(file, "int8");
+    asdf_value_t *value = asdf_get_value(file, "int8");
     assert_not_null(value); \
     asdf_value_err_t err = asdf_value_as_int8(value, &i);
     assert_int(err, ==, ASDF_VALUE_OK);
@@ -175,8 +178,9 @@ MU_TEST(test_asdf_value_as_scalar0) {
 #define CHECK_BOOL_VALUE(key, expected_value) \
     do { \
         bool __v = !(expected_value); \
-        asdf_value_t *__value = asdf_get(file, (key)); \
+        asdf_value_t *__value = asdf_get_value(file, (key)); \
         assert_not_null(__value); \
+        assert_true(asdf_value_is_bool(__value)); \
         asdf_value_err_t __err = asdf_value_as_bool(__value, &__v); \
         assert_int(__err, ==, ASDF_VALUE_OK); \
         assert_int(__v, ==, (expected_value)); \
@@ -186,10 +190,11 @@ MU_TEST(test_asdf_value_as_scalar0) {
 
 #define CHECK_BOOL_MISMATCH(key) \
     do { \
-        int __v = -1; \
-        asdf_value_t *__value = asdf_get(file, (key)); \
+        bool __v = false; \
+        asdf_value_t *__value = asdf_get_value(file, (key)); \
         assert_not_null(__value); \
-        asdf_value_err_t __err = asdf_value_as_bool(__value, (bool *)&__v); \
+        assert_false(asdf_value_is_bool(__value)); \
+        asdf_value_err_t __err = asdf_value_as_bool(__value, &__v); \
         assert_int(__err, ==, ASDF_VALUE_ERR_TYPE_MISMATCH); \
         asdf_value_destroy(__value); \
     } while (0)
@@ -217,12 +222,13 @@ MU_TEST(test_asdf_value_as_bool) {
 
 
 /* Helpers for null conversion tests */
-#define CHECK_NULL_VALUE(key, expected_err) \
+#define CHECK_NULL_VALUE(key, expected) \
     do { \
-        asdf_value_t *__value = asdf_get(file, (key)); \
+        asdf_value_t *__value = asdf_get_value(file, (key)); \
         assert_not_null(__value); \
-        asdf_value_err_t __err = asdf_value_is_null(__value); \
-        assert_int(__err, ==, (expected_err)); \
+        bool __v = !(expected); \
+        __v = asdf_value_is_null(__value); \
+        assert_int(__v, ==, (expected)); \
         asdf_value_destroy(__value); \
     } while (0)
 
@@ -231,12 +237,12 @@ MU_TEST(test_asdf_value_is_null) {
     const char *path = get_fixture_file_path("scalars.asdf");
     asdf_file_t *file = asdf_open_file(path, "r");
     assert_not_null(file);
-    CHECK_NULL_VALUE("null", ASDF_VALUE_OK);
-    CHECK_NULL_VALUE("Null", ASDF_VALUE_OK);
-    CHECK_NULL_VALUE("NULL", ASDF_VALUE_OK);
-    CHECK_NULL_VALUE("empty", ASDF_VALUE_OK);
-    CHECK_NULL_VALUE("plain", ASDF_VALUE_ERR_TYPE_MISMATCH);
-    CHECK_NULL_VALUE("false0", ASDF_VALUE_ERR_TYPE_MISMATCH);
+    CHECK_NULL_VALUE("null", true);
+    CHECK_NULL_VALUE("Null", true);
+    CHECK_NULL_VALUE("NULL", true);
+    CHECK_NULL_VALUE("empty", true);
+    CHECK_NULL_VALUE("plain", false);
+    CHECK_NULL_VALUE("false0", false);
     asdf_close(file);
     return MUNIT_OK;
 }
@@ -246,8 +252,9 @@ MU_TEST(test_asdf_value_is_null) {
 #define CHECK_INT_VALUE(type, key, expected_err, expected_value) \
     do { \
         type##_t __v = 0; \
-        asdf_value_t *__value = asdf_get(file, (key)); \
+        asdf_value_t *__value = asdf_get_value(file, (key)); \
         assert_not_null(__value); \
+        assert_true(asdf_value_is_int(__value)); \
         asdf_value_err_t __err = asdf_value_as_##type(__value, &__v); \
         assert_int(__err, ==, (expected_err)); \
         type##_t __ve = (expected_value); \
@@ -259,8 +266,9 @@ MU_TEST(test_asdf_value_is_null) {
 #define CHECK_INT_VALUE_MISMATCH(type, key) \
     do { \
         type##_t __v = 0; \
-        asdf_value_t *__value = asdf_get(file, (key)); \
+        asdf_value_t *__value = asdf_get_value(file, (key)); \
         assert_not_null(__value); \
+        assert_false(asdf_value_is_##type(__value)); \
         asdf_value_err_t __err = asdf_value_as_##type(__value, &__v); \
         assert_int(__err, ==, ASDF_VALUE_ERR_TYPE_MISMATCH); \
         asdf_value_destroy(__value); \
@@ -405,8 +413,23 @@ MU_TEST(test_asdf_value_as_uint64) {
     CHECK_INT_VALUE(uint64, "uint32", ASDF_VALUE_OK, 4294967295);
     CHECK_INT_VALUE(uint64, "int64", ASDF_VALUE_OK, 9223372036854775807LL);
     CHECK_INT_VALUE(uint64, "uint64", ASDF_VALUE_OK, 18446744073709551615ULL);
-    CHECK_INT_VALUE(uint64, "bigint", ASDF_VALUE_ERR_OVERFLOW, 0);
     CHECK_INT_VALUE_MISMATCH(uint64, "plain");
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_asdf_value_as_uint64_on_bigint) {
+    const char *path = get_fixture_file_path("scalars.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    asdf_value_t *value = asdf_get_value(file, "bigint");
+    assert_not_null(value);
+    uint64_t v = 0;
+    asdf_value_err_t err = asdf_value_as_uint64(value, &v);
+    assert_int(err, ==, ASDF_VALUE_ERR_OVERFLOW);
+    assert_false(asdf_value_is_int(value));
+    asdf_value_destroy(value);
     asdf_close(file);
     return MUNIT_OK;
 }
@@ -415,7 +438,7 @@ MU_TEST(test_asdf_value_as_uint64) {
 #define CHECK_FLOAT_VALUE(type, key, expected_err, expected_value) \
     do { \
         type __v = 0; \
-        asdf_value_t *__value = asdf_get(file, (key)); \
+        asdf_value_t *__value = asdf_get_value(file, (key)); \
         assert_not_null(__value); \
         asdf_value_err_t __err = asdf_value_as_##type(__value, &__v); \
         assert_int(__err, ==, (expected_err)); \
@@ -428,8 +451,9 @@ MU_TEST(test_asdf_value_as_uint64) {
 #define CHECK_FLOAT_VALUE_MISMATCH(type, key) \
     do { \
         type __v = 0; \
-        asdf_value_t *__value = asdf_get(file, (key)); \
+        asdf_value_t *__value = asdf_get_value(file, (key)); \
         assert_not_null(__value); \
+        assert_false(asdf_value_is_##type(__value)); \
         asdf_value_err_t __err = asdf_value_as_##type(__value, &__v); \
         assert_##type(__err, ==, ASDF_VALUE_ERR_TYPE_MISMATCH); \
         asdf_value_destroy(__value); \
@@ -477,6 +501,7 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_value_as_uint16),
     MU_RUN_TEST(test_asdf_value_as_uint32),
     MU_RUN_TEST(test_asdf_value_as_uint64),
+    MU_RUN_TEST(test_asdf_value_as_uint64_on_bigint),
     MU_RUN_TEST(test_asdf_value_as_float),
     MU_RUN_TEST(test_asdf_value_as_double)
 );

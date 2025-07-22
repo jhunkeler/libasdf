@@ -91,33 +91,6 @@ void asdf_close(asdf_file_t *file) {
 }
 
 
-asdf_value_t *asdf_get(asdf_file_t *file, const char *path) {
-    struct fy_document *tree = asdf_file_get_tree_document(file);
-
-    if (UNLIKELY(!tree))
-        return NULL;
-
-    struct fy_node *root = fy_document_root(tree);
-
-    if (UNLIKELY(!root))
-        return NULL;
-
-    struct fy_node *node = fy_node_by_path(root, path, -1, FYNWF_PTR_DEFAULT);
-
-    if (!node)
-        return NULL;
-
-    asdf_value_t *value = asdf_value_create(file, node);
-
-    if (UNLIKELY(!value)) {
-        ASDF_ERROR_OOM(file);
-        return NULL;
-    }
-
-    return value;
-}
-
-
 ASDF_LOCAL struct fy_document *asdf_file_get_tree_document(asdf_file_t *file) {
     if (!file)
         return NULL;
@@ -173,3 +146,144 @@ has_tree:
     file->tree = fy_document_build_from_string(NULL, buf, size);
     return file->tree;
 }
+
+
+asdf_value_t *asdf_get_value(asdf_file_t *file, const char *path) {
+    struct fy_document *tree = asdf_file_get_tree_document(file);
+
+    if (UNLIKELY(!tree))
+        return NULL;
+
+    struct fy_node *root = fy_document_root(tree);
+
+    if (UNLIKELY(!root))
+        return NULL;
+
+    struct fy_node *node = fy_node_by_path(root, path, -1, FYNWF_PTR_DEFAULT);
+
+    if (!node)
+        return NULL;
+
+    asdf_value_t *value = asdf_value_create(file, node);
+
+    if (UNLIKELY(!value)) {
+        ASDF_ERROR_OOM(file);
+        return NULL;
+    }
+
+    return value;
+}
+
+
+/* asdf_is_(type), asdf_get_(type) shortcuts */
+#define __ASDF_IS_TYPE(type) \
+    bool asdf_is_##type(asdf_file_t *file, const char *path) { \
+        asdf_value_t *value = asdf_get_value(file, path); \
+        if (!value) \
+            return false; \
+        bool ret = asdf_value_is_##type(value); \
+        asdf_value_destroy(value); \
+        return ret; \
+    }
+
+
+__ASDF_IS_TYPE(string)
+__ASDF_IS_TYPE(scalar)
+__ASDF_IS_TYPE(bool)
+__ASDF_IS_TYPE(null)
+__ASDF_IS_TYPE(int)
+__ASDF_IS_TYPE(int8)
+__ASDF_IS_TYPE(int16)
+__ASDF_IS_TYPE(int32)
+__ASDF_IS_TYPE(int64)
+__ASDF_IS_TYPE(uint8)
+__ASDF_IS_TYPE(uint16)
+__ASDF_IS_TYPE(uint32)
+__ASDF_IS_TYPE(uint64)
+__ASDF_IS_TYPE(float)
+__ASDF_IS_TYPE(double)
+
+
+asdf_value_err_t asdf_get_string(
+    asdf_file_t *file, const char *path, const char **out, size_t *out_len) {
+    asdf_value_t *value = asdf_get_value(file, path);
+
+    if (!value)
+        return ASDF_VALUE_ERR_NOT_FOUND;
+
+    asdf_value_err_t err = asdf_value_as_string(value, out, out_len);
+    asdf_value_destroy(value);
+    return err;
+}
+
+
+asdf_value_err_t asdf_get_string0(asdf_file_t *file, const char *path, const char **out) {
+    asdf_value_t *value = asdf_get_value(file, path);
+
+    if (!value)
+        return ASDF_VALUE_ERR_NOT_FOUND;
+
+    asdf_value_err_t err = asdf_value_as_string0(value, out);
+    asdf_value_destroy(value);
+    return err;
+}
+
+
+asdf_value_err_t asdf_get_scalar(
+    asdf_file_t *file, const char *path, const char **out, size_t *out_len) {
+    asdf_value_t *value = asdf_get_value(file, path);
+
+    if (!value)
+        return ASDF_VALUE_ERR_NOT_FOUND;
+
+    asdf_value_err_t err = asdf_value_as_scalar(value, out, out_len);
+    asdf_value_destroy(value);
+    return err;
+}
+
+
+asdf_value_err_t asdf_get_scalar0(asdf_file_t *file, const char *path, const char **out) {
+    asdf_value_t *value = asdf_get_value(file, path);
+
+    if (!value)
+        return ASDF_VALUE_ERR_NOT_FOUND;
+
+    asdf_value_err_t err = asdf_value_as_scalar0(value, out);
+    asdf_value_destroy(value);
+    return err;
+}
+
+
+#define __ASDF_GET_TYPE(type) \
+    asdf_value_err_t asdf_get_##type(asdf_file_t *file, const char *path, type *out) { \
+        asdf_value_t *value = asdf_get_value(file, path); \
+        if (!value) \
+            return ASDF_VALUE_ERR_NOT_FOUND; \
+        asdf_value_err_t err = asdf_value_as_##type(value, out); \
+        asdf_value_destroy(value); \
+        return err; \
+    }
+
+
+#define __ASDF_GET_INT_TYPE(type) \
+    asdf_value_err_t asdf_get_##type(asdf_file_t *file, const char *path, type##_t *out) { \
+        asdf_value_t *value = asdf_get_value(file, path); \
+        if (!value) \
+            return ASDF_VALUE_ERR_NOT_FOUND; \
+        asdf_value_err_t err = asdf_value_as_##type(value, out); \
+        asdf_value_destroy(value); \
+        return err; \
+    }
+
+
+__ASDF_GET_TYPE(bool)
+__ASDF_GET_INT_TYPE(int8)
+__ASDF_GET_INT_TYPE(int16)
+__ASDF_GET_INT_TYPE(int32)
+__ASDF_GET_INT_TYPE(int64)
+__ASDF_GET_INT_TYPE(uint8)
+__ASDF_GET_INT_TYPE(uint16)
+__ASDF_GET_INT_TYPE(uint32)
+__ASDF_GET_INT_TYPE(uint64)
+__ASDF_GET_TYPE(float)
+__ASDF_GET_TYPE(double)

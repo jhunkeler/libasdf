@@ -415,6 +415,18 @@ asdf_value_type_t asdf_value_get_type(asdf_value_t *value) {
 }
 
 
+/* Helper to define the asdf_value_is_(type) checkers */
+#define __ASDF_VALUE_IS_TYPE(typ, value_type) \
+    bool asdf_value_is_##typ(asdf_value_t *value) { \
+        if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK) \
+            return false; \
+        return value->type == (value_type); \
+    }
+
+
+__ASDF_VALUE_IS_TYPE(string, ASDF_VALUE_STRING)
+
+
 asdf_value_err_t asdf_value_as_string(asdf_value_t *value, const char **out, size_t *len) {
     asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
     if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
@@ -428,7 +440,7 @@ asdf_value_err_t asdf_value_as_string(asdf_value_t *value, const char **out, siz
 }
 
 
-asdf_value_err_t asdf_value_as_string0(asdf_value_t *value, char **out) {
+asdf_value_err_t asdf_value_as_string0(asdf_value_t *value, const char **out) {
     asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
     if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
         return err;
@@ -436,8 +448,13 @@ asdf_value_err_t asdf_value_as_string0(asdf_value_t *value, char **out) {
     if (value->type != ASDF_VALUE_STRING)
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
 
-    *out = (char *)fy_node_get_scalar0(value->node);
+    *out = fy_node_get_scalar0(value->node);
     return ASDF_VALUE_OK;
+}
+
+
+bool asdf_value_is_scalar(asdf_value_t *value) {
+    return (asdf_value_infer_scalar_type(value) == ASDF_VALUE_OK);
 }
 
 
@@ -462,7 +479,7 @@ asdf_value_err_t asdf_value_as_scalar(asdf_value_t *value, const char **out, siz
 }
 
 
-asdf_value_err_t asdf_value_as_scalar0(asdf_value_t *value, char **out) {
+asdf_value_err_t asdf_value_as_scalar0(asdf_value_t *value, const char **out) {
     if (!value)
         return ASDF_VALUE_ERR_UNKNOWN;
 
@@ -474,9 +491,12 @@ asdf_value_err_t asdf_value_as_scalar0(asdf_value_t *value, char **out) {
         break;
     }
 
-    *out = (char *)fy_node_get_scalar0(value->node);
+    *out = fy_node_get_scalar0(value->node);
     return ASDF_VALUE_OK;
 }
+
+
+__ASDF_VALUE_IS_TYPE(bool, ASDF_VALUE_BOOL)
 
 
 asdf_value_err_t asdf_value_as_bool(asdf_value_t *value, bool *out) {
@@ -502,15 +522,48 @@ asdf_value_err_t asdf_value_as_bool(asdf_value_t *value, bool *out) {
 }
 
 
-asdf_value_err_t asdf_value_is_null(asdf_value_t *value) {
-    asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
-    if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
-        return err;
+__ASDF_VALUE_IS_TYPE(null, ASDF_VALUE_NULL)
 
-    if (value->type != ASDF_VALUE_NULL)
-        return ASDF_VALUE_ERR_TYPE_MISMATCH;
 
-    return ASDF_VALUE_OK;
+bool asdf_value_is_int(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_INT64:
+    case ASDF_VALUE_UINT64:
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_UINT16:
+    case ASDF_VALUE_INT8:
+    case ASDF_VALUE_UINT8:
+        return true;
+    default:
+        return false;
+    }
+}
+
+
+bool asdf_value_is_int8(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_INT8:
+        return true;
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_INT64:
+        return value->scalar.i >= INT8_MIN && value->scalar.u <= INT8_MAX;
+    case ASDF_VALUE_UINT8:
+    case ASDF_VALUE_UINT16:
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_UINT64:
+        return value->scalar.u <= INT8_MAX;
+    default:
+        return false;
+    }
 }
 
 
@@ -548,6 +601,28 @@ asdf_value_err_t asdf_value_as_int8(asdf_value_t *value, int8_t *out) {
 }
 
 
+bool asdf_value_is_int16(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_INT8:
+    case ASDF_VALUE_UINT8:
+        return true;
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_INT64:
+        return value->scalar.i >= INT16_MIN && value->scalar.u <= INT16_MAX;
+    case ASDF_VALUE_UINT16:
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_UINT64:
+        return value->scalar.u <= INT16_MAX;
+    default:
+        return false;
+    }
+}
+
+
 asdf_value_err_t asdf_value_as_int16(asdf_value_t *value, int16_t *out) {
     asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
     if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
@@ -576,6 +651,28 @@ asdf_value_err_t asdf_value_as_int16(asdf_value_t *value, int16_t *out) {
         return ASDF_VALUE_OK;
     default:
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
+    }
+}
+
+
+bool asdf_value_is_int32(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_INT8:
+    case ASDF_VALUE_UINT8:
+    case ASDF_VALUE_UINT16:
+        return true;
+    case ASDF_VALUE_INT64:
+        return value->scalar.i >= INT32_MIN && value->scalar.u <= INT32_MAX;
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_UINT64:
+        return value->scalar.u <= INT32_MAX;
+    default:
+        return false;
     }
 }
 
@@ -613,6 +710,27 @@ asdf_value_err_t asdf_value_as_int32(asdf_value_t *value, int32_t *out) {
 }
 
 
+bool asdf_value_is_int64(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_INT64:
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_INT8:
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_UINT16:
+    case ASDF_VALUE_UINT8:
+        return true;
+    case ASDF_VALUE_UINT64:
+        return value->scalar.u <= INT64_MAX;
+    default:
+        return false;
+    }
+}
+
+
 asdf_value_err_t asdf_value_as_int64(asdf_value_t *value, int64_t *out) {
     asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
     if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
@@ -637,6 +755,28 @@ asdf_value_err_t asdf_value_as_int64(asdf_value_t *value, int64_t *out) {
         return ASDF_VALUE_OK;
     default:
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
+    }
+}
+
+
+bool asdf_value_is_uint8(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_UINT8:
+    case ASDF_VALUE_UINT16:
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_UINT64:
+        return true;
+    case ASDF_VALUE_INT8:
+        return value->scalar.i >= 0;
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_INT64:
+        return value->scalar.i >= 0 && value->scalar.i <= UINT8_MAX;
+    default:
+        return false;
     }
 }
 
@@ -685,6 +825,29 @@ asdf_value_err_t asdf_value_as_uint8(asdf_value_t *value, uint8_t *out) {
 }
 
 
+bool asdf_value_is_uint16(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_UINT16:
+    case ASDF_VALUE_UINT8:
+        return true;
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_UINT64:
+        return value->scalar.u <= UINT16_MAX;
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_INT8:
+        return value->scalar.i >= 0;
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_INT64:
+        return value->scalar.i >= 0 && value->scalar.i <= UINT16_MAX;
+    default:
+        return false;
+    }
+}
+
+
 asdf_value_err_t asdf_value_as_uint16(asdf_value_t *value, uint16_t *out) {
     asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
     if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
@@ -729,6 +892,29 @@ asdf_value_err_t asdf_value_as_uint16(asdf_value_t *value, uint16_t *out) {
 }
 
 
+bool asdf_value_is_uint32(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_UINT16:
+    case ASDF_VALUE_UINT8:
+        return true;
+    case ASDF_VALUE_UINT64:
+        return value->scalar.u <= UINT32_MAX;
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_INT8:
+        return value->scalar.i >= 0;
+    case ASDF_VALUE_INT64:
+        return value->scalar.i >= 0 && value->scalar.i <= UINT16_MAX;
+    default:
+        return false;
+    }
+}
+
+
 asdf_value_err_t asdf_value_as_uint32(asdf_value_t *value, uint32_t *out) {
     asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
     if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
@@ -766,6 +952,27 @@ asdf_value_err_t asdf_value_as_uint32(asdf_value_t *value, uint32_t *out) {
 }
 
 
+bool asdf_value_is_uint64(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_UINT64:
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_UINT16:
+    case ASDF_VALUE_UINT8:
+        return true;
+    case ASDF_VALUE_INT64:
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_INT8:
+        return value->scalar.i >= 0;
+    default:
+        return false;
+    }
+}
+
+
 asdf_value_err_t asdf_value_as_uint64(asdf_value_t *value, uint64_t *out) {
     asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
     if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
@@ -796,6 +1003,20 @@ asdf_value_err_t asdf_value_as_uint64(asdf_value_t *value, uint64_t *out) {
 }
 
 
+bool asdf_value_is_float(asdf_value_t *value) {
+    if (asdf_value_infer_scalar_type(value) != ASDF_VALUE_OK)
+        return false;
+
+    switch (value->type) {
+    case ASDF_VALUE_DOUBLE:
+    case ASDF_VALUE_FLOAT:
+        return true;
+    default:
+        return false;
+    }
+}
+
+
 asdf_value_err_t asdf_value_as_float(asdf_value_t *value, float *out) {
     asdf_value_err_t err = ASDF_VALUE_ERR_UNKNOWN;
     if ((err = asdf_value_infer_scalar_type(value)) != ASDF_VALUE_OK)
@@ -816,6 +1037,9 @@ asdf_value_err_t asdf_value_as_float(asdf_value_t *value, float *out) {
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
     }
 }
+
+
+__ASDF_VALUE_IS_TYPE(double, ASDF_VALUE_DOUBLE)
 
 
 asdf_value_err_t asdf_value_as_double(asdf_value_t *value, double *out) {
