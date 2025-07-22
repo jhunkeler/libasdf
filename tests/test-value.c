@@ -501,6 +501,44 @@ MU_TEST(test_asdf_value_tagged_strings) {
 }
 
 
+MU_TEST(test_asdf_mapping_iter) {
+    const char *path = get_fixture_file_path("value-types.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    asdf_value_t *mapping = NULL;
+    asdf_value_err_t err = asdf_get_mapping(file, "mapping", &mapping);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_int(asdf_mapping_size(mapping), ==, 2);
+    asdf_mapping_iter_t iter = asdf_mapping_iter_init();
+
+    asdf_mapping_item_t *item = asdf_mapping_iter(mapping, &iter);
+    assert_not_null(item);
+    assert_not_null(asdf_mapping_item_key(item));
+    assert_string_equal(asdf_mapping_item_key(item), "foo");
+    asdf_value_t *value = asdf_mapping_item_value(item);
+    assert_not_null(value);
+    const char *s = NULL;
+    assert_int(asdf_value_as_string0(value, &s), ==, ASDF_VALUE_OK);
+    assert_string_equal(s, "foo");
+
+    item = asdf_mapping_iter(mapping, &iter);
+    assert_not_null(item);
+    assert_not_null(asdf_mapping_item_key(item));
+    assert_string_equal(asdf_mapping_item_key(item), "bar");
+    value = asdf_mapping_item_value(item);
+    assert_not_null(value);
+    s = NULL;
+    assert_int(asdf_value_as_string0(value, &s), ==, ASDF_VALUE_OK);
+    assert_string_equal(s, "bar");
+
+    assert_null(asdf_mapping_iter(mapping, &iter));
+    assert_null((void *)iter);
+    asdf_value_destroy(mapping);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_value,
     MU_RUN_TEST(test_asdf_value_get_type),
@@ -521,7 +559,8 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_value_as_uint64_on_bigint),
     MU_RUN_TEST(test_asdf_value_as_float),
     MU_RUN_TEST(test_asdf_value_as_double),
-    MU_RUN_TEST(test_asdf_value_tagged_strings)
+    MU_RUN_TEST(test_asdf_value_tagged_strings),
+    MU_RUN_TEST(test_asdf_mapping_iter)
 );
 
 

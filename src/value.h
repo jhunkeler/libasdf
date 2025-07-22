@@ -24,7 +24,21 @@ typedef struct asdf_value {
         double d;
         void *ext;
     } scalar;
+    char *path;
 } asdf_value_t;
+
+
+typedef struct _asdf_mapping_iter_impl {
+    const char *key;
+    asdf_value_t *value;
+    void *iter;
+} _asdf_mapping_iter_impl_t;
+
+
+typedef _asdf_mapping_iter_impl_t *asdf_mapping_iter_t;
+
+
+typedef struct _asdf_mapping_iter_impl asdf_mapping_item_t;
 
 
 ASDF_LOCAL asdf_value_t *asdf_value_create(asdf_file_t *file, struct fy_node *node);

@@ -5,6 +5,7 @@
 
 #include <libfyaml.h>
 
+#include "error.h"
 #include "log.h"
 #include "util.h"
 #include "value.h"
@@ -15,8 +16,10 @@
 asdf_value_t *asdf_value_create(asdf_file_t *file, struct fy_node *node) {
     asdf_value_t *value = calloc(1, sizeof(asdf_value_t));
 
-    if (!value)
+    if (!value) {
+        ASDF_ERROR_OOM(file);
         return NULL;
+    }
 
     value->file = file;
 
@@ -34,6 +37,7 @@ asdf_value_t *asdf_value_create(asdf_file_t *file, struct fy_node *node) {
     }
     value->err = ASDF_VALUE_ERR_UNKNOWN;
     value->node = node;
+    value->path = NULL;
     return value;
 }
 
@@ -49,21 +53,128 @@ void asdf_value_destroy(asdf_value_t *value) {
      * come back to this...
      */
     fy_node_free(value->node);
+    free(value->path);
     ZERO_MEMORY(value, sizeof(asdf_value_t));
     free(value);
 }
 
 
+const char *asdf_value_path(asdf_value_t *value) {
+    if (!value)
+        return NULL;
+
+    if (NULL == value->path) {
+        // Get the path and memoize it; it can be freed when the value is freed
+        value->path = fy_node_get_path(value->node);
+    }
+
+    return value->path;
+}
+
+
+/* Mapping functions */
 bool asdf_value_is_mapping(asdf_value_t *value) {
     return value->type == ASDF_VALUE_MAPPING;
 }
 
 
+int asdf_mapping_size(asdf_value_t *mapping) {
+    if (UNLIKELY(!mapping) || !asdf_value_is_mapping(mapping))
+        return -1;
+
+    return fy_node_mapping_item_count(mapping->node);
+}
+
+
+asdf_mapping_iter_t asdf_mapping_iter_init() {
+    return NULL;
+}
+
+
+const char *asdf_mapping_item_key(asdf_mapping_item_t *item) {
+    return item->key;
+}
+
+
+asdf_value_t *asdf_mapping_item_value(asdf_mapping_item_t *item) {
+    return item->value;
+}
+
+
+asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_mapping_iter_t *iter) {
+    if (mapping->type != ASDF_VALUE_MAPPING) {
+#ifdef ASDF_LOG_ENABLED
+        ASDF_LOG(mapping->file, ASDF_LOG_WARN, "%s is not a mapping", asdf_value_path(mapping));
+#endif
+        return NULL;
+    }
+
+    _asdf_mapping_iter_impl_t *impl = *iter;
+
+    if (NULL == impl) {
+        impl = calloc(1, sizeof(_asdf_mapping_iter_impl_t));
+
+        if (!impl) {
+            ASDF_ERROR_OOM(mapping->file);
+            return false;
+        }
+
+        *iter = impl;
+    }
+
+    struct fy_node_pair *pair = fy_node_mapping_iterate(mapping->node, &impl->iter);
+
+    if (!pair) {
+        /* Cleanup and end iteration */
+        goto cleanup;
+    }
+
+    struct fy_node *key_node = fy_node_pair_key(pair);
+
+    if (UNLIKELY(fy_node_get_type(key_node) != FYNT_SCALAR)) {
+#ifdef ASDF_LOG_ENABLED
+        ASDF_LOG(
+            mapping->file,
+            ASDF_LOG_WARN,
+            "non-scalar key found in mapping %s; non-scalar "
+            "keys are not allowed in ASDF; the value will be returned but the key will "
+            "be set to NULL",
+            asdf_value_path(mapping));
+#endif
+        impl->key = NULL;
+    } else {
+        impl->key = fy_node_get_scalar0(key_node);
+    }
+
+    struct fy_node *value_node = fy_node_pair_value(pair);
+    asdf_value_t *value = asdf_value_create(mapping->file, value_node);
+
+    if (!value) {
+        goto cleanup;
+    }
+
+    // Destroy previous value if any
+    asdf_value_destroy(impl->value);
+    impl->value = value;
+    return impl;
+
+cleanup:
+    impl->key = NULL;
+    asdf_value_destroy(impl->value);
+    impl->value = NULL;
+    free(impl);
+    *iter = NULL;
+    return NULL;
+}
+
+
+/* Sequence functions */
 bool asdf_value_is_sequence(asdf_value_t *value) {
     return value->type == ASDF_VALUE_SEQUENCE;
 }
 
 
+/* Scalar functions */
 static bool is_yaml_null(const char *s, size_t len) {
     return (
         !s || len == 0 ||

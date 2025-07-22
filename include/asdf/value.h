@@ -54,16 +54,32 @@ typedef enum {
 } asdf_value_err_t;
 
 
+/* Basic value-related definitions */
 typedef struct asdf_value asdf_value_t;
-
 
 ASDF_EXPORT void asdf_value_destroy(asdf_value_t *value);
 ASDF_EXPORT asdf_value_type_t asdf_value_get_type(asdf_value_t *value);
+ASDF_EXPORT const char *asdf_value_path(asdf_value_t *value);
 
+/* Mapping-related definitions */
 ASDF_EXPORT bool asdf_value_is_mapping(asdf_value_t *value);
+ASDF_EXPORT int asdf_mapping_size(asdf_value_t *value);
 
+typedef struct _asdf_mapping_iter_impl _asdf_mapping_iter_impl_t;
+typedef _asdf_mapping_iter_impl_t* asdf_mapping_iter_t;
+typedef struct _asdf_mapping_iter_impl asdf_mapping_item_t;
+
+ASDF_EXPORT asdf_mapping_iter_t asdf_mapping_iter_init(void);
+ASDF_EXPORT const char *asdf_mapping_item_key(asdf_mapping_item_t *item);
+ASDF_EXPORT asdf_value_t *asdf_mapping_item_value(asdf_mapping_item_t *item);
+ASDF_EXPORT asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_mapping_iter_t *iter);
+
+
+/* Sequence-related definitions */
 ASDF_EXPORT bool asdf_value_is_sequence(asdf_value_t *value);
 
+
+/* Scalar-related definitions */
 ASDF_EXPORT bool asdf_value_is_string(asdf_value_t *value);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_string(asdf_value_t *value, const char **out, size_t *out_len);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_string0(asdf_value_t *value, const char **out);
