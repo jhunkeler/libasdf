@@ -35,8 +35,8 @@ typedef enum {
     ASDF_VALUE_UINT64,
 
     // Floating point
-    ASDF_VALUE_FLOAT32,
-    ASDF_VALUE_FLOAT64,
+    ASDF_VALUE_FLOAT,
+    ASDF_VALUE_DOUBLE,
 
     // Extension types (to be defined in more detail later)
     ASDF_VALUE_EXTENSION
@@ -57,6 +57,7 @@ typedef struct asdf_value asdf_value_t;
 
 
 ASDF_EXPORT void asdf_value_destroy(asdf_value_t *value);
+ASDF_EXPORT asdf_value_type_t asdf_value_get_type(asdf_value_t *value);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_string(asdf_value_t *value, const char **out, size_t *out_len);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_string0(asdf_value_t *value, char **out);
 

@@ -169,7 +169,8 @@ static asdf_value_err_t is_yaml_unsigned_int(
 }
 
 
-static bool is_yaml_float(const char *s, size_t len, double *value, asdf_value_type_t *type) {
+static asdf_value_err_t is_yaml_float(
+    const char *s, size_t len, double *value, asdf_value_type_t *type) {
     if (!s)
         return ASDF_VALUE_ERR_UNKNOWN;
 
@@ -184,6 +185,7 @@ static bool is_yaml_float(const char *s, size_t len, double *value, asdf_value_t
 
     if (errno == ERANGE) {
         free(fs);
+        *type = ASDF_VALUE_DOUBLE;
         return ASDF_VALUE_ERR_OVERFLOW;
     } else if (errno || *end) {
         free(fs);
@@ -193,9 +195,9 @@ static bool is_yaml_float(const char *s, size_t len, double *value, asdf_value_t
     float fv = (float)v;
 
     if ((double)fv == v)
-        *type = ASDF_VALUE_FLOAT32;
+        *type = ASDF_VALUE_FLOAT;
     else
-        *type = ASDF_VALUE_FLOAT64;
+        *type = ASDF_VALUE_DOUBLE;
 
     *value = v;
     free(fs);
@@ -259,7 +261,7 @@ static asdf_value_err_t asdf_value_infer_float(asdf_value_t *value, const char *
     double d_val = 0.0;
     asdf_value_type_t type = ASDF_VALUE_UNKNOWN;
     asdf_value_err_t err = is_yaml_float(s, len, &d_val, &type);
-    if (ASDF_VALUE_OK == err) {
+    if (ASDF_VALUE_OK == err || ASDF_VALUE_ERR_OVERFLOW == err) {
         value->type = type;
         value->scalar.d = d_val;
     } else {
@@ -398,6 +400,18 @@ static asdf_value_err_t asdf_value_infer_scalar_type(asdf_value_t *value) {
     value->type = ASDF_VALUE_STRING;
     value->err = ASDF_VALUE_OK;
     return ASDF_VALUE_OK;
+}
+
+
+asdf_value_type_t asdf_value_get_type(asdf_value_t *value) {
+    if (!value)
+        return ASDF_VALUE_UNKNOWN;
+
+    if (value->type != ASDF_VALUE_SCALAR)
+        return value->type;
+
+    asdf_value_infer_scalar_type(value);
+    return value->type;
 }
 
 
@@ -788,10 +802,10 @@ asdf_value_err_t asdf_value_as_float(asdf_value_t *value, float *out) {
         return err;
 
     switch (value->type) {
-    case ASDF_VALUE_FLOAT32:
+    case ASDF_VALUE_FLOAT:
         *out = (float)value->scalar.d;
         return ASDF_VALUE_OK;
-    case ASDF_VALUE_FLOAT64:
+    case ASDF_VALUE_DOUBLE:
         *out = (float)value->scalar.d;
 
         if ((float)value->scalar.d != value->scalar.d)
@@ -810,8 +824,8 @@ asdf_value_err_t asdf_value_as_double(asdf_value_t *value, double *out) {
         return err;
 
     switch (value->type) {
-    case ASDF_VALUE_FLOAT64:
-    case ASDF_VALUE_FLOAT32:
+    case ASDF_VALUE_DOUBLE:
+    case ASDF_VALUE_FLOAT:
         *out = value->scalar.d;
         return ASDF_VALUE_OK;
     default:

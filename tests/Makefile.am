@@ -153,6 +153,7 @@ EXTRA_DIST += \
     fixtures/info/unicode_spp.info.txt \
     fixtures/parse-minimal.asdf \
     fixtures/parse-minimal-extra-comment.asdf \
+    fixtures/scalars.asdf \
     munit/COPYING \
     munit/munit.c \
     munit/munit.h

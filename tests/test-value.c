@@ -11,6 +11,54 @@
 #include "util.h"
 
 
+#define CHECK_VALUE_TYPE(key, expected_type) \
+    do { \
+        asdf_value_t *__value = asdf_get(file, (key)); \
+        assert_not_null(__value); \
+        asdf_value_type_t __type = asdf_value_get_type(__value); \
+        assert_int(__type, ==, (expected_type)); \
+        asdf_value_destroy(__value); \
+    } while (0)
+
+
+MU_TEST(test_asdf_value_get_type) {
+    const char *path = get_fixture_file_path("scalars.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    CHECK_VALUE_TYPE("single_quoted", ASDF_VALUE_STRING);
+    CHECK_VALUE_TYPE("double_quoted", ASDF_VALUE_STRING);
+    CHECK_VALUE_TYPE("plain", ASDF_VALUE_STRING);
+    CHECK_VALUE_TYPE("literal", ASDF_VALUE_STRING);
+    CHECK_VALUE_TYPE("folded", ASDF_VALUE_STRING);
+    CHECK_VALUE_TYPE("false", ASDF_VALUE_BOOL);
+    CHECK_VALUE_TYPE("False", ASDF_VALUE_BOOL);
+    CHECK_VALUE_TYPE("FALSE", ASDF_VALUE_BOOL);
+    CHECK_VALUE_TYPE("false0", ASDF_VALUE_BOOL);
+    CHECK_VALUE_TYPE("true", ASDF_VALUE_BOOL);
+    CHECK_VALUE_TYPE("True", ASDF_VALUE_BOOL);
+    CHECK_VALUE_TYPE("TRUE", ASDF_VALUE_BOOL);
+    CHECK_VALUE_TYPE("true1", ASDF_VALUE_BOOL);
+    CHECK_VALUE_TYPE("null", ASDF_VALUE_NULL);
+    CHECK_VALUE_TYPE("Null", ASDF_VALUE_NULL);
+    CHECK_VALUE_TYPE("NULL", ASDF_VALUE_NULL);
+    CHECK_VALUE_TYPE("empty", ASDF_VALUE_NULL);
+    CHECK_VALUE_TYPE("int8", ASDF_VALUE_UINT8);
+    CHECK_VALUE_TYPE("int16", ASDF_VALUE_UINT16);
+    CHECK_VALUE_TYPE("int32", ASDF_VALUE_UINT32);
+    CHECK_VALUE_TYPE("int64", ASDF_VALUE_UINT64);
+    CHECK_VALUE_TYPE("uint8", ASDF_VALUE_UINT8);
+    CHECK_VALUE_TYPE("uint16", ASDF_VALUE_UINT16);
+    CHECK_VALUE_TYPE("uint32", ASDF_VALUE_UINT32);
+    CHECK_VALUE_TYPE("uint64", ASDF_VALUE_UINT64);
+    CHECK_VALUE_TYPE("bigint", ASDF_VALUE_UNKNOWN);
+    CHECK_VALUE_TYPE("float32", ASDF_VALUE_FLOAT);
+    CHECK_VALUE_TYPE("float64", ASDF_VALUE_DOUBLE);
+    CHECK_VALUE_TYPE("bigfloat", ASDF_VALUE_DOUBLE);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 /* Helper for string conversion tests */
 #define CHECK_STR_VALUE(key, expected_value) \
     do { \
@@ -364,8 +412,57 @@ MU_TEST(test_asdf_value_as_uint64) {
 }
 
 
+#define CHECK_FLOAT_VALUE(type, key, expected_err, expected_value) \
+    do { \
+        type __v = 0; \
+        asdf_value_t *__value = asdf_get(file, (key)); \
+        assert_not_null(__value); \
+        asdf_value_err_t __err = asdf_value_as_##type(__value, &__v); \
+        assert_int(__err, ==, (expected_err)); \
+        type __ve = (expected_value); \
+        assert_##type(__v, ==, __ve); \
+        asdf_value_destroy(__value); \
+    } while (0)
+
+
+#define CHECK_FLOAT_VALUE_MISMATCH(type, key) \
+    do { \
+        type __v = 0; \
+        asdf_value_t *__value = asdf_get(file, (key)); \
+        assert_not_null(__value); \
+        asdf_value_err_t __err = asdf_value_as_##type(__value, &__v); \
+        assert_##type(__err, ==, ASDF_VALUE_ERR_TYPE_MISMATCH); \
+        asdf_value_destroy(__value); \
+    } while (0)
+
+
+MU_TEST(test_asdf_value_as_float) {
+    const char *path = get_fixture_file_path("scalars.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    CHECK_FLOAT_VALUE(float, "float32", ASDF_VALUE_OK, 0.15625);
+    CHECK_FLOAT_VALUE(float, "float64", ASDF_VALUE_ERR_OVERFLOW, 1.000000059604644775390625);
+    CHECK_FLOAT_VALUE_MISMATCH(float, "plain");
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_asdf_value_as_double) {
+    const char *path = get_fixture_file_path("scalars.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    CHECK_FLOAT_VALUE(double, "float32", ASDF_VALUE_OK, 0.15625);
+    CHECK_FLOAT_VALUE(double, "float64", ASDF_VALUE_OK, 1.000000059604644775390625);
+    CHECK_FLOAT_VALUE_MISMATCH(float, "plain");
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_value,
+    MU_RUN_TEST(test_asdf_value_get_type),
     MU_RUN_TEST(test_asdf_value_as_string),
     MU_RUN_TEST(test_asdf_value_as_string0),
     MU_RUN_TEST(test_asdf_value_as_scalar),
@@ -379,7 +476,9 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_value_as_uint8),
     MU_RUN_TEST(test_asdf_value_as_uint16),
     MU_RUN_TEST(test_asdf_value_as_uint32),
-    MU_RUN_TEST(test_asdf_value_as_uint64)
+    MU_RUN_TEST(test_asdf_value_as_uint64),
+    MU_RUN_TEST(test_asdf_value_as_float),
+    MU_RUN_TEST(test_asdf_value_as_double)
 );
 
 
