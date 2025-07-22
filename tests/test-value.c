@@ -520,7 +520,8 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_value_as_uint64),
     MU_RUN_TEST(test_asdf_value_as_uint64_on_bigint),
     MU_RUN_TEST(test_asdf_value_as_float),
-    MU_RUN_TEST(test_asdf_value_as_double)
+    MU_RUN_TEST(test_asdf_value_as_double),
+    MU_RUN_TEST(test_asdf_value_tagged_strings)
 );
 
 

@@ -362,6 +362,7 @@ static asdf_value_err_t asdf_value_infer_scalar_type(asdf_value_t *value) {
         case ASDF_YAML_COMMON_TAG_STR:
             /* Explicitly tagged as str--just set the value type to str, no need to parse */
             value->type = ASDF_VALUE_STRING;
+            err = ASDF_VALUE_OK;
             break;
         }
         free(tag_str);
