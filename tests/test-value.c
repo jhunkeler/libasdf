@@ -484,6 +484,23 @@ MU_TEST(test_asdf_value_as_double) {
 }
 
 
+/**
+ * Test that scalars explicitly tagged as !!str as interpreted as strings
+ */
+MU_TEST(test_asdf_value_tagged_strings) {
+    const char *path = get_fixture_file_path("tagged-scalars.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    CHECK_STR_VALUE("string", "string");
+    CHECK_STR_VALUE("bool_string", "true");
+    CHECK_STR_VALUE("null_string", "null");
+    CHECK_STR_VALUE("int_string", "1");
+    CHECK_STR_VALUE("float_string", "1.0");
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_value,
     MU_RUN_TEST(test_asdf_value_get_type),
