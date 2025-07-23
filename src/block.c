@@ -84,7 +84,7 @@ asdf_block_info_t *asdf_block_read_info(asdf_parser_t *parser) {
     uint32_t flags =
         // NOLINTNEXTLINE(readability-magic-numbers)
         (((uint32_t)buf[0] << 24) | ((uint32_t)buf[1] << 16) | ((uint32_t)buf[2] << 8) | buf[3]);
-    strncpy(
+    memcpy(
         header->compression,
         (char *)buf + ASDF_BLOCK_COMPRESSION_OFFSET,
         sizeof(header->compression));

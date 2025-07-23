@@ -1,15 +1,23 @@
 # Tests
 # 'check' comes from 'make check'
-AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src
+AM_CPPFLAGS = \
+    -I$(top_srcdir)/include \
+    -I$(top_srcdir)/third_party/STC/include \
+    -I$(top_srcdir)/src
 
 asdf_standard_dir = $(top_srcdir)/asdf-standard
 asdf_standard_submodule = $(asdf_standard_dir)/.git
 munit_submodule = $(srcdir)/tests/munit.git
+submodules = $(asdf_standard_submodule) $(munit_submodule)
 
 $(asdf_standard_submodule) $(munit_submodule):
-	echo "Initializing submodules..."
-	git submodule update --init --recursive
-	git config submodule.tests/munit.ignore untracked
+	@if test -d $(top_srcdir)/.git; then \
+	    echo "Initializing submodules $@ ..."; \
+	    git submodule update --init --recursive; \
+	    git config submodule.tests/munit.ignore untracked; \
+	else \
+	    echo "Skipping submodule init: not in a Git repository"; \
+	fi
 
 
 @VALGRIND_CHECK_RULES@
@@ -19,7 +27,9 @@ check_PROGRAMS = \
     test-file.unit \
     test-parse.unit \
     test-parse-util.unit \
-    test-stream.unit
+    test-stream.unit \
+    test-value.unit \
+    test-value-util.unit
 
 TESTS_ENVIRONMENT = top_builddir=$(top_builddir) top_srcdir=$(top_srcdir)
 TESTS = $(check_PROGRAMS)
@@ -51,16 +61,11 @@ test_event_unit_LDFLAGS = $(unit_test_ldflags)
 test_event_unit_LDADD = $(unit_test_ldadd)
 
 # test-file.unit
-test_file_unit_SOURCES = \
-    test-file.c \
-    $(top_srcdir)/src/context.c \
-    $(top_srcdir)/src/error.c \
-    $(top_srcdir)/src/file.c \
-    $(top_srcdir)/src/log.c
+test_file_unit_SOURCES = test-file.c
 test_file_unit_CPPFLAGS = $(unit_test_cppflags)
 test_file_unit_CFLAGS = $(unit_test_cflags)
 test_file_unit_LDFLAGS = $(unit_test_ldflags)
-test_file_unit_LDADD = $(unit_test_ldadd) $(FYAML_LIBS)
+test_file_unit_LDADD = $(unit_test_ldadd)
 
 # test-parse.unit
 test_parse_unit_SOURCES = test-parse.c
@@ -91,6 +96,23 @@ test_stream_unit_CPPFLAGS = $(unit_test_cppflags)
 test_stream_unit_CFLAGS = $(unit_test_cflags)
 test_stream_unit_LDFLAGS = $(unit_test_ldflags)
 test_stream_unit_LDADD = $(FYAML_LIBS) libmunit.a
+
+# test-value.unit
+test_value_unit_SOURCES = test-value.c
+test_value_unit_CPPFLAGS = $(unit_test_cppflags)
+test_value_unit_CFLAGS = $(unit_test_cflags)
+test_value_unit_LDFLAGS = $(unit_test_ldflags)
+test_value_unit_LDADD = $(unit_test_ldadd)
+
+# test-value-util.unit
+test_value_util_unit_SOURCES = \
+    test-value-util.c \
+    $(top_srcdir)/src/value_util.c \
+    $(top_srcdir)/third_party/STC/src/cstr_core.c
+test_value_util_unit_CPPFLAGS = $(unit_test_cppflags)
+test_value_util_unit_CFLAGS = $(unit_test_cflags)
+test_value_util_unit_LDFLAGS = $(unit_test_ldflags)
+test_value_util_unit_LDADD = libmunit.a
 
 # Shell tests
 TOOL_TESTS = test-events.sh test-info.sh
@@ -131,13 +153,16 @@ EXTRA_DIST += \
     fixtures/info/unicode_spp.info.txt \
     fixtures/parse-minimal.asdf \
     fixtures/parse-minimal-extra-comment.asdf \
+    fixtures/scalars.asdf \
+    fixtures/tagged-scalars.asdf \
+    fixtures/value-types.asdf \
     munit/COPYING \
     munit/munit.c \
     munit/munit.h
 
 
 # Bit of a hack to make syncing the submodule a prerequisite to make check
-check-am: $(asdf_standard_submodule)
+check-am: $(submodules)
 
 # Clean up temp files from tests
 distclean-local:
