@@ -1,0 +1,12 @@
+#ASDF 1.0.0
+#ASDF_STANDARD 1.6.0
+%YAML 1.1
+%TAG ! tag:stsci.edu:asdf/
+--- !core/asdf-1.1.0
+string: !!str string
+bool_string: !!str true
+null_string: !!str null
+int_string: !!str 1
+float_string: !!str 1.0
+...
+
