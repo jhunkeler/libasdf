@@ -64,6 +64,7 @@ ASDF_EXPORT const char *asdf_value_path(asdf_value_t *value);
 /* Mapping-related definitions */
 ASDF_EXPORT bool asdf_value_is_mapping(asdf_value_t *value);
 ASDF_EXPORT int asdf_mapping_size(asdf_value_t *value);
+ASDF_EXPORT asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key);
 
 typedef struct _asdf_mapping_iter_impl _asdf_mapping_iter_impl_t;
 typedef _asdf_mapping_iter_impl_t* asdf_mapping_iter_t;
@@ -73,12 +74,12 @@ ASDF_EXPORT asdf_mapping_iter_t asdf_mapping_iter_init(void);
 ASDF_EXPORT const char *asdf_mapping_item_key(asdf_mapping_item_t *item);
 ASDF_EXPORT asdf_value_t *asdf_mapping_item_value(asdf_mapping_item_t *item);
 ASDF_EXPORT asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_mapping_iter_t *iter);
-ASDF_EXPORT asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key);
 
 
 /* Sequence-related definitions */
 ASDF_EXPORT bool asdf_value_is_sequence(asdf_value_t *value);
-ASDF_EXPORT int asdf_sequence_size(asdf_value_t *value);
+ASDF_EXPORT int asdf_sequence_size(asdf_value_t *sequence);
+ASDF_EXPORT asdf_value_t *asdf_sequence_get(asdf_value_t *sequence, int index);
 
 typedef struct _asdf_sequence_iter_impl _asdf_sequence_iter_impl_t;
 typedef _asdf_sequence_iter_impl_t* asdf_sequence_iter_t;

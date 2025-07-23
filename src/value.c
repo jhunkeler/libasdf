@@ -86,6 +86,23 @@ int asdf_mapping_size(asdf_value_t *mapping) {
 }
 
 
+asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key) {
+    if (mapping->type != ASDF_VALUE_MAPPING) {
+#ifdef ASDF_LOG_ENABLED
+        ASDF_LOG(mapping->file, ASDF_LOG_WARN, "%s is not a mapping", asdf_value_path(mapping));
+#endif
+        return NULL;
+    }
+
+    struct fy_node *value = fy_node_mapping_lookup_value_by_simple_key(mapping->node, key, -1);
+
+    if (!value)
+        return NULL;
+
+    return asdf_value_create(mapping->file, value);
+}
+
+
 asdf_mapping_iter_t asdf_mapping_iter_init() {
     return NULL;
 }
@@ -168,23 +185,6 @@ cleanup:
 }
 
 
-asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key) {
-    if (mapping->type != ASDF_VALUE_MAPPING) {
-#ifdef ASDF_LOG_ENABLED
-        ASDF_LOG(mapping->file, ASDF_LOG_WARN, "%s is not a mapping", asdf_value_path(mapping));
-#endif
-        return NULL;
-    }
-
-    struct fy_node *value = fy_node_mapping_lookup_value_by_simple_key(mapping->node, key, -1);
-
-    if (!value)
-        return NULL;
-
-    return asdf_value_create(mapping->file, value);
-}
-
-
 /* Sequence functions */
 bool asdf_value_is_sequence(asdf_value_t *value) {
     return value->type == ASDF_VALUE_SEQUENCE;
@@ -192,10 +192,31 @@ bool asdf_value_is_sequence(asdf_value_t *value) {
 
 
 int asdf_sequence_size(asdf_value_t *sequence) {
-    if (UNLIKELY(!sequence) || !asdf_value_is_sequence(sequence))
+    if (UNLIKELY(!sequence) || !asdf_value_is_sequence(sequence)) {
+#ifdef ASDF_LOG_ENABLED
+        ASDF_LOG(sequence->file, ASDF_LOG_WARN, "%s is not a sequence", asdf_value_path(sequence));
+#endif
         return -1;
+    }
 
     return fy_node_sequence_item_count(sequence->node);
+}
+
+
+asdf_value_t *asdf_sequence_get(asdf_value_t *sequence, int index) {
+    if (UNLIKELY(!sequence) || !asdf_value_is_sequence(sequence)) {
+#ifdef ASDF_LOG_ENABLED
+        ASDF_LOG(sequence->file, ASDF_LOG_WARN, "%s is not a sequence", asdf_value_path(sequence));
+#endif
+        return NULL;
+    }
+
+    struct fy_node *value = fy_node_sequence_get_by_index(sequence->node, index);
+
+    if (!value)
+        return NULL;
+
+    return asdf_value_create(sequence->file, value);
 }
 
 

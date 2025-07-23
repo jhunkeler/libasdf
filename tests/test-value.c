@@ -604,6 +604,48 @@ MU_TEST(test_asdf_sequence_iter) {
 }
 
 
+MU_TEST(test_asdf_sequence_get) {
+    const char *path = get_fixture_file_path("value-types.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    asdf_value_t *sequence = NULL;
+    asdf_value_err_t err = asdf_get_sequence(file, "sequence", &sequence);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_not_null(sequence);
+
+    asdf_value_t *first = asdf_sequence_get(sequence, 0);
+    assert_not_null(first);
+    assert_true(asdf_value_is_int(first));
+    int8_t i8 = -1;
+    assert_int(asdf_value_as_int8(first, &i8), ==, ASDF_VALUE_OK);
+    assert_int(i8, ==, 0);
+    asdf_value_destroy(first);
+
+    asdf_value_t *second = asdf_sequence_get(sequence, 1);
+    assert_not_null(second);
+    assert_true(asdf_value_is_int(second));
+    assert_int(asdf_value_as_int8(second, &i8), ==, ASDF_VALUE_OK);
+    assert_int(i8, ==, 1);
+    asdf_value_destroy(second);
+
+    /* TODO: When memory allocation is improved for asdf_value_t, it might be that this returns
+     * a pointer to the same asdf_value_t at the same address as the previous lookup; TBD */
+    asdf_value_t *last = asdf_sequence_get(sequence, -1);
+    assert_not_null(last);
+    assert_true(asdf_value_is_int(last));
+    assert_int(asdf_value_as_int8(last, &i8), ==, ASDF_VALUE_OK);
+    assert_int(i8, ==, 1);
+    asdf_value_destroy(last);
+
+    asdf_value_t *third = asdf_sequence_get(sequence, 2);
+    assert_null(third);
+
+    asdf_value_destroy(sequence);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_value,
     MU_RUN_TEST(test_asdf_value_get_type),
@@ -627,7 +669,8 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_value_tagged_strings),
     MU_RUN_TEST(test_asdf_mapping_iter),
     MU_RUN_TEST(test_asdf_mapping_get),
-    MU_RUN_TEST(test_asdf_sequence_iter)
+    MU_RUN_TEST(test_asdf_sequence_iter),
+    MU_RUN_TEST(test_asdf_sequence_get)
 );
 
 
