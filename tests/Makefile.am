@@ -154,6 +154,8 @@ EXTRA_DIST += \
     fixtures/parse-minimal.asdf \
     fixtures/parse-minimal-extra-comment.asdf \
     fixtures/scalars.asdf \
+    fixtures/tagged-scalars.asdf \
+    fixtures/value-types.asdf \
     munit/COPYING \
     munit/munit.c \
     munit/munit.h
