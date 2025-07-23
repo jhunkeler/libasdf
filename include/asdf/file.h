@@ -65,4 +65,7 @@ ASDF_EXPORT asdf_value_err_t asdf_get_float(asdf_file_t *file, const char *path,
 ASDF_EXPORT bool asdf_is_double(asdf_file_t *file, const char *path);
 ASDF_EXPORT asdf_value_err_t asdf_get_double(asdf_file_t *file, const char *path, double *out);
 
+/* Block-related methods */
+ASDF_EXPORT size_t asdf_block_count(asdf_file_t *file);
+
 #endif /* ASDF_FILE_H */

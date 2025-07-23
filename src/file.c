@@ -321,3 +321,24 @@ __ASDF_GET_INT_TYPE(uint32)
 __ASDF_GET_INT_TYPE(uint64)
 __ASDF_GET_TYPE(float)
 __ASDF_GET_TYPE(double)
+
+
+/* Block-related methods */
+size_t asdf_block_count(asdf_file_t *file) {
+    if (!file)
+        return 0;
+
+    /* Because blocks are the last things we expect to find in a file (modulo the optional block
+     * index) we cannot return the block count accurately without parsing the full file.  Relying
+     * on the block index alone for the count is also not guaranteed to be accurate since it is
+     * only a hint (a hint that nonetheless allows the parser to complete much faster when
+     * possible).  So here we ensure the file is parsed to completion then return the block count.
+     */
+    asdf_parser_t *parser = file->parser;
+
+    while (!parser->done) {
+        asdf_event_iterate(parser);
+    }
+
+    return parser->blocks.n_blocks;
+}
