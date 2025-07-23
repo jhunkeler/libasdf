@@ -541,6 +541,40 @@ MU_TEST(test_asdf_mapping_iter) {
 }
 
 
+MU_TEST(test_asdf_mapping_get) {
+    const char *path = get_fixture_file_path("value-types.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    asdf_value_t *mapping = NULL;
+    asdf_value_err_t err = asdf_get_mapping(file, "mapping", &mapping);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_not_null(mapping);
+    asdf_value_t *foo = asdf_mapping_get(mapping, "foo");
+    assert_not_null(foo);
+    assert_true(asdf_value_is_string(foo));
+    const char *s = NULL;
+    assert_int(asdf_value_as_string0(foo, &s), ==, ASDF_VALUE_OK);
+    assert_not_null(s);
+    assert_string_equal(s, "foo");
+    asdf_value_destroy(foo);
+
+    asdf_value_t *bar = asdf_mapping_get(mapping, "bar");
+    assert_not_null(bar);
+    assert_true(asdf_value_is_string(bar));
+    assert_int(asdf_value_as_string0(bar, &s), ==, ASDF_VALUE_OK);
+    assert_not_null(s);
+    assert_string_equal(s, "bar");
+    asdf_value_destroy(bar);
+
+    asdf_value_t *null = asdf_mapping_get(mapping, "does-not-exist");
+    assert_null(null);
+
+    asdf_value_destroy(mapping);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST(test_asdf_sequence_iter) {
     const char *path = get_fixture_file_path("value-types.asdf");
     asdf_file_t *file = asdf_open_file(path, "r");
@@ -592,6 +626,7 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_value_as_double),
     MU_RUN_TEST(test_asdf_value_tagged_strings),
     MU_RUN_TEST(test_asdf_mapping_iter),
+    MU_RUN_TEST(test_asdf_mapping_get),
     MU_RUN_TEST(test_asdf_sequence_iter)
 );
 

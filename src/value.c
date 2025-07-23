@@ -168,6 +168,23 @@ cleanup:
 }
 
 
+asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key) {
+    if (mapping->type != ASDF_VALUE_MAPPING) {
+#ifdef ASDF_LOG_ENABLED
+        ASDF_LOG(mapping->file, ASDF_LOG_WARN, "%s is not a mapping", asdf_value_path(mapping));
+#endif
+        return NULL;
+    }
+
+    struct fy_node *value = fy_node_mapping_lookup_value_by_simple_key(mapping->node, key, -1);
+
+    if (!value)
+        return NULL;
+
+    return asdf_value_create(mapping->file, value);
+}
+
+
 /* Sequence functions */
 bool asdf_value_is_sequence(asdf_value_t *value) {
     return value->type == ASDF_VALUE_SEQUENCE;

@@ -73,6 +73,7 @@ ASDF_EXPORT asdf_mapping_iter_t asdf_mapping_iter_init(void);
 ASDF_EXPORT const char *asdf_mapping_item_key(asdf_mapping_item_t *item);
 ASDF_EXPORT asdf_value_t *asdf_mapping_item_value(asdf_mapping_item_t *item);
 ASDF_EXPORT asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_mapping_iter_t *iter);
+ASDF_EXPORT asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key);
 
 
 /* Sequence-related definitions */
