@@ -1,4 +1,5 @@
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #ifdef HAVE_CONFIG_H
@@ -63,24 +64,16 @@ asdf_log_level_t asdf_log_level_from_env() {
 }
 
 
-void asdf_log(
-    asdf_context_t *ctx,
+static void asdf_log_impl(
+    FILE *stream,
     asdf_log_level_t level,
     const char *file,
     int lineno,
     const char *fmt,
-    ...) {
-    if (UNLIKELY(!ctx))
-        return;
-
-    if (ctx->log.level > level)
-        return;
-
-    va_list args;
-    va_start(args, fmt);
+    va_list args) {
 #ifdef ASDF_LOG_COLOR
     fprintf(
-        ctx->log.stream,
+        stream,
         DIM("[") COLOR("%s", "%s")
             DIM("]") " " COLOR(COLOR_DIM_GREY, "(" PACKAGE_NAME ")%s:%d:") " ",
         level_colors[level],
@@ -88,13 +81,45 @@ void asdf_log(
         file,
         lineno);
 #else
-    fprintf(ctx->log.stream, "[%-5s] (" PACKAGE_NAME ")%s:%d: ", level_names[level], file, lineno);
+    fprintf(stream, "[%-5s] (" PACKAGE_NAME ")%s:%d: ", level_names[level], file, lineno);
 #endif
+
+    vfprintf(stream, fmt, args);
+    fprintf(stream, "\n");
+}
+
+
+void asdf_log(
+    asdf_context_t *ctx,
+    asdf_log_level_t level,
+    const char *file,
+    int lineno,
+    const char *fmt,
+    ...) {
+    if (UNLIKELY(!ctx || !ctx->log.stream)) {
+        asdf_log_fallback(ASDF_LOG_FATAL, file, lineno, "logging context not initialized");
+        return;
+    }
+
+    if (ctx->log.level > level)
+        return;
 
     // Bug in clang-tidy: https://github.com/llvm/llvm-project/issues/40656
     // Should be fixed in newer versions though...
     // NOLINTNEXTLINE(clang-analyzer-valist.Uninitialized)
-    vfprintf(ctx->log.stream, fmt, args);
-    fprintf(ctx->log.stream, "\n");
+    va_list args;
+    va_start(args, fmt);
+    asdf_log_impl(ctx->log.stream, level, file, lineno, fmt, args);
+    va_end(args);
+}
+
+
+void asdf_log_fallback(asdf_log_level_t level, const char *file, int lineno, const char *fmt, ...) {
+    // Bug in clang-tidy: https://github.com/llvm/llvm-project/issues/40656
+    // Should be fixed in newer versions though...
+    // NOLINTNEXTLINE(clang-analyzer-valist.Uninitialized)
+    va_list args;
+    va_start(args, fmt);
+    asdf_log_impl(stderr, level, file, lineno, fmt, args);
     va_end(args);
 }
