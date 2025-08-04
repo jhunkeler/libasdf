@@ -2,18 +2,10 @@
 #ifndef ASDF_EXTENSION_H
 #define ASDF_EXTENSION_H
 
+#include <asdf/core/software.h>
 #include <asdf/file.h>
 #include <asdf/util.h>
 #include <asdf/value.h>
-
-
-/* Forward-declaration of asdf_software_t; see asdf/core/software.h */
-typedef struct {
-    const char *name;
-    const char *author;
-    const char *homepage;
-    const char *version;
-} asdf_software_t;
 
 
 typedef asdf_value_err_t (*asdf_extension_deserialize_t)(asdf_value_t *value, const void *userdata, void **out);
@@ -22,7 +14,7 @@ typedef void (*asdf_extension_dealloc_t)(void *userdata);
 
 typedef struct asdf_extension {
     const char *tag;
-    asdf_software_t software;
+    asdf_software_t *software;
     asdf_extension_deserialize_t deserialize;
     asdf_extension_dealloc_t dealloc;
     void *userdata;
@@ -43,15 +35,10 @@ ASDF_EXPORT const asdf_extension_t *asdf_extension_get(asdf_file_t *file, const 
 #define ASDF_EXT_STATIC_NAME(extname) _ASDF_EXPAND(ASDF_EXT_PREFIX, _##extname##_extension)
 
 
-#define ASDF_EXT_DEFINE(extname, _tag, _software, _author, _homepage, _version, _deserialize, _dealloc, _userdata) \
+#define ASDF_EXT_DEFINE(extname, _tag, _software, _deserialize, _dealloc, _userdata) \
     static asdf_extension_t ASDF_EXT_STATIC_NAME(extname) = { \
         .tag = _tag, \
-        .software = { \
-            .name = _software, \
-            .author = _author, \
-            .homepage = _homepage, \
-            .version = _version \
-        }, \
+        .software = _software, \
         .deserialize = _deserialize, \
         .dealloc = _dealloc, \
         .userdata = _userdata \
@@ -82,8 +69,8 @@ ASDF_EXPORT const asdf_extension_t *asdf_extension_get(asdf_file_t *file, const 
     }
 
 
-#define ASDF_REGISTER_EXTENSION(extname, tag, type, software, author, url, version, deserialize, dealloc, userdata) \
-    ASDF_EXT_DEFINE(extname, tag, software, author, url, version, deserialize, dealloc, userdata); \
+#define ASDF_REGISTER_EXTENSION(extname, tag, type, software, deserialize, dealloc, userdata) \
+    ASDF_EXT_DEFINE(extname, tag, software, deserialize, dealloc, userdata); \
     ASDF_EXT_DEFINE_VALUE_IS_TYPE(extname) \
     ASDF_EXT_DEFINE_VALUE_AS_TYPE(extname, type) \
     ASDF_EXT_DEFINE_IS_TYPE(extname, type) \

@@ -3,6 +3,7 @@
 #include "munit.h"
 #include "util.h"
 
+#include <asdf/core/software.h>
 #include <asdf/extension.h>
 #include <asdf/file.h>
 #include <asdf/util.h>
@@ -12,6 +13,14 @@
 typedef struct {
     const char *foo;
 } asdf_foo_t;
+
+
+static asdf_software_t asdf_foo_software = {
+    .name = "foo",
+    .author = "STScI",
+    .homepage = "https://stsci.edu",
+    .version = "1.0.0"
+};
 
 
 // TODO: Not used yet, just needs to be defined
@@ -61,10 +70,7 @@ ASDF_REGISTER_EXTENSION(
     foo,
     "stsci.edu:asdf/tests/foo-1.0.0",
     asdf_foo_t,
-    "foo",
-    "STScI",
-    "https://stsci.edu",
-    "1.0.0",
+    &asdf_foo_software,
     asdf_foo_deserialize,
     asdf_foo_dealloc,
     NULL
