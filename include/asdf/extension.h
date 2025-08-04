@@ -2,10 +2,19 @@
 #ifndef ASDF_EXTENSION_H
 #define ASDF_EXTENSION_H
 
-#include <asdf/core/software.h>
+#include <stdbool.h>
+
 #include <asdf/file.h>
 #include <asdf/util.h>
 #include <asdf/value.h>
+
+
+typedef struct {
+    const char *name;
+    const char *author;
+    const char *homepage;
+    const char *version;
+} asdf_software_t;
 
 
 typedef asdf_value_err_t (*asdf_extension_deserialize_t)(asdf_value_t *value, const void *userdata, void **out);
@@ -69,14 +78,36 @@ ASDF_EXPORT const asdf_extension_t *asdf_extension_get(asdf_file_t *file, const 
     }
 
 
+/* Auto-generated helper to free extension type objects */
+#define ASDF_EXT_DEFINE_DESTROY(extname, type) \
+    ASDF_EXPORT void asdf_##extname##_destroy(type *object) { \
+        if (!object) \
+            return; \
+        asdf_extension_t *ext = &ASDF_EXT_STATIC_NAME(extname); \
+        if (!ext && ext->dealloc) \
+            return; \
+        ext->dealloc(object); \
+    }
+
+
 #define ASDF_REGISTER_EXTENSION(extname, tag, type, software, deserialize, dealloc, userdata) \
     ASDF_EXT_DEFINE(extname, tag, software, deserialize, dealloc, userdata); \
     ASDF_EXT_DEFINE_VALUE_IS_TYPE(extname) \
     ASDF_EXT_DEFINE_VALUE_AS_TYPE(extname, type) \
     ASDF_EXT_DEFINE_IS_TYPE(extname, type) \
     ASDF_EXT_DEFINE_GET(extname, type) \
+    ASDF_EXT_DEFINE_DESTROY(extname, type) \
     static ASDF_CONSTRUCTOR void _ASDF_EXPAND(ASDF_EXT_PREFIX, _register_##extname##_extension)(void) { \
         asdf_extension_register(&ASDF_EXT_STATIC_NAME(extname)); \
     }
+
+
+/* Provides declarations for auto-generated extension type APIs, for use in headers */
+#define ASDF_DECLARE_EXTENSION(extname, type) \
+    ASDF_EXPORT bool asdf_value_is_##extname(asdf_value_t *value); \
+    ASDF_EXPORT asdf_value_err_t asdf_value_as_##extname(asdf_value_t *value, type **out); \
+    ASDF_EXPORT bool asdf_is_##extname(asdf_file_t *file, const char *path); \
+    ASDF_EXPORT asdf_value_err_t asdf_get_##extname(asdf_file_t *file, const char *path, type **out); \
+    ASDF_EXPORT void asdf_##extname##_destroy(type *object)
 
 #endif /* ASDF_EXTENSION_H */

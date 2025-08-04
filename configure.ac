@@ -1,5 +1,11 @@
 AC_PREREQ([2.69])
-AC_INIT([libasdf], [0.0.0], [https://github.com/asdf-format/libasdf/issues])
+AC_INIT(
+  [libasdf],
+  [0.0.0],
+  [https://github.com/asdf-format/libasdf/issues],
+  [],
+  [https://github.com/asdf-format/libasdf],
+)
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
 LT_INIT([disable-static])

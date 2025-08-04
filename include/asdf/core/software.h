@@ -2,12 +2,11 @@
 #ifndef ASDF_CORE_SOFTWARE_H
 #define ASDF_CORE_SOFTWARE_H
 
-typedef struct {
-    const char *name;
-    const char *author;
-    const char *homepage;
-    const char *version;
-} asdf_software_t;
+#include <asdf/extension.h>
+
+
+/* NOTE: asdf_software_t is defined in asdf/extension.h due to the circularity between them */
+ASDF_DECLARE_EXTENSION(software, asdf_software_t);
+
 
 #endif /* ASDF_CORE_SOFTWARE_H */
-
