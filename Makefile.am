@@ -3,6 +3,7 @@ src_files = \
     src/context.c \
     src/error.c \
     src/event.c \
+    src/extension_registry.c \
     src/file.c \
     src/info.c \
     src/log.c \
@@ -18,6 +19,7 @@ src_headers = \
     src/compat/endian.h \
     src/context.h \
     src/error.h \
+    src/extension_registry.h \
     src/event.h \
     src/file.h \
     src/info.h \
@@ -27,6 +29,7 @@ src_headers = \
     src/stream.h \
     src/stream_intern.h \
     src/types/asdf_common_tag_map.h \
+    src/types/asdf_extension_map.h \
     src/util.h \
     src/value.h \
     src/value_util.h \
@@ -42,7 +45,9 @@ ACLOCAL_AMFLAGS = -Im4
 include_HEADERS = $(include_dir)/asdf.h
 nobase_include_HEADERS = \
     $(include_dir)/asdf.h \
+    $(include_dir)/asdf/core/software.h \
     $(include_dir)/asdf/event.h \
+    $(include_dir)/asdf/extension.h \
     $(include_dir)/asdf/file.h \
     $(include_dir)/asdf/log.h \
     $(include_dir)/asdf/parse.h \

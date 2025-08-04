@@ -5,6 +5,7 @@
 
 #include <libfyaml.h>
 
+#include <asdf/extension.h>
 #include <asdf/value.h>
 
 #include "file.h"
@@ -12,17 +13,26 @@
 #include "value.h"
 
 
+typedef struct {
+    const asdf_extension_t *ext;
+    void *object;
+} asdf_extension_value_t;
+
+
 typedef struct asdf_value {
     asdf_file_t *file;
     asdf_value_type_t type;
     asdf_value_err_t err;
     struct fy_node *node;
+    char *tag;
+    bool explicit_tag_checked;
+    bool extension_checked;
     union {
         bool b;
         int64_t i;
         uint64_t u;
         double d;
-        void *ext;
+        asdf_extension_value_t *ext;
     } scalar;
     char *path;
 } asdf_value_t;

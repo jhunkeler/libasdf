@@ -310,17 +310,43 @@ asdf_value_err_t asdf_get_scalar0(asdf_file_t *file, const char *path, const cha
     }
 
 
-__ASDF_GET_TYPE(bool)
-__ASDF_GET_INT_TYPE(int8)
-__ASDF_GET_INT_TYPE(int16)
-__ASDF_GET_INT_TYPE(int32)
-__ASDF_GET_INT_TYPE(int64)
-__ASDF_GET_INT_TYPE(uint8)
-__ASDF_GET_INT_TYPE(uint16)
-__ASDF_GET_INT_TYPE(uint32)
-__ASDF_GET_INT_TYPE(uint64)
-__ASDF_GET_TYPE(float)
-__ASDF_GET_TYPE(double)
+__ASDF_GET_TYPE(bool);
+__ASDF_GET_INT_TYPE(int8);
+__ASDF_GET_INT_TYPE(int16);
+__ASDF_GET_INT_TYPE(int32);
+__ASDF_GET_INT_TYPE(int64);
+__ASDF_GET_INT_TYPE(uint8);
+__ASDF_GET_INT_TYPE(uint16);
+__ASDF_GET_INT_TYPE(uint32);
+__ASDF_GET_INT_TYPE(uint64);
+__ASDF_GET_TYPE(float);
+__ASDF_GET_TYPE(double);
+
+
+bool asdf_is_extension_type(asdf_file_t *file, const char *path, asdf_extension_t *ext) {
+    asdf_value_t *value = asdf_get_value(file, path);
+    if (!value)
+        return false;
+
+    bool ret = asdf_value_is_extension_type(value, ext);
+    asdf_value_destroy(value);
+    return ret;
+}
+
+
+asdf_value_err_t asdf_get_extension_type(
+    asdf_file_t *file, const char *path, asdf_extension_t *ext, void **out) {
+    asdf_value_t *value = asdf_get_value(file, path);
+    if (!value)
+        return ASDF_VALUE_ERR_NOT_FOUND;
+    asdf_value_err_t err = asdf_value_as_extension_type(value, ext, out);
+    // HACK: Sets the value type to not an extension so it does not dealloc the extension object
+    // Need to consider more carefully the lifetimes and allocation mechanism for these objects
+    value->type = ASDF_VALUE_UNKNOWN;
+    free(value->scalar.ext);
+    asdf_value_destroy(value);
+    return err;
+}
 
 
 /* User-facing block-related methods */

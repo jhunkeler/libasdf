@@ -51,6 +51,7 @@ typedef enum {
     ASDF_VALUE_ERR_PARSE_FAILURE,
     ASDF_VALUE_ERR_OVERFLOW,
     ASDF_VALUE_ERR_TAG_MISMATCH,
+    ASDF_VALUE_ERR_OOM,
 } asdf_value_err_t;
 
 
@@ -58,8 +59,12 @@ typedef enum {
 typedef struct asdf_value asdf_value_t;
 
 ASDF_EXPORT void asdf_value_destroy(asdf_value_t *value);
+ASDF_EXPORT asdf_value_t *asdf_value_clone(asdf_value_t *value);
 ASDF_EXPORT asdf_value_type_t asdf_value_get_type(asdf_value_t *value);
 ASDF_EXPORT const char *asdf_value_path(asdf_value_t *value);
+
+/* Return the value's tag if it has an *explicit* tag (implict tags are not returned) */
+ASDF_EXPORT const char *asdf_value_tag(asdf_value_t *value);
 
 /* Mapping-related definitions */
 ASDF_EXPORT bool asdf_value_is_mapping(asdf_value_t *value);
@@ -86,6 +91,13 @@ typedef _asdf_sequence_iter_impl_t* asdf_sequence_iter_t;
 
 ASDF_EXPORT asdf_sequence_iter_t asdf_sequence_iter_init(void);
 ASDF_EXPORT asdf_value_t *asdf_sequence_iter(asdf_value_t *sequence, asdf_sequence_iter_t *iter);
+
+
+/* Extension-related definitions */
+// Forward declaration for asdf_extension_t
+typedef struct asdf_extension asdf_extension_t;
+ASDF_EXPORT bool asdf_value_is_extension_type(asdf_value_t *value, const asdf_extension_t *ext);
+ASDF_EXPORT asdf_value_err_t asdf_value_as_extension_type(asdf_value_t *value, const asdf_extension_t *ext, void **out);
 
 
 /* Scalar-related definitions */

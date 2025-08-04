@@ -25,6 +25,7 @@ $(asdf_standard_submodule) $(munit_submodule):
 check_PROGRAMS = \
     test-block.unit \
     test-event.unit \
+    test-extension.unit \
     test-file.unit \
     test-parse.unit \
     test-parse-util.unit \
@@ -67,6 +68,13 @@ test_event_unit_CPPFLAGS = $(unit_test_cppflags)
 test_event_unit_CFLAGS = $(unit_test_cflags)
 test_event_unit_LDFLAGS = $(unit_test_ldflags)
 test_event_unit_LDADD = $(unit_test_ldadd)
+#
+# test-extension.unit
+test_extension_unit_SOURCES = test-extension.c
+test_extension_unit_CPPFLAGS = $(unit_test_cppflags)
+test_extension_unit_CFLAGS = $(unit_test_cflags)
+test_extension_unit_LDFLAGS = $(unit_test_ldflags)
+test_extension_unit_LDADD = $(unit_test_ldadd)
 
 # test-file.unit
 test_file_unit_SOURCES = test-file.c
@@ -164,6 +172,7 @@ EXTRA_DIST += \
     fixtures/parse-minimal-extra-comment.asdf \
     fixtures/scalars.asdf \
     fixtures/tagged-scalars.asdf \
+    fixtures/trivial-extension.asdf \
     fixtures/value-types.asdf \
     munit/COPYING \
     munit/munit.c \

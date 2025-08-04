@@ -65,6 +65,9 @@ ASDF_EXPORT asdf_value_err_t asdf_get_float(asdf_file_t *file, const char *path,
 ASDF_EXPORT bool asdf_is_double(asdf_file_t *file, const char *path);
 ASDF_EXPORT asdf_value_err_t asdf_get_double(asdf_file_t *file, const char *path, double *out);
 
+ASDF_EXPORT bool asdf_is_extension_type(asdf_file_t *file, const char *path, asdf_extension_t *ext);
+ASDF_EXPORT asdf_value_err_t asdf_get_extension_type(asdf_file_t *file, const char *path, asdf_extension_t *ext, void **out);
+
 /* Block-related methods */
 ASDF_EXPORT size_t asdf_block_count(asdf_file_t *file);
 

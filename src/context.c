@@ -62,7 +62,7 @@ asdf_global_context_t *asdf_global_context_get() {
 }
 
 
-__attribute__((constructor)) static void asdf_global_context_create() {
+ASDF_CONSTRUCTOR static void asdf_global_context_create() {
     if (atomic_load_explicit(&global_ctx_initialized, memory_order_acquire))
         return;
 
@@ -82,7 +82,7 @@ __attribute__((constructor)) static void asdf_global_context_create() {
 }
 
 
-__attribute__((destructor)) static void asdf_global_context_destroy(void) {
+ASDF_DESTRUCTOR static void asdf_global_context_destroy(void) {
     if (atomic_load_explicit(&global_ctx_initialized, memory_order_acquire)) {
         asdf_context_release(global_ctx.base.ctx);
         atomic_store_explicit(&global_ctx_initialized, false, memory_order_release);
