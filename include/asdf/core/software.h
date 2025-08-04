@@ -4,9 +4,7 @@
 
 #include <asdf/extension.h>
 
-
 /* NOTE: asdf_software_t is defined in asdf/extension.h due to the circularity between them */
 ASDF_DECLARE_EXTENSION(software, asdf_software_t);
-
 
 #endif /* ASDF_CORE_SOFTWARE_H */
