@@ -54,8 +54,10 @@ static int asdf_parse_datetime(const char *s, struct timespec *out) {
     else
         has_time = true;
 
-    if (!rest)
+    if (!rest) {
+        free(buf);
         return -1;
+    }
 
     // Handle optional fractional seconds
     if (has_time) {
@@ -77,12 +79,15 @@ static int asdf_parse_datetime(const char *s, struct timespec *out) {
 
     // Convert to time_t and adjust for time zone
     time_t t = timegm(&tm);
-    if (t == (time_t)-1)
+    if (t == (time_t)-1) {
+        free(buf);
         return -1;
+    }
 
     t -= tz_sign * (tz_hour * 3600 + tz_min * 60);
     out->tv_sec = t;
     out->tv_nsec = nsec;
+    free(buf);
     return 0;
 }
 #else
@@ -237,7 +242,7 @@ static void asdf_history_entry_dealloc(void *value) {
  */
 ASDF_REGISTER_EXTENSION(
     history_entry,
-    ASDF_CORE_TAG_PREFIX "history_entry-1.1.0",
+    ASDF_CORE_TAG_PREFIX "history_entry-1.0.0",
     asdf_history_entry_t,
     &libasdf_software,
     asdf_history_entry_deserialize,

@@ -2,6 +2,7 @@ src_files = \
     src/block.c \
     src/context.c \
     src/core/asdf.c \
+    src/core/extension_metadata.c \
     src/core/history_entry.c \
     src/core/software.c \
     src/error.c \
@@ -49,6 +50,7 @@ include_HEADERS = $(include_dir)/asdf.h
 nobase_include_HEADERS = \
     $(include_dir)/asdf.h \
     $(include_dir)/asdf/core/asdf.h \
+    $(include_dir)/asdf/core/extension_metadata.h \
     $(include_dir)/asdf/core/history_entry.h \
     $(include_dir)/asdf/core/software.h \
     $(include_dir)/asdf/event.h \
