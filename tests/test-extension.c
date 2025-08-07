@@ -114,6 +114,8 @@ MU_TEST(test_asdf_value_as_foo) {
     assert_not_null(foo->foo);
     assert_string_equal(foo->foo, "foo:foo");
     asdf_value_destroy(value);
+    // TODO: User has to destroy the asdf_foo_t object for now; consider fixing this in #34
+    asdf_foo_destroy(foo);
     asdf_close(file);
     return MUNIT_OK;
 }
@@ -138,7 +140,8 @@ MU_TEST(test_asdf_get_foo) {
     assert_not_null(foo);
     assert_not_null(foo->foo);
     assert_string_equal(foo->foo, "foo:foo");
-    asdf_foo_dealloc(foo);
+    // TODO: User has to destroy the asdf_foo_t object for now; consider fixing this in #34
+    asdf_foo_destroy(foo);
     asdf_close(file);
     return MUNIT_OK;
 }

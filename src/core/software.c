@@ -52,10 +52,8 @@ static asdf_value_err_t asdf_software_deserialize(
 
     asdf_software_t *software = calloc(1, sizeof(asdf_software_t));
 
-    if (!software) {
-        err = ASDF_VALUE_ERR_OOM;
-        goto failure;
-    }
+    if (!software)
+        return ASDF_VALUE_ERR_OOM;
 
     software->name = name;
     software->version = version;

@@ -1,6 +1,7 @@
 #include "munit.h"
 #include "util.h"
 
+#include <asdf/core/asdf.h>
 #include <asdf/core/extension_metadata.h>
 #include <asdf/core/history_entry.h>
 #include <asdf/core/software.h>
@@ -41,6 +42,7 @@ MU_TEST(test_asdf_extension_metadata) {
     assert_not_null(software);
     assert_string_equal(software->name, "asdf_standard");
     assert_string_equal(software->version, "1.1.1");
+    asdf_software_destroy(software);
     asdf_value_destroy(prop);
 
     prop = asdf_mapping_get(metadata->metadata, "software");
@@ -51,8 +53,10 @@ MU_TEST(test_asdf_extension_metadata) {
     assert_not_null(software);
     assert_string_equal(software->name, "asdf");
     assert_string_equal(software->version, "4.1.0");
+    asdf_software_destroy(software);
     asdf_value_destroy(prop);
 
+    asdf_extension_metadata_destroy(metadata);
     asdf_value_destroy(value);
     asdf_close(file);
     return MUNIT_OK;
@@ -78,6 +82,49 @@ MU_TEST(test_asdf_history_entry) {
     // code writing asdf history entries?  Need more test cases...
     assert_null(entry->software);
     asdf_value_destroy(value);
+    asdf_history_entry_destroy(entry);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_asdf_meta) {
+    const char *path = get_fixture_file_path("255.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    // Get the root of the tree as an asdf_value_t;
+    asdf_value_t *root = asdf_get_value(file, "");
+    assert_not_null(root);
+    assert_true(asdf_value_is_meta(root));
+
+    asdf_meta_t *meta = NULL;
+    assert_int(asdf_value_as_meta(root, &meta), ==, ASDF_VALUE_OK);
+    assert_not_null(meta);
+    assert_not_null(meta->asdf_library);
+    assert_string_equal(meta->asdf_library->name, "asdf");
+
+    assert_not_null(meta->history.extensions);
+    size_t count = 0;
+    asdf_extension_metadata_t **ep = meta->history.extensions;
+    while (*ep++) {
+        count++;
+        assert_int(count, <=, 1);
+    }
+    assert_string_equal(meta->history.extensions[0]->extension_class,
+                        "asdf.extension._manifest.ManifestExtension");
+
+    assert_not_null(meta->history.entries);
+    count = 0;
+    asdf_history_entry_t **hep = meta->history.entries;
+    while (*hep++) {
+        count++;
+        assert_int(count, <=, 1);
+    }
+    assert_string_equal(meta->history.entries[0]->description,
+                        "test file containing integers from 0 to 255 in the "
+                        "block data, for simple tests against known data");
+    asdf_meta_destroy(meta);
+    asdf_value_destroy(root);
     asdf_close(file);
     return MUNIT_OK;
 }
@@ -105,6 +152,7 @@ MU_TEST_SUITE(
     test_asdf_core_extensions,
     MU_RUN_TEST(test_asdf_extension_metadata),
     MU_RUN_TEST(test_asdf_history_entry),
+    MU_RUN_TEST(test_asdf_meta),
     MU_RUN_TEST(test_asdf_software)
 );
 

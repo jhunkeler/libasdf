@@ -40,10 +40,8 @@ static asdf_value_err_t asdf_extension_metadata_deserialize(
 
     asdf_extension_metadata_t *metadata = calloc(1, sizeof(asdf_extension_metadata_t));
 
-    if (!metadata) {
-        err = ASDF_VALUE_ERR_OOM;
-        goto failure;
-    }
+    if (!metadata)
+        return ASDF_VALUE_ERR_OOM;
 
     metadata->extension_class = extension_class;
     metadata->package = package;

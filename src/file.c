@@ -83,8 +83,8 @@ void asdf_close(asdf_file_t *file) {
         return;
 
     asdf_context_release(file->base.ctx);
-    asdf_parser_destroy(file->parser);
     fy_document_destroy(file->tree);
+    asdf_parser_destroy(file->parser);
     /* Clean up */
     ZERO_MEMORY(file, sizeof(asdf_file_t));
     free(file);
@@ -340,10 +340,6 @@ asdf_value_err_t asdf_get_extension_type(
     if (!value)
         return ASDF_VALUE_ERR_NOT_FOUND;
     asdf_value_err_t err = asdf_value_as_extension_type(value, ext, out);
-    // HACK: Sets the value type to not an extension so it does not dealloc the extension object
-    // Need to consider more carefully the lifetimes and allocation mechanism for these objects
-    value->type = ASDF_VALUE_UNKNOWN;
-    free(value->scalar.ext);
     asdf_value_destroy(value);
     return err;
 }

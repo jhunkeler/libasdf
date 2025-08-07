@@ -52,29 +52,39 @@ asdf_value_t *asdf_value_create(asdf_file_t *file, struct fy_node *node) {
 }
 
 
+/**
+ * Helper to check if a node is the root node of the document it belongs to (if any)
+ *
+ * Note, this does not include copies of the original root node.  This is effectively equivalent
+ * to checking ``node == node->fyd->root``.
+ */
+static bool is_root_node(struct fy_node *node) {
+    if (!node)
+        return false;
+
+    struct fy_document *doc = fy_node_document(node);
+    return doc && fy_document_root(doc) == node;
+}
+
+
 void asdf_value_destroy(asdf_value_t *value) {
     if (!value)
         return;
 
-    /* Not so sure about this.  According to the docs:
-     * Recursively frees the given node...
-     * So this will free sub-nodes as well? Seems dangerous
-     * I have not yet decided the memory management strategy for asdf_value yet so need to
-     * come back to this...
-     */
-    fy_node_free(value->node);
+    // nodes still attached to a document should not be manually freed
+    // Have to include a check if it's the root node as well; it should not be freed
+    // see https://github.com/pantoniou/libfyaml/issues/143
+    if (!(fy_node_is_attached(value->node) || is_root_node(value->node)))
+        fy_node_free(value->node);
+
     free(value->path);
     free(value->tag);
 
     // Free the extension data
+    // The extension object itself must be freed by the user for now, which is less than ideal.
+    // In #34 let's consider some kind of reference counting mechanism for them.
     if (ASDF_VALUE_EXTENSION == value->type) {
         asdf_extension_value_t *extval = value->scalar.ext;
-        if (extval) {
-            const asdf_extension_t *ext = extval->ext;
-
-            if (ext && ext->dealloc && extval->object)
-                ext->dealloc(extval->object);
-        }
         free(extval);
     }
 

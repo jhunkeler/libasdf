@@ -204,10 +204,8 @@ static asdf_value_err_t asdf_history_entry_deserialize(
 
     asdf_history_entry_t *entry = calloc(1, sizeof(asdf_history_entry_t));
 
-    if (!entry) {
-        err = ASDF_VALUE_ERR_OOM;
-        goto failure;
-    }
+    if (!entry)
+        return ASDF_VALUE_ERR_OOM;
 
     entry->description = description;
     entry->time = time;
@@ -227,10 +225,10 @@ static void asdf_history_entry_dealloc(void *value) {
     asdf_history_entry_t *entry = value;
 
     if (entry->software) {
-        asdf_software_t **sp = (asdf_software_t **)entry->software;
-        while (*sp++) {
+        for (asdf_software_t **sp = (asdf_software_t **)entry->software; *sp; ++sp) {
             asdf_software_destroy(*sp);
         }
+        free(entry->software);
     }
 
     free(entry);
