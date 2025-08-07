@@ -1,6 +1,7 @@
 #include <stdatomic.h>
 
 #include "types/asdf_common_tag_map.h"
+#include "util.h"
 #include "value_util.h"
 
 
@@ -18,7 +19,7 @@ asdf_yaml_common_tag_t asdf_common_tag_get(const char *tagstr) {
 }
 
 
-__attribute__((constructor)) static void asdf_common_tag_map_create() {
+ASDF_CONSTRUCTOR static void asdf_common_tag_map_create() {
     if (atomic_load_explicit(&tag_map_initialized, memory_order_acquire))
         return;
 
@@ -33,10 +34,9 @@ __attribute__((constructor)) static void asdf_common_tag_map_create() {
 }
 
 
-__attribute__((destructor)) static void asdf_common_tag_map_destroy(void) {
+ASDF_DESTRUCTOR static void asdf_common_tag_map_destroy(void) {
     if (atomic_load_explicit(&tag_map_initialized, memory_order_acquire)) {
         asdf_common_tag_map_drop(&tag_map);
         atomic_store_explicit(&tag_map_initialized, false, memory_order_release);
-        tag_map_initialized = 0;
     }
 }

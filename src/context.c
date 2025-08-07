@@ -1,4 +1,5 @@
 #include <stdatomic.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -6,6 +7,10 @@
 #include "error.h"
 #include "log.h"
 #include "util.h"
+
+
+static asdf_global_context_t global_ctx = {0};
+static atomic_bool global_ctx_initialized = false;
 
 
 asdf_context_t *asdf_context_create() {
@@ -49,4 +54,37 @@ void asdf_context_release(asdf_context_t *ctx) {
         return;
     if (atomic_fetch_sub_explicit(&ctx->refcount, 1, memory_order_acq_rel) == 1)
         asdf_context_destroy(ctx);
+}
+
+
+asdf_global_context_t *asdf_global_context_get() {
+    return &global_ctx;
+}
+
+
+ASDF_CONSTRUCTOR static void asdf_global_context_create() {
+    if (atomic_load_explicit(&global_ctx_initialized, memory_order_acquire))
+        return;
+
+    asdf_context_t *ctx = asdf_context_create();
+
+    if (!ctx) {
+        asdf_log_fallback(
+            ASDF_LOG_FATAL,
+            __FILE__,
+            __LINE__,
+            "failed to initialize libasdf global context, likely due to low memory");
+        return;
+    }
+
+    global_ctx.base.ctx = ctx;
+    atomic_store_explicit(&global_ctx_initialized, true, memory_order_release);
+}
+
+
+ASDF_DESTRUCTOR static void asdf_global_context_destroy(void) {
+    if (atomic_load_explicit(&global_ctx_initialized, memory_order_acquire)) {
+        asdf_context_release(global_ctx.base.ctx);
+        atomic_store_explicit(&global_ctx_initialized, false, memory_order_release);
+    }
 }

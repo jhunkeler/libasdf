@@ -9,4 +9,10 @@
     #define ASDF_LOCAL
 #endif
 
+
+/* AFAIK this should be supported on virtually any target/compiler */
+#define ASDF_CONSTRUCTOR __attribute__((constructor))
+#define ASDF_DESTRUCTOR __attribute__((destructor))
+
+
 #endif  /* ASDF_UTIL_H */

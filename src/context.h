@@ -46,10 +46,19 @@ typedef struct {
 } asdf_base_t;
 
 
+/**
+ * Minimal global context needed for logging during library initialization
+ */
+typedef struct {
+    asdf_base_t base;
+} asdf_global_context_t;
+
+
 ASDF_LOCAL asdf_context_t *asdf_context_create(void);
 ASDF_LOCAL void asdf_context_destroy(asdf_context_t *ctx);
 ASDF_LOCAL void asdf_context_retain(asdf_context_t *ctx);
 ASDF_LOCAL void asdf_context_release(asdf_context_t *ctx);
+ASDF_LOCAL asdf_global_context_t *asdf_global_context_get(void);
 
 
 #ifdef DEBUG

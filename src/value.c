@@ -1,15 +1,34 @@
+#include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <libfyaml.h>
 
 #include "error.h"
+#include "extension_registry.h"
 #include "log.h"
 #include "util.h"
 #include "value.h"
 #include "value_util.h"
+
+
+static asdf_value_type_t asdf_value_type_from_node(struct fy_node *node) {
+    assert(node);
+    enum fy_node_type node_type = fy_node_get_type(node);
+    switch (node_type) {
+    case FYNT_SCALAR:
+        return ASDF_VALUE_SCALAR;
+    case FYNT_MAPPING:
+        return ASDF_VALUE_MAPPING;
+    case FYNT_SEQUENCE:
+        return ASDF_VALUE_SEQUENCE;
+    default:
+        UNREACHABLE();
+    }
+}
 
 
 /* TODO: Create or return from a freelist that lives on the file */
@@ -22,23 +41,29 @@ asdf_value_t *asdf_value_create(asdf_file_t *file, struct fy_node *node) {
     }
 
     value->file = file;
-
-    enum fy_node_type node_type = fy_node_get_type(node);
-    switch (node_type) {
-    case FYNT_SCALAR:
-        value->type = ASDF_VALUE_SCALAR;
-        break;
-    case FYNT_MAPPING:
-        value->type = ASDF_VALUE_MAPPING;
-        break;
-    case FYNT_SEQUENCE:
-        value->type = ASDF_VALUE_SEQUENCE;
-        break;
-    }
+    value->type = asdf_value_type_from_node(node);
     value->err = ASDF_VALUE_ERR_UNKNOWN;
     value->node = node;
+    value->tag = NULL;
+    value->explicit_tag_checked = false;
+    value->extension_checked = false;
     value->path = NULL;
     return value;
+}
+
+
+/**
+ * Helper to check if a node is the root node of the document it belongs to (if any)
+ *
+ * Note, this does not include copies of the original root node.  This is effectively equivalent
+ * to checking ``node == node->fyd->root``.
+ */
+static bool is_root_node(struct fy_node *node) {
+    if (!node)
+        return false;
+
+    struct fy_document *doc = fy_node_document(node);
+    return doc && fy_document_root(doc) == node;
 }
 
 
@@ -46,16 +71,98 @@ void asdf_value_destroy(asdf_value_t *value) {
     if (!value)
         return;
 
-    /* Not so sure about this.  According to the docs:
-     * Recursively frees the given node...
-     * So this will free sub-nodes as well? Seems dangerous
-     * I have not yet decided the memory management strategy for asdf_value yet so need to
-     * come back to this...
-     */
-    fy_node_free(value->node);
+    // nodes still attached to a document should not be manually freed
+    // Have to include a check if it's the root node as well; it should not be freed
+    // see https://github.com/pantoniou/libfyaml/issues/143
+    if (!(fy_node_is_attached(value->node) || is_root_node(value->node)))
+        fy_node_free(value->node);
+
     free(value->path);
+    free(value->tag);
+
+    // Free the extension data
+    // The extension object itself must be freed by the user for now, which is less than ideal.
+    // In #34 let's consider some kind of reference counting mechanism for them.
+    if (ASDF_VALUE_EXTENSION == value->type) {
+        asdf_extension_value_t *extval = value->scalar.ext;
+        free(extval);
+    }
+
     ZERO_MEMORY(value, sizeof(asdf_value_t));
     free(value);
+}
+
+
+static asdf_value_t *asdf_value_clone_impl(asdf_value_t *value, bool preserve_type_inference) {
+    if (!value)
+        return NULL;
+
+    asdf_value_t *new_value = malloc(sizeof(asdf_value_t));
+
+    if (!new_value) {
+        ASDF_ERROR_OOM(value->file);
+        return NULL;
+    }
+
+    struct fy_node *new_node = fy_node_copy(value->file->tree, value->node);
+
+    if (!new_node) {
+        free(new_value);
+        ASDF_ERROR_OOM(value->file);
+        return NULL;
+    }
+
+    new_value->file = value->file;
+    new_value->node = new_node;
+
+    if (value->tag)
+        new_value->tag = strdup(value->tag);
+    else
+        new_value->tag = NULL;
+
+    new_value->explicit_tag_checked = value->explicit_tag_checked;
+
+    if (value->path)
+        new_value->path = strdup(value->path);
+    else
+        new_value->path = NULL;
+
+    if (preserve_type_inference) {
+        // If the cloned value is an extension, copy the asdf_extension_value_t, but not the
+        // deserialized object--it will be re-deserialized lazily since we don't have a means
+        // to clone those currently (would need to at least save their size, which is maybe good
+        // to do...)
+        if (ASDF_VALUE_EXTENSION == value->type && value->scalar.ext) {
+            asdf_extension_value_t *new_ext = calloc(1, sizeof(asdf_extension_value_t));
+
+            if (!new_ext) {
+                fy_node_free(new_node);
+                free(new_value);
+                ASDF_ERROR_OOM(value->file);
+                return NULL;
+            }
+
+            new_ext->ext = value->scalar.ext->ext;
+            new_value->scalar.ext = new_ext;
+        }
+
+        new_value->extension_checked = value->extension_checked;
+        new_value->type = value->type;
+        new_value->err = value->err;
+        new_value->scalar = value->scalar;
+    } else {
+        new_value->type = asdf_value_type_from_node(new_node);
+        new_value->err = ASDF_VALUE_ERR_UNKNOWN;
+        new_value->extension_checked = false;
+        new_value->scalar.ext = NULL;
+    }
+
+    return new_value;
+}
+
+
+asdf_value_t *asdf_value_clone(asdf_value_t *value) {
+    return asdf_value_clone_impl(value, true);
 }
 
 
@@ -69,6 +176,25 @@ const char *asdf_value_path(asdf_value_t *value) {
     }
 
     return value->path;
+}
+
+
+const char *asdf_value_tag(asdf_value_t *value) {
+    if (!value)
+        return NULL;
+
+    if (!value->explicit_tag_checked) {
+        // Get the tag and memoize it; it can be freed when the value is freed
+        size_t tag_len = 0;
+        const char *maybe_tag = fy_node_get_tag(value->node, &tag_len);
+
+        if (maybe_tag)
+            value->tag = strndup(maybe_tag, tag_len);
+
+        value->explicit_tag_checked = true;
+    }
+
+    return value->tag;
 }
 
 
@@ -270,6 +396,94 @@ cleanup:
     free(impl);
     *iter = NULL;
     return NULL;
+}
+
+
+/* Extension value functions */
+
+/**
+ * Infer whether the value (scalar, mapping, sequence, doesn't matter) is a registered extension
+ * type
+ */
+static asdf_value_err_t asdf_value_infer_extension_type(asdf_value_t *value) {
+    if (UNLIKELY(!value))
+        return ASDF_VALUE_ERR_UNKNOWN;
+
+    if (value->extension_checked) {
+        if (ASDF_VALUE_EXTENSION != value->type)
+            return ASDF_VALUE_ERR_TYPE_MISMATCH;
+
+        return ASDF_VALUE_OK;
+    }
+
+    value->extension_checked = true;
+
+    const char *tag = asdf_value_tag(value);
+
+    if (!tag)
+        // Not a known extension type
+        // TODO: Possibly enable the case of implicit extensions based on path
+        return ASDF_VALUE_ERR_TYPE_MISMATCH;
+
+    ASDF_LOG(value->file, ASDF_LOG_DEBUG, "inferring value as extension type for %s", tag);
+    const asdf_extension_t *ext = asdf_extension_get(value->file, tag);
+
+    if (!ext)
+        return ASDF_VALUE_ERR_TYPE_MISMATCH;
+
+    asdf_extension_value_t *ext_value = calloc(1, sizeof(asdf_extension_value_t));
+
+    if (!ext_value) {
+        ASDF_ERROR_OOM(value->file);
+        return ASDF_VALUE_ERR_OOM;
+    }
+
+    ext_value->ext = ext;
+    value->type = ASDF_VALUE_EXTENSION;
+    // The extension value is treated as a kind of "scalar"
+    value->scalar.ext = ext_value;
+    return ASDF_VALUE_OK;
+}
+
+
+bool asdf_value_is_extension_type(asdf_value_t *value, const asdf_extension_t *ext) {
+    if (ASDF_VALUE_OK != asdf_value_infer_extension_type(value))
+        return false;
+
+    return value->scalar.ext && value->scalar.ext->ext == ext;
+}
+
+
+asdf_value_err_t asdf_value_as_extension_type(
+    asdf_value_t *value, const asdf_extension_t *ext, void **out) {
+    if (!asdf_value_is_extension_type(value, ext))
+        return ASDF_VALUE_ERR_TYPE_MISMATCH;
+
+    asdf_extension_value_t *extval = value->scalar.ext;
+
+    if (extval->object) {
+        *out = extval->object;
+        return ASDF_VALUE_OK;
+    }
+
+    assert(ext->deserialize);
+    // Clone the raw value without existing extension inference to pass to the the extension's
+    // deserialize method.
+    asdf_value_t *raw_value = asdf_value_clone_impl(value, false);
+
+    if (!raw_value) {
+        ASDF_ERROR_OOM(value->file);
+        return ASDF_VALUE_ERR_OOM;
+    }
+
+    asdf_value_err_t err = ext->deserialize(raw_value, extval->object, out);
+    asdf_value_destroy(raw_value);
+
+    if (ASDF_VALUE_OK == err)
+        extval->object = *out;
+
+    value->err = err;
+    return err;
 }
 
 
@@ -526,15 +740,9 @@ static asdf_value_err_t asdf_value_infer_scalar_type(asdf_value_t *value) {
         break;
     }
 
-    size_t tag_len = 0;
-    const char *maybe_tag = fy_node_get_tag(value->node, &tag_len);
-    char *tag_str = NULL;
-
-    if (maybe_tag)
-        tag_str = strndup(maybe_tag, tag_len);
-
     size_t len = 0;
     const char *s = fy_node_get_scalar(value->node, &len);
+    const char *tag_str = asdf_value_tag(value);
 
     /* If Common Schema tag explicitly present, honor it (but verify) */
     if (tag_str) {
@@ -575,11 +783,10 @@ static asdf_value_err_t asdf_value_infer_scalar_type(asdf_value_t *value) {
             err = ASDF_VALUE_OK;
             break;
         }
-        free(tag_str);
-        return err;
-    }
 
-    /* TODO: Infer extension types from tags */
+        if (ASDF_YAML_COMMON_TAG_UNKNOWN != tag)
+            return err;
+    }
 
     /* Untagged -> core schema heuristics (plain style only) */
     if (ASDF_VALUE_OK == asdf_value_infer_null(value, s, len)) {

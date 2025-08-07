@@ -18,8 +18,8 @@ Makefile
 
 # build outputs
 /asdf
-*/*.o
-*/*.lo
+**/*.o
+**/*.lo
 .deps
 .dirstamp
 .libs

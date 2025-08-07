@@ -1,7 +1,17 @@
 AC_PREREQ([2.69])
-AC_INIT([libasdf], [0.0.0], [https://github.com/asdf-format/libasdf/issues])
+AC_INIT(
+  [libasdf],
+  [0.0.0],
+  [https://github.com/asdf-format/libasdf/issues],
+  [],
+  [https://github.com/asdf-format/libasdf],
+)
 AC_CONFIG_AUX_DIR([build-aux])
 AM_INIT_AUTOMAKE([foreign subdir-objects])
+
+# needed for strptime, at the very least...
+AC_USE_SYSTEM_EXTENSIONS
+
 LT_INIT([disable-static])
 
 # silent make https://autotools.io/automake/silent.html
@@ -37,6 +47,9 @@ AC_CHECK_DECLS([be64toh], [], [], [[
 #  include <sys/endian.h>
 #endif
 ]])
+
+# Check functions
+AC_CHECK_FUNCS([strptime])
 
 
 # http://www.gnu.org/software/autoconf-archive/ax_valgrind_check.html

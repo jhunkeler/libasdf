@@ -54,4 +54,10 @@ ASDF_LOCAL void asdf_log(
     const char *fmt,
     ...);
 
+
+/* Last-resort logging without an `asdf_context_t`, for internal use only */
+ASDF_LOCAL void asdf_log_fallback(
+    asdf_log_level_t level, const char *file, int lineno, const char *fmt, ...);
+
+
 ASDF_LOCAL asdf_log_level_t asdf_log_level_from_env(void);
