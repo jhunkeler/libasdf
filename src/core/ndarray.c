@@ -1,12 +1,32 @@
+#include <stddef.h>
 #include <stdint.h>
 
 #include <asdf/core/asdf.h>
+#define ASDF_CORE_NDARRAY_INTERNAL
 #include <asdf/core/ndarray.h>
+#undef ASDF_CORE_NDARRAY_INTERNAL
 #include <asdf/extension.h>
 
+#include "../file.h"
 #include "../log.h"
 #include "../util.h"
 #include "../value.h"
+
+
+/* Internal definition of the asdf_ndarray_t type with extended internal fields */
+typedef struct asdf_ndarray {
+    size_t source;
+    uint32_t ndim;
+    uint64_t *shape;
+    asdf_datatype_t datatype;
+    asdf_byteorder_t byteorder;
+    uint64_t offset;
+    int64_t *strides;
+
+    // Internal fields
+    asdf_block_t *block;
+    asdf_file_t *file;
+} asdf_ndarray_t;
 
 
 /* Helper to look up required properties and log a warning if missing */
@@ -383,6 +403,7 @@ static asdf_value_err_t asdf_ndarray_deserialize(
     ndarray->byteorder = byteorder;
     ndarray->offset = offset;
     ndarray->strides = strides;
+    ndarray->file = value->file;
     *out = ndarray;
     return ASDF_VALUE_OK;
 failure:
@@ -398,8 +419,10 @@ static void asdf_ndarray_dealloc(void *value) {
         return;
 
     asdf_ndarray_t *ndarray = value;
+    asdf_block_close(ndarray->block);
     free(ndarray->shape);
     free(ndarray->strides);
+    ZERO_MEMORY(ndarray, sizeof(asdf_ndarray_t));
     free(ndarray);
 }
 
@@ -417,3 +440,21 @@ ASDF_REGISTER_EXTENSION(
     asdf_ndarray_deserialize,
     asdf_ndarray_dealloc,
     NULL);
+
+
+/* ndarray methods */
+void *asdf_ndarray_data_raw(asdf_ndarray_t *ndarray, size_t *size) {
+    if (!ndarray)
+        return NULL;
+
+    if (!ndarray->block) {
+        asdf_block_t *block = asdf_block_open(ndarray->file, ndarray->source);
+
+        if (!block)
+            return NULL;
+
+        ndarray->block = block;
+    }
+
+    return asdf_block_data(ndarray->block, size);
+}

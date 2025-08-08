@@ -33,9 +33,11 @@
 #ifndef ASDF_CORE_NDARRAY_H
 #define ASDF_CORE_NDARRAY_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 #include <asdf/extension.h>
+#include <asdf/util.h>
 
 /*
  * Enum for basic ndarray datatypes
@@ -79,7 +81,8 @@ typedef enum {
  * For convenience some basic fields are made public for now, though this may not be ABI-stable
  * in future releases.
  */
-typedef struct {
+#ifndef ASDF_CORE_NDARRAY_INTERNAL
+typedef struct asdf_ndarray {
     size_t source;
     uint32_t ndim;
     uint64_t *shape;
@@ -88,9 +91,16 @@ typedef struct {
     uint64_t offset;
     int64_t *strides;
 } asdf_ndarray_t;
+#else
+typedef struct asdf_ndarray asdf_ndarray_t;
+#endif
 
 
 ASDF_DECLARE_EXTENSION(ndarray, asdf_ndarray_t);
+
+
+/* ndarray methods */
+ASDF_EXPORT void *asdf_ndarray_data_raw(asdf_ndarray_t *ndarray, size_t *size);
 
 
 #endif /* ASDF_CORE_NDARRAY_H */

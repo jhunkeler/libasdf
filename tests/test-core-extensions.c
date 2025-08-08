@@ -1,3 +1,6 @@
+#include <stddef.h>
+#include <stdint.h>
+
 #include "munit.h"
 #include "util.h"
 
@@ -149,6 +152,15 @@ MU_TEST(test_asdf_ndarray) {
     assert_int(ndarray->byteorder, ==, ASDF_BYTEORDER_LITTLE);
     assert_int(ndarray->offset, ==, 0);
     assert_null(ndarray->strides);
+
+    size_t size = 0;
+    void *data = asdf_ndarray_data_raw(ndarray, &size);
+    assert_not_null(data);
+    assert_int(size, ==, sizeof(int64_t) * 8);
+    // The actual array in this file is just 64-bit ints 0 through 7
+    for (int64_t idx = 0; idx < 8; idx++) {
+        assert_int(((int64_t *)data)[idx], ==, idx);
+    }
     asdf_ndarray_destroy(ndarray);
     asdf_close(file);
     return MUNIT_OK;
