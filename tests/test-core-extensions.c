@@ -4,6 +4,7 @@
 #include <asdf/core/asdf.h>
 #include <asdf/core/extension_metadata.h>
 #include <asdf/core/history_entry.h>
+#include <asdf/core/ndarray.h>
 #include <asdf/core/software.h>
 #include <asdf/file.h>
 
@@ -130,6 +131,30 @@ MU_TEST(test_asdf_meta) {
 }
 
 
+/*
+ * Very basic test of ndarray parsing; will have more comprehensive ndarray tests in their own suite
+ */
+MU_TEST(test_asdf_ndarray) {
+    const char *path = get_reference_file_path("1.6.0/basic.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    assert_true(asdf_is_ndarray(file, "data"));
+    asdf_ndarray_t *ndarray = NULL;
+    assert_int(asdf_get_ndarray(file, "data", &ndarray), ==, ASDF_VALUE_OK);
+    assert_not_null(ndarray);
+    assert_int(ndarray->source, ==, 0);
+    assert_int(ndarray->ndim, ==, 1);
+    assert_int(ndarray->shape[0], ==, 8);
+    assert_int(ndarray->datatype, ==, ASDF_DATATYPE_INT64);
+    assert_int(ndarray->byteorder, ==, ASDF_BYTEORDER_LITTLE);
+    assert_int(ndarray->offset, ==, 0);
+    assert_null(ndarray->strides);
+    asdf_ndarray_destroy(ndarray);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST(test_asdf_software) {
     const char *path = get_reference_file_path("1.6.0/basic.asdf");
     asdf_file_t *file = asdf_open_file(path, "r");
@@ -153,6 +178,7 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_extension_metadata),
     MU_RUN_TEST(test_asdf_history_entry),
     MU_RUN_TEST(test_asdf_meta),
+    MU_RUN_TEST(test_asdf_ndarray),
     MU_RUN_TEST(test_asdf_software)
 );
 
