@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include <asdf/core/asdf.h>
 #define ASDF_CORE_NDARRAY_INTERNAL
@@ -442,6 +443,97 @@ ASDF_REGISTER_EXTENSION(
     NULL);
 
 
+static inline ssize_t asdf_ndarray_datatype_size(asdf_datatype_t type) {
+    switch (type) {
+    case ASDF_DATATYPE_INT8:
+    case ASDF_DATATYPE_UINT8:
+    case ASDF_DATATYPE_BOOL8:
+        return 1;
+    case ASDF_DATATYPE_INT16:
+    case ASDF_DATATYPE_UINT16:
+    case ASDF_DATATYPE_FLOAT16:
+        return 2;
+    case ASDF_DATATYPE_INT32:
+    case ASDF_DATATYPE_UINT32:
+    case ASDF_DATATYPE_FLOAT32:
+        return 4;
+    case ASDF_DATATYPE_INT64:
+    case ASDF_DATATYPE_UINT64:
+    case ASDF_DATATYPE_FLOAT64:
+    case ASDF_DATATYPE_COMPLEX64:
+        return 8;
+    case ASDF_DATATYPE_COMPLEX128:
+        return 16;
+
+    // These need additional context to determine size, not implemented yet
+    case ASDF_DATATYPE_ASCII:
+    case ASDF_DATATYPE_UCS4:
+    case ASDF_DATATYPE_RECORD:
+    case ASDF_DATATYPE_UNKNOWN:
+        return -1;
+    default:
+        UNREACHABLE();
+    }
+}
+
+
+typedef void (*asdf_ndarray_tile_copy_fn_t)(
+    void *restrict dst, const void *restrict src, size_t bytes, size_t elem_size);
+
+
+// Plain memcpy
+// TODO: For all these copy functions also pass in an argument specifying whether the src
+// and dst are aligned; then we can use __builtin_assume_aligned here though need to
+// have a clear routine for checking it first
+static inline void copy_memcpy(
+    void *restrict dst, const void *restrict src, size_t bytes, UNUSED(size_t elem_size)) {
+    memcpy(dst, src, bytes);
+}
+
+
+static inline void copy_and_bswap(
+    void *restrict dst, const void *restrict src, size_t bytes, size_t elem_size) {
+    switch (elem_size) {
+    case 2: {
+        uint16_t *d = dst;
+        const uint16_t *s = src;
+        for (size_t idx = 0; idx < bytes / 2; idx++)
+            d[idx] = __builtin_bswap16(s[idx]);
+        break;
+    }
+    case 4: {
+        uint32_t *d = dst;
+        const uint32_t *s = src;
+        for (size_t idx = 0; idx < bytes / 4; idx++)
+            d[idx] = __builtin_bswap32(s[idx]);
+        break;
+    }
+    case 8: {
+        uint32_t *d = dst;
+        const uint32_t *s = src;
+        for (size_t idx = 0; idx < bytes / 8; idx++)
+            d[idx] = __builtin_bswap64(s[idx]);
+        break;
+    }
+    default: {
+        uint8_t *d = dst;
+        const uint8_t *s = src;
+        // TODO: This only works if elem_size is a power of two
+        // May need an even more generic case for record types...
+        for (size_t idx = 0; idx < bytes / elem_size; idx++)
+            d[idx] = s[idx ^ (elem_size - 1)];
+        break;
+    }
+    }
+}
+
+
+static inline asdf_byteorder_t asdf_host_byteorder() {
+    uint16_t x = 1;
+    return (*(uint8_t *)&x) == 1 ? ASDF_BYTEORDER_LITTLE : ASDF_BYTEORDER_BIG;
+}
+
+
 /* ndarray methods */
 void *asdf_ndarray_data_raw(asdf_ndarray_t *ndarray, size_t *size) {
     if (!ndarray)
@@ -457,4 +549,198 @@ void *asdf_ndarray_data_raw(asdf_ndarray_t *ndarray, size_t *size) {
     }
 
     return asdf_block_data(ndarray->block, size);
+}
+
+
+asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
+    asdf_ndarray_t *ndarray, const uint64_t *origin, const uint64_t *shape, void **out) {
+    uint32_t ndim = ndarray->ndim;
+
+    if (UNLIKELY(!out || !ndarray || !origin || !shape))
+        // Invalid argument, must be non-NULL
+        return ASDF_NDARRAY_ERR_INVAL;
+
+    ssize_t elsize = asdf_ndarray_datatype_size(ndarray->datatype);
+
+    // For not-yet-supported datatypes return ERR_INVAL
+    if (elsize < 1)
+        return ASDF_NDARRAY_ERR_INVAL;
+
+    // Check bounds
+    // TODO: (Maybe? allow option for edge cases with fill values for out-of-bound pixels?
+    uint64_t *array_shape = ndarray->shape;
+
+    for (uint32_t idx = 0; idx < ndim; idx++) {
+        if (origin[idx] + shape[idx] > array_shape[idx])
+            return ASDF_NDARRAY_ERR_OUT_OF_BOUNDS;
+    }
+
+    size_t tile_nelems = 0;
+
+    if (ndim > 0) {
+        tile_nelems = 1;
+
+        for (uint32_t dim = 0; dim < ndim; dim++) {
+            tile_nelems *= shape[dim];
+        }
+    }
+
+    size_t tile_size = elsize * tile_nelems;
+    size_t data_size = 0;
+    void *data = asdf_ndarray_data_raw(ndarray, &data_size);
+
+    if (data_size < tile_size)
+        return ASDF_NDARRAY_ERR_OUT_OF_BOUNDS;
+    //
+    // If the function is passed a null pointer, allocate memory for the tile ourselves
+    // User is responsible for freeing it.
+    void *dst = *out;
+    void *new_dst = NULL;
+
+    if (!dst) {
+        dst = malloc(tile_size);
+
+        if (!dst)
+            return ASDF_NDARRAY_ERR_OOM;
+
+        new_dst = dst;
+    }
+
+    // Special case, if size of the array is 0 just return now.  We do still malloc though even if
+    // it's a bit pointless, just to ensure that the returned pointer can be freed successfully
+    if (UNLIKELY(0 == ndim || 0 == tile_size)) {
+        *out = dst;
+        return ASDF_NDARRAY_OK;
+    }
+
+    // Determine element strides (assume C-order for now; ndarray->strides is not used yet)
+    uint32_t inner_dim = ndim - 1;
+    int64_t *strides = malloc(sizeof(int64_t) * ndim);
+
+    if (!strides) {
+        free(new_dst);
+        return ASDF_NDARRAY_ERR_OOM;
+    }
+
+    strides[inner_dim] = 1;
+
+    if (ndim > 1) {
+        for (uint32_t dim = inner_dim; dim > 0; dim--)
+            strides[dim - 1] = strides[dim] * array_shape[dim];
+    }
+
+    // Determine the copy strategy to use; right now this just handles whether-or-not byteswap
+    // is needed, may have others depending on alignment, vectorization etc.
+    asdf_ndarray_tile_copy_fn_t copy_fn = copy_memcpy;
+    if (elsize > 1) {
+        asdf_byteorder_t host_byteorder = asdf_host_byteorder();
+
+        if (host_byteorder != ndarray->byteorder)
+            copy_fn = copy_and_bswap;
+    }
+
+    size_t offset = origin[inner_dim];
+    bool is_1d = true;
+
+    if (ndim > 1) {
+        for (uint32_t dim = 0; dim < inner_dim; dim++) {
+            offset += origin[dim] * strides[dim];
+            if (shape[dim] != 1) {
+                // If any of the outer dimensions are >1 than it's not a 1d tile
+                is_1d = false;
+            }
+        }
+        offset *= elsize;
+    } else {
+        offset = origin[0] * elsize;
+    }
+
+    // Special case if the "tile" is one-dimensional, C-contiguous
+    if (is_1d) {
+        const void *src = data + offset;
+        copy_fn(dst, src, tile_size, elsize);
+        free(strides);
+        *out = dst;
+        return ASDF_NDARRAY_OK;
+    }
+
+    uint64_t *odometer = malloc(sizeof(uint64_t) * inner_dim);
+
+    if (!odometer) {
+        free(strides);
+        free(new_dst);
+        return ASDF_NDARRAY_ERR_OOM;
+    }
+
+    memcpy(odometer, origin, sizeof(uint64_t) * inner_dim);
+    bool done = false;
+    uint64_t inner_nelem = shape[inner_dim];
+    size_t inner_size = inner_nelem * elsize;
+    const void *src = data + offset;
+    void *dst_tmp = dst;
+
+    while (!done) {
+        copy_fn(dst_tmp, src, inner_size, elsize);
+        dst_tmp += inner_size;
+
+        uint32_t dim = inner_dim - 1;
+        do {
+            odometer[dim]++;
+            src += strides[dim] * elsize;
+
+            if (odometer[dim] < origin[dim] + shape[dim]) {
+                break;
+            } else {
+                if (dim == 0) {
+                    done = true;
+                    break;
+                }
+
+                odometer[dim] = origin[dim];
+                // Back up
+                src -= shape[dim] * strides[dim] * elsize;
+            }
+        } while (dim-- > 0);
+    }
+
+    free(odometer);
+    free(strides);
+    *out = dst;
+    return ASDF_NDARRAY_OK;
+}
+
+
+asdf_ndarray_err_t asdf_ndarray_read_tile_2d(
+    asdf_ndarray_t *ndarray,
+    uint64_t x,
+    uint64_t y,
+    uint64_t width,
+    uint64_t height,
+    const uint64_t *plane_origin,
+    void **out) {
+    uint32_t ndim = ndarray->ndim;
+
+    if (ndim < 2)
+        return ASDF_NDARRAY_ERR_OUT_OF_BOUNDS;
+
+    uint64_t *origin = calloc(ndim, sizeof(uint64_t));
+    uint64_t *shape = calloc(ndim, sizeof(uint64_t));
+
+    if (!origin || !shape)
+        return ASDF_NDARRAY_ERR_OOM;
+
+    uint32_t leading_ndim = ndim - 2;
+    for (uint32_t dim = 0; dim < leading_ndim; dim++) {
+        origin[dim] = plane_origin ? plane_origin[dim] : 0;
+        shape[dim] = 1;
+    }
+    origin[ndim - 2] = y;
+    origin[ndim - 1] = x;
+    shape[ndim - 2] = height;
+    shape[ndim - 1] = width;
+
+    asdf_ndarray_err_t err = asdf_ndarray_read_tile_ndim(ndarray, origin, shape, out);
+    free(origin);
+    free(shape);
+    return err;
 }

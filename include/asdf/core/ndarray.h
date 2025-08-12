@@ -76,6 +76,15 @@ typedef enum {
 } asdf_byteorder_t;
 
 
+/* Error codes for reading ndarray data */
+typedef enum {
+    ASDF_NDARRAY_OK = 0,
+    ASDF_NDARRAY_ERR_OUT_OF_BOUNDS,
+    ASDF_NDARRAY_ERR_OOM,
+    ASDF_NDARRAY_ERR_INVAL,
+} asdf_ndarray_err_t;
+
+
 /* Partial definition of the `asdf_ndarray_t` type
  *
  * For convenience some basic fields are made public for now, though this may not be ABI-stable
@@ -101,6 +110,11 @@ ASDF_DECLARE_EXTENSION(ndarray, asdf_ndarray_t);
 
 /* ndarray methods */
 ASDF_EXPORT void *asdf_ndarray_data_raw(asdf_ndarray_t *ndarray, size_t *size);
+ASDF_EXPORT asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
+    asdf_ndarray_t *ndarray, const uint64_t *origin, const uint64_t *shape, void **out);
+ASDF_EXPORT asdf_ndarray_err_t asdf_ndarray_read_tile_2d(
+    asdf_ndarray_t *ndarray, uint64_t x, uint64_t y, uint64_t width, uint64_t height,
+    const uint64_t *plane_origin, void **out);
 
 
 #endif /* ASDF_CORE_NDARRAY_H */

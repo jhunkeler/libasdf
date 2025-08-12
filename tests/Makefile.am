@@ -28,6 +28,7 @@ check_PROGRAMS = \
     test-event.unit \
     test-extension.unit \
     test-file.unit \
+    test-ndarray.unit \
     test-parse.unit \
     test-parse-util.unit \
     test-stream.unit \
@@ -90,6 +91,13 @@ test_file_unit_CPPFLAGS = $(unit_test_cppflags)
 test_file_unit_CFLAGS = $(unit_test_cflags)
 test_file_unit_LDFLAGS = $(unit_test_ldflags)
 test_file_unit_LDADD = $(unit_test_ldadd)
+
+# test-ndarray.unit
+test_ndarray_unit_SOURCES = test-ndarray.c
+test_ndarray_unit_CPPFLAGS = $(unit_test_cppflags)
+test_ndarray_unit_CFLAGS = $(unit_test_cflags)
+test_ndarray_unit_LDFLAGS = $(unit_test_ldflags)
+test_ndarray_unit_LDADD = $(unit_test_ldadd)
 
 # test-parse.unit
 test_parse_unit_SOURCES = test-parse.c
@@ -180,6 +188,7 @@ EXTRA_DIST += \
     fixtures/parse-minimal-extra-comment.asdf \
     fixtures/scalars.asdf \
     fixtures/tagged-scalars.asdf \
+    fixtures/tiles.asdf \
     fixtures/trivial-extension.asdf \
     fixtures/value-types.asdf \
     munit/COPYING \
