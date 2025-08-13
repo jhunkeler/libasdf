@@ -119,11 +119,53 @@ MU_TEST(test_asdf_ndarray_read_3d_tile) {
 }
 
 
+/* Helper for test_asdf_ndarray_read_tile_byteswap
+ *
+ * Each array in byteorder.asdf just contains 0...7 in different int types, different
+ * endianness
+ */
+#define CHECK_BYTEORDER_ARRAY(dtype, endian) do { \
+    asdf_ndarray_t *ndarray = NULL; \
+    const char *array_name = NULL; \
+    if (ASDF_BYTEORDER_LITTLE == (endian)) \
+        array_name = #dtype "-little"; \
+    else \
+        array_name = #dtype "-big"; \
+    assert_int(asdf_get_ndarray(file, array_name, &ndarray), ==, ASDF_VALUE_OK); \
+    assert_not_null(ndarray); \
+    assert_int(ndarray->byteorder, ==, (endian)); \
+    void *tile = NULL; \
+    uint64_t origin[] = {0}; \
+    assert_int(asdf_ndarray_read_tile_ndim(ndarray, origin, ndarray->shape, &tile), ==, ASDF_NDARRAY_OK); \
+    assert_not_null(tile); \
+    dtype##_t expected[] = {0, 1, 2, 3, 4, 5, 6, 7}; \
+    assert_memory_equal(8 * sizeof(dtype##_t), tile, expected); \
+    asdf_ndarray_destroy(ndarray); \
+} while (0)
+
+
+/* Test reading from (1-D) arrays with different byte orders */
+MU_TEST(test_asdf_ndarray_read_tile_byteswap) {
+    const char *path = get_fixture_file_path("byteorder.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    CHECK_BYTEORDER_ARRAY(uint16, ASDF_BYTEORDER_LITTLE);
+    CHECK_BYTEORDER_ARRAY(uint16, ASDF_BYTEORDER_BIG);
+    CHECK_BYTEORDER_ARRAY(uint32, ASDF_BYTEORDER_LITTLE);
+    CHECK_BYTEORDER_ARRAY(uint32, ASDF_BYTEORDER_BIG);
+    CHECK_BYTEORDER_ARRAY(uint64, ASDF_BYTEORDER_LITTLE);
+    CHECK_BYTEORDER_ARRAY(uint64, ASDF_BYTEORDER_BIG);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_ndarray,
     MU_RUN_TEST(test_asdf_ndarray_read_1d_tile_contiguous),
     MU_RUN_TEST(test_asdf_ndarray_read_2d_tile),
-    MU_RUN_TEST(test_asdf_ndarray_read_3d_tile)
+    MU_RUN_TEST(test_asdf_ndarray_read_3d_tile),
+    MU_RUN_TEST(test_asdf_ndarray_read_tile_byteswap)
 );
 
 

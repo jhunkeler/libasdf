@@ -164,6 +164,7 @@ EXTRA_DIST += \
     shell-test.sh \
     util.h \
     fixtures/255.asdf \
+    fixtures/byteorder.asdf \
     fixtures/events/basic.events.txt \
     fixtures/events/complex.events.txt \
     fixtures/events/compressed.events.txt \

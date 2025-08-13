@@ -509,8 +509,8 @@ static inline void copy_and_bswap(
         break;
     }
     case 8: {
-        uint32_t *d = dst;
-        const uint32_t *s = src;
+        uint64_t *d = dst;
+        const uint64_t *s = src;
         for (size_t idx = 0; idx < bytes / 8; idx++)
             d[idx] = __builtin_bswap64(s[idx]);
         break;
