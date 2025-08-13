@@ -195,17 +195,17 @@ asdf_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
                 return ASDF_DATATYPE_COMPLEX128;
         }
         goto unknown;
-        return ASDF_DATATYPE_UNKNOWN;
     }
 
     if (strcmp(s, "bool8") == 0)
         return ASDF_DATATYPE_BOOL8;
 
-unknown:
+unknown : {
 #ifdef ASDF_LOG_ENABLED
     const char *path = asdf_value_path(value);
     ASDF_LOG(value->file, ASDF_LOG_WARN, "unknown datatype for ndarray at %s: %s", path, s);
 #endif
+}
     return ASDF_DATATYPE_UNKNOWN;
 }
 
@@ -235,7 +235,7 @@ asdf_byteorder_t asdf_ndarray_deserialize_byteorder(asdf_value_t *value) {
     else if (s && (strcmp(s, "big") == 0))
         return ASDF_BYTEORDER_BIG;
 
-invalid:
+invalid : {
 #ifdef ASDF_LOG_ENABLED
     const char *path = asdf_value_path(value);
     ASDF_LOG(
@@ -245,6 +245,7 @@ invalid:
         "defaulting to \"little\"",
         path);
 #endif
+}
     return ASDF_BYTEORDER_LITTLE;
 }
 
