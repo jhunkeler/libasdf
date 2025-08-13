@@ -72,7 +72,11 @@ static void stream_capture(asdf_stream_t *stream, const uint8_t *buf, size_t siz
     size_t needed = *stream->capture_size + size;
 
     if (needed > stream->capture_cap) {
-        size_t new_cap = stream->capture_cap * 2;
+        size_t new_cap = stream->capture_cap;
+        /* Grow exponentially until we have sufficient capacity */
+        while (new_cap < needed)
+            new_cap *= 2;
+
         uint8_t *new_buf = realloc(capture_buf, new_cap);
 
         if (!new_buf) {
