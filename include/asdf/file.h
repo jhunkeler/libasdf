@@ -22,6 +22,12 @@ inline asdf_file_t *asdf_open(const char *filename, const char *mode) {
     return asdf_open_file(filename, mode);
 }
 
+/* Check if an error condition is set on an ASDF file
+ *
+ * Returns NULL if not otherwise a pointer to the error message string.
+ */
+ASDF_EXPORT const char *asdf_error(asdf_file_t *file);
+
 /* Value getters */
 ASDF_EXPORT asdf_value_t *asdf_get_value(asdf_file_t *file, const char *path);
 

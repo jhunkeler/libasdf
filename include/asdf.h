@@ -1,7 +1,8 @@
 #ifndef ASDF_H
 #define ASDF_H
 
+#include <asdf/core/ndarray.h>
 #include <asdf/file.h>
-#include <asdf/parse.h>
+#include <asdf/value.h>
 
-#endif
+#endif /* ASDF_H */

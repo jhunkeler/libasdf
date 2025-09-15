@@ -118,6 +118,20 @@ ASDF_EXPORT asdf_ndarray_err_t asdf_ndarray_read_tile_2d(
     asdf_ndarray_t *ndarray, uint64_t x, uint64_t y, uint64_t width, uint64_t height,
     const uint64_t *plane_origin, void **out);
 
+
+/**
+ * Convert an `asdf_datatype_t` to its string representation
+ *
+ * .. note::
+ *
+ *   Resists the urge to name this ``asdf_ndarray_serialize_datatype`` as in the long term
+ *   this will be used to serialize a datatype back to YAML, and will need to also support
+ *   compound datatypes.
+ *
+ *   This just provides the string representations for the common scalar datatypes.
+ */
+ASDF_EXPORT const char *asdf_ndarray_datatype_to_string(asdf_datatype_t datatype);
+
 ASDF_END_DECLS
 
 #endif /* ASDF_CORE_NDARRAY_H */
