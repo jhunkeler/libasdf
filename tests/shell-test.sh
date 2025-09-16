@@ -61,7 +61,7 @@ for input in $@; do
   mkdir -p tmp
 
   # Generate actual output
-  "${top_builddir}"/asdf ${SUBCOMMAND} ${EXTRA_ARGS} "$input" 2>&1 > "$actual" || true
+  "${top_builddir}"/src/asdf ${SUBCOMMAND} ${EXTRA_ARGS} "$input" 2>&1 > "$actual" || true
 
   if [ "$UPDATE" -eq 1 ]; then
     cp "$actual" "$expected"
