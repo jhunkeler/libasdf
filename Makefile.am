@@ -96,6 +96,10 @@ SUBDIRS = include tests third_party
 # Eventually test against older reference files as well
 reference_files = $(top_srcdir)/asdf-standard/reference_files/1.6.0
 EXTRA_DIST = \
+    CHANGES.rst \
+    CODE_OF_CONDUCT.md \
+    LICENSE \
+    README.rst \
     $(reference_files)/anchor.asdf \
     $(reference_files)/ascii.asdf \
     $(reference_files)/basic.asdf \

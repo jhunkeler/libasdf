@@ -34,7 +34,7 @@ code_block_re = re.compile(
 
 for rst_file in args.rst_files:
     if not rst_file.is_file():
-        continue
+        parser.exit(1, f'file not found: {rst_file}\n')
 
     content = rst_file.read_text()
 
