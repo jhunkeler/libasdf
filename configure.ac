@@ -188,7 +188,7 @@ AC_SUBST([PYTHON3])
 AC_SUBST([ASDF_CFLAGS])
 AC_SUBST([ASDF_LDFLAGS])
 AC_CONFIG_HEADERS([config.h]) # use config.h instead of passing -D in the command line
-AC_CONFIG_FILES([Makefile include/Makefile tests/Makefile third_party/Makefile])
+AC_CONFIG_FILES([Makefile include/Makefile tests/Makefile third_party/Makefile docs/Makefile])
 
 AC_OUTPUT
 
