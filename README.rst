@@ -1,6 +1,14 @@
 libasdf
 #######
 
+.. _begin-badges:
+
+.. image:: https://github.com/asdf-format/libasdf/workflows/Build/badge.svg
+    :target: https://github.com/asdf-format/libasdf/actions
+    :alt: CI Status
+
+.. _end-badges:
+
 C library for reading (and eventually writing) `ASDF
 <https://www.asdf-format.org/en/latest/>`__ files
 

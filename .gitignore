@@ -9,6 +9,7 @@ config.h.in~
 config.log
 config.status
 configure
+configure~
 stamp-h1
 Makefile.in
 Makefile
@@ -38,6 +39,9 @@ tests/*.trs
 tests/*.unit
 tests/test_cpp_headers.cpp
 tests/tmp
+
+# doc build outputs
+docs/_build
 
 # coverage outputs
 *-coverage.info

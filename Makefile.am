@@ -77,6 +77,11 @@ tidy:
 	clang-tidy $(src_files) -- \
 	    $(DEFS) $(DEFAULT_INCLUDES) $(AM_CPPLFAGS) $(CPPFLAGS) $(asdf_CFLAGS)
 
+if BUILD_DOCS
+docs:
+	$(SPHINXBUILD) -b html $(srcdir)/docs $(srcdir)/docs/_build/html
+endif
+.PHONY: docs
 
 CODE_COVERAGE_IGNORE_PATTERN = \
     $(abs_top_srcdir)/tests/* \

@@ -177,6 +177,9 @@ AS_IF([test "x$asdf_build_tool" = "xyes"], [
   ])
 ])
 
+# Enable/check doc build requirements
+ASDF_CHECK_SPHINX
+
 AC_SUBST([ASDF_CFLAGS])
 AC_SUBST([ASDF_LDFLAGS])
 AC_CONFIG_HEADERS([config.h]) # use config.h instead of passing -D in the command line
