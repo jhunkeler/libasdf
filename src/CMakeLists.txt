@@ -1,7 +1,10 @@
 project(libasdf)
 
 add_library(libasdf STATIC)
-target_link_libraries(libasdf PUBLIC stc ${FYAML_LIBRARIES})
+target_link_libraries(libasdf PUBLIC stc 
+	${FYAML_LIBRARIES}
+	${ARGP_LIBRARIES}
+)
 target_include_directories(libasdf PUBLIC
         ${CMAKE_SOURCE_DIR}/third_party/STC/include
         ${CMAKE_BINARY_DIR}/include
