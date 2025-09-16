@@ -7,6 +7,8 @@
 #include <asdf/util.h>
 #include <asdf/value.h>
 
+ASDF_BEGIN_DECLS
+
 /* Forward declaration */
 typedef struct asdf_file asdf_file_t;
 
@@ -19,6 +21,12 @@ ASDF_EXPORT void asdf_close(asdf_file_t *file);
 inline asdf_file_t *asdf_open(const char *filename, const char *mode) {
     return asdf_open_file(filename, mode);
 }
+
+/* Check if an error condition is set on an ASDF file
+ *
+ * Returns NULL if not otherwise a pointer to the error message string.
+ */
+ASDF_EXPORT const char *asdf_error(asdf_file_t *file);
 
 /* Value getters */
 ASDF_EXPORT asdf_value_t *asdf_get_value(asdf_file_t *file, const char *path);
@@ -77,5 +85,7 @@ ASDF_EXPORT asdf_block_t *asdf_block_open(asdf_file_t *file, size_t index);
 ASDF_EXPORT void asdf_block_close(asdf_block_t *block);
 ASDF_EXPORT size_t asdf_block_data_size(asdf_block_t *block);
 ASDF_EXPORT void *asdf_block_data(asdf_block_t *block, size_t *size);
+
+ASDF_END_DECLS
 
 #endif /* ASDF_FILE_H */

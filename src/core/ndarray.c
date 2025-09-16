@@ -210,6 +210,53 @@ unknown : {
 }
 
 
+const char *asdf_ndarray_datatype_to_string(asdf_datatype_t datatype) {
+    switch (datatype) {
+    case ASDF_DATATYPE_UNKNOWN:
+        return "<unknown>";
+    case ASDF_DATATYPE_INT8:
+        return "int8";
+    case ASDF_DATATYPE_UINT8:
+        return "uint8";
+    case ASDF_DATATYPE_INT16:
+        return "int16";
+    case ASDF_DATATYPE_UINT16:
+        return "uint16";
+    case ASDF_DATATYPE_INT32:
+        return "int32";
+    case ASDF_DATATYPE_UINT32:
+        return "uint32";
+    case ASDF_DATATYPE_INT64:
+        return "int64";
+    case ASDF_DATATYPE_UINT64:
+        return "uint64";
+    case ASDF_DATATYPE_FLOAT16:
+        return "float16";
+    case ASDF_DATATYPE_FLOAT32:
+        return "float32";
+    case ASDF_DATATYPE_FLOAT64:
+        return "float64";
+    case ASDF_DATATYPE_COMPLEX64:
+        return "complex64";
+    case ASDF_DATATYPE_COMPLEX128:
+        return "complex128";
+    case ASDF_DATATYPE_BOOL8:
+        return "bool8";
+    // TODO: The remaining cases will be more usefully stringified
+    // From an asdf_datatype_t object that contains their additional data...
+    // Should probably refactor before first release to avoid ABI incompatibility
+    // See issue #50
+    case ASDF_DATATYPE_ASCII:
+        return "ascii";
+    case ASDF_DATATYPE_UCS4:
+        return "ucs4";
+    case ASDF_DATATYPE_RECORD:
+        return "<record>";
+    }
+    UNREACHABLE();
+}
+
+
 asdf_byteorder_t asdf_ndarray_deserialize_byteorder(asdf_value_t *value) {
     if (!value) {
 #ifdef ASDF_LOG_ENABLED

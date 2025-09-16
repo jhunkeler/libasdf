@@ -91,6 +91,11 @@ void asdf_close(asdf_file_t *file) {
 }
 
 
+const char *asdf_error(asdf_file_t *file) {
+    return ASDF_ERROR_GET(file);
+}
+
+
 ASDF_LOCAL struct fy_document *asdf_file_get_tree_document(asdf_file_t *file) {
     if (!file)
         return NULL;
