@@ -174,8 +174,30 @@ check-cpp-headers: $(cpp_header_test) $(top_builddir)/libasdf.la
 	./test_cpp_headers
 	@rm -f test_cpp_headers
 
+CONDITIONAL_CHECKS =
+# Check examples in the documentation
+if HAVE_PYTHON
 
-check-local: check-cpp-headers
+DOC_EXAMPLES_DIR = $(srcdir)/doc_examples
+.PHONY: extract-doc-examples
+extract-doc-examples: $(srcdir)/scripts/extract_doc_examples.py
+	$(PYTHON3) scripts/extract_doc_examples.py $(top_srcdir)/README.rst
+
+.PHONY: test-doc-examples
+check-doc-examples: extract-doc-examples
+	@for f in $(DOC_EXAMPLES_DIR)/*.c; do \
+	    exe=$${f%.c}; \
+	    $(LIBTOOL) --mode=link $(CC) $(ASDF_CFLAGS) -I$(top_srcdir)/include \
+	        $$f $(top_builddir)/libasdf.la \
+	        -o $$exe; \
+	    ./$$exe $(srcdir)/fixtures/cube.asdf 2>&1 > $$exe.log; \
+	done
+
+CONDITIONAL_CHECKS += check-doc-examples
+endif
+
+
+check-local: check-cpp-headers $(CONDITIONAL_CHECKS)
 
 
 AUTOMAKE_OPTIONS = parallel-tests
@@ -187,6 +209,7 @@ EXTRA_DIST += \
     util.h \
     fixtures/255.asdf \
     fixtures/byteorder.asdf \
+    fixtures/cube.asdf \
     fixtures/events/basic.events.txt \
     fixtures/events/complex.events.txt \
     fixtures/events/compressed.events.txt \

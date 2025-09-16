@@ -18,7 +18,7 @@ ASDF_EXPORT asdf_file_t *asdf_open_mem(const void *buf, size_t size);
 ASDF_EXPORT void asdf_close(asdf_file_t *file);
 
 /* As a convenience, asdf_open() is available as an alias for asdf_open_file */
-inline asdf_file_t *asdf_open(const char *filename, const char *mode) {
+static inline asdf_file_t *asdf_open(const char *filename, const char *mode) {
     return asdf_open_file(filename, mode);
 }
 

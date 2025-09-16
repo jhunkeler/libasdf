@@ -37,6 +37,7 @@ third_party/*.la
 tests/*.log
 tests/*.trs
 tests/*.unit
+tests/doc_examples
 tests/test_cpp_headers.cpp
 tests/tmp
 
@@ -53,3 +54,6 @@ docs/_build
 
 # distcheck outputs
 libasdf-*/
+
+# misc
+.gdb_history
