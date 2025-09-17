@@ -1,9 +1,9 @@
 find_program(BASH_PROGRAM bash)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/tests)
 set(CTEST_BINARY_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
-set(nix_gnu_cflags ${CMAKE_C_FLAGS} -Wno-format-truncation -Wno-error -Wno-unused-parameter -Wno-unused-result -Wno-discarded-qualifiers)
-set(nix_clang_cflags ${CMAKE_C_FLAGS} -Wno-unused-parameter -Wno-unused-result -Wno-incompatible-pointer-types-discards-qualifiers)
-set(win_msvc_cflags ${CMAKE_C_FLAGS} /Wall)
+set(nix_gnu_cflags ${CMAKE_C_FLAGS} -Wall -Wextra)
+set(nix_clang_cflags ${CMAKE_C_FLAGS} -Wall -Wextra)
+set(win_msvc_cflags ${CMAKE_C_FLAGS} /Wall -Wextra)
 
 file(GLOB source_files "test-*.c")
 file(GLOB shell_files "test-*.sh")
@@ -46,8 +46,6 @@ foreach(source_file ${source_files})
         target_compile_options(${test_executable} PRIVATE ${win_cflags} ${win_msvc_cflags})
     endif()
 
-    #target_compile_definitions(util PRIVATE REFERENCE_FILES_DIR=\"${REFERENCE_FILES_DIR}\")
-    #target_compile_definitions(util PRIVATE FIXTURES_DIR=\"${FIXTURES_DIR}\")
     target_include_directories(${test_executable} PRIVATE
 	    ${FYAML_INCLUDEDIR}
 	    ${ARGP_INCLUDEDIR}
@@ -58,9 +56,9 @@ foreach(source_file ${source_files})
 	    ${CMAKE_CURRENT_BINARY_DIR}/include
     )
     target_link_libraries(${test_executable} PRIVATE
+	    libasdf
 	    munit
 	    util
-	    libasdf
     )
     add_test(${test_executable} ${test_executable})
     set_tests_properties(${test_executable}

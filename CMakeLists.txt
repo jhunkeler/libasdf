@@ -1,11 +1,17 @@
 cmake_minimum_required(VERSION 3.21)
 project(asdf C)
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+# Global includes
+include(GNUInstallDirs)
+include(FindPkgConfig)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
+include(CheckSourceRuns)
+include(CheckSourceRuns)
 include(CheckIncludeFile)
-include(FindPkgConfig)
+
+# Local includes
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(SubmoduleInit)
 
 set(ASDFSTD_DIR ${CMAKE_SOURCE_DIR}/asdf-standard)
@@ -17,10 +23,46 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(PACKAGE_NAME "asdf")
 set(PACKAGE_VERSION "0.0.0")
 
-option(ENABLE_TESTING OFF)
-option(ENABLE_TESTING_SHELL OFF)
+# Configure config.h
+add_compile_definitions(HAVE_CONFIG_H)
+add_compile_definitions(__USE_MISC)
+add_compile_definitions(_XOPEN_SOURCE)
+add_compile_definitions(_GNU_SOURCE)
+if(APPLE)
+    # for time.h: timegm
+    add_compile_definitions(_DARWIN_C_SOURCE)
+endif()
 
-# Define git submodules
+check_include_file(endian.h HAVE_ENDIAN_H)
+check_include_file(machine/endian.h HAVE_MACHINE_ENDIAN_H)
+check_include_file(sys/endian.h HAVE_SYS_ENDIAN_H)
+if(HAVE_ENDIAN_H)
+    set(ENDIAN_H endian.h)
+elseif(HAVE_MACHINE_ENDIAN_H)
+    set(ENDIAN_H machine/endian.h)
+elseif(HAVE_SYS_ENDIAN_H)
+    set(ENDIAN_H sys/endian.h)
+endif()
+
+check_function_exists(strptime HAVE_STRPTIME)
+check_source_runs(C "
+    #include <stdio.h>
+    #include <${ENDIAN_H}>
+    int main() {
+    #ifdef be64toh
+        puts(\"YES\");
+        return 0;
+    #else
+        puts(\"NO\");
+        return 1;
+    #endif
+    }
+    "
+    HAVE_DECL_BE64TOH)
+
+
+
+# Update git submodules
 list(APPEND submodules
         asdf-standard
         third_party/STC
@@ -28,6 +70,7 @@ list(APPEND submodules
 )
 submodule_init(${submodules})
 
+# Configure options for ASDF library
 if(ASDF_LOG_ENABLED)
     option(ASDF_LOG_COLOR "Enable colored log output" ON)
 endif()
@@ -74,54 +117,19 @@ if(APPLE)
     endif()
 endif()
 
-# Configure compile-time defines
-add_compile_definitions(HAVE_CONFIG_H)
-add_compile_definitions(__USE_MISC)
-add_compile_definitions(_XOPEN_SOURCE)
-add_compile_definitions(_GNU_SOURCE)
-if(APPLE)
-    # for time.h: timegm
-    add_compile_definitions(_DARWIN_C_SOURCE)
-endif()
-
-check_include_file(endian.h HAVE_ENDIAN_H)
-check_include_file(machine/endian.h HAVE_MACHINE_ENDIAN_H)
-check_include_file(sys/endian.h HAVE_SYS_ENDIAN_H)
-if(HAVE_ENDIAN_H)
-    set(ENDIAN_H endian.h)
-elseif(HAVE_MACHINE_ENDIAN_H)
-    set(ENDIAN_H machine/endian.h)
-elseif(HAVE_SYS_ENDIAN_H)
-    set(ENDIAN_H sys/endian.h)
-endif()
-
-check_function_exists(strptime HAVE_STRPTIME)
-#check_symbol_exists(be64toh endian.h machine/endian.h sys/endian.h HAVE_DECL_BE64TOH)
-
-include(CheckSourceRuns)
-check_source_runs(C "
-    #include <stdio.h>
-    #include <${ENDIAN_H}>
-    int main() {
-    #ifdef be64toh
-        puts(\"YES\");
-        return 0;
-    #else
-        puts(\"NO\");
-        return 1;
-    #endif
-    }
-    "
-    HAVE_DECL_BE64TOH)
-
 include_directories(${CMAKE_SOURCE_DIR}/include)
 configure_file(config.h.cmake include/config.h @ONLY)
 
 add_subdirectory(third_party)
 add_subdirectory(src)
+add_subdirectory(include)
 
-# Test
+# Testing
+option(ENABLE_TESTING OFF)
+option(ENABLE_TESTING_SHELL OFF)
+
 if(ENABLE_TESTING)
     enable_testing()
     add_subdirectory(tests)
 endif()
+
