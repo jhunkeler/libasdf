@@ -23,6 +23,8 @@ set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(PACKAGE_NAME "asdf")
 set(PACKAGE_VERSION "0.0.0")
 
+add_compile_options(-fvisibility=hidden)
+
 # Configure config.h
 add_compile_definitions(HAVE_CONFIG_H)
 add_compile_definitions(__USE_MISC)
@@ -64,9 +66,9 @@ check_source_runs(C "
 
 # Update git submodules
 list(APPEND submodules
-        asdf-standard
-        third_party/STC
-	tests/munit
+    asdf-standard
+    third_party/STC
+    tests/munit
 )
 submodule_init(${submodules})
 
