@@ -1,18 +1,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#ifndef _XOPEN_SOURCE
-#    define _XOPEN_SOURCE
-#endif
-
-#ifndef _GNU_SOURCE
-#    define _GNU_SOURCE
-#endif
-
-#ifndef _POSIX_C_SOURCE
-#    define _POSIX_C_SOURCE 200809L
-#endif
-
 /* Enable color output in logs */
 #define ASDF_LOG_COLOR @ASDF_LOG_COLOR@
 
