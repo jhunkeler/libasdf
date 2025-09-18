@@ -22,9 +22,9 @@ target_sources(libasdf PUBLIC
     value_util.c
     yaml.c
 )
-target_link_libraries(libasdf PUBLIC stc
+target_link_libraries(libasdf PUBLIC
+    stc
     ${FYAML_LIBRARIES}
-    ${ARGP_LIBRARIES}
 )
 target_include_directories(libasdf PUBLIC
     ${CMAKE_SOURCE_DIR}/third_party/STC/include
@@ -39,8 +39,8 @@ install(TARGETS libasdf
 
 project(asdf_cli)
 add_executable(asdf_cli main.c)
-target_link_libraries(asdf_cli libasdf stc)
-target_include_directories(asdf_cli PUBLIC
+target_link_libraries(asdf_cli PRIVATE libasdf stc ${ARGP_LIBRARIES})
+target_include_directories(asdf_cli PRIVATE
     ${STC_DIR}/include
     ${CMAKE_BINARY_DIR}/include
     ${CMAKE_CURRENT_BINARY_DIR}
