@@ -30,6 +30,10 @@ project, version, release = read_config_h()
 author = 'The ASDF Developers'
 copyright = f"{datetime.now().year}, {author}"
 
+# It is a C library--use the 'c' domain by default
+primary_domain = 'c'
+default_role = 'c:expr'
+
 # -- Options for HTML output ---------------------------------------------------
 html_title = f"{project} v{release}"
 
@@ -46,13 +50,45 @@ latex_documents = [(
 # -- Options for manual page output --------------------------------------------
 man_pages = [("index", project.lower(), project + " Documentation", [author], 1)]
 
+
+todo_include_todos = True
+
+
+# Epilogue appended to each rst file; use this to append commonly used link
+# references
+rst_epilog = ''
+
+with open('links.rst') as fobj:
+    rst_epilog += fobj.read()
+
+
 # Enable nitpicky mode - which ensures that all references in the docs
 # resolve.
 
 nitpicky = True
 
-# Nitpicks to ignore, if any
-nitpick_ignore = []
+# Nitpicks to ignore
+# Because we use c:expr as the default role which is *very* convenient, any
+# standard C identifiers used within backticks will try to resolve as well.
+# I haven't found any Sphinx documents that cover the C standard library
+# (someone should write one!) so we list most of those here when they come up
+# in the docs.  Try to keep this sorted...
+nitpick_ignore = [
+    ('c:identifier', 'ERANGE'),
+    ('c:identifier', 'FILE'),
+    ('c:identifier', 'NULL'),
+    ('c:identifier', 'errno'),
+    ('c:identifier', 'int16_t'),
+    ('c:identifier', 'int32_t'),
+    ('c:identifier', 'int64_t'),
+    ('c:identifier', 'int8_t'),
+    ('c:identifier', 'size_t'),
+    ('c:identifier', 'strtod'),
+    ('c:identifier', 'uint16_t'),
+    ('c:identifier', 'uint32_t'),
+    ('c:identifier', 'uint64_t'),
+    ('c:identifier', 'uint8_t'),
+]
 
 # Add intersphinx mappings
 # e.g. intersphinx_mapping["semantic_version"] = ("https://python-semanticversion.readthedocs.io/en/latest/", None)
@@ -60,8 +96,21 @@ intersphinx_mapping = {
     'asdf-standard': ('https://www.asdf-format.org/projects/asdf-standard/en/latest/', None)
 }
 
-extensions = ['sphinx.ext.intersphinx']
+extensions = ['sphinx.ext.intersphinx', 'sphinx.ext.todo', 'hawkmoth']
 
+# -- Options for hawkmoth extension --------------------------------------------
+
+hawkmoth_root = Path(__file__).parent.parent
+
+# These are options that should be passed to the compiler when hawkmoth processes
+# files.
+#
+# Should see if we can glean what we need here from configure/automake output
+# For now see what we can get away with by simply hard-coding...
+hawkmoth_clang = ['-Iinclude']
+
+
+# -- Options for theme and HTML output -----------------------------------------
 html_theme = "furo"
 html_static_path = ["_static"]
 # Override default settings from sphinx_asdf / sphinx_astropy (incompatible with furo)

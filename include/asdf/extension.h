@@ -23,13 +23,19 @@ typedef asdf_value_err_t (*asdf_extension_deserialize_t)(asdf_value_t *value, co
 typedef void (*asdf_extension_dealloc_t)(void *userdata);
 
 
-typedef struct asdf_extension {
+struct _asdf_extension {
     const char *tag;
     asdf_software_t *software;
     asdf_extension_deserialize_t deserialize;
     asdf_extension_dealloc_t dealloc;
     void *userdata;
-} asdf_extension_t;
+};
+
+
+/**
+ * Struct representing a registered libasdf extension
+ */
+typedef struct _asdf_extension asdf_extension_t;
 
 
 ASDF_EXPORT void asdf_extension_register(asdf_extension_t *ext);

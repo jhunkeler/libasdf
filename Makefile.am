@@ -79,7 +79,7 @@ tidy:
 
 if BUILD_DOCS
 docs:
-	$(SPHINXBUILD) -b html $(srcdir)/docs $(srcdir)/docs/_build/html
+	$(SPHINXBUILD) $(SPHINX_FLAGS) -b html $(srcdir)/docs $(srcdir)/docs/_build/html
 endif
 .PHONY: docs
 
