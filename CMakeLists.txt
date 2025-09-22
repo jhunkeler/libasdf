@@ -41,9 +41,6 @@ if(ENABLE_TESTING)
 	add_subdirectory(tests)
 endif()
 
-add_executable(asdf_check check.c)
-target_link_libraries(asdf_check libasdf)
-
 install(
     FILES
         LICENSE
