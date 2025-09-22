@@ -3,7 +3,7 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/tests)
 set(CTEST_BINARY_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
 set(nix_gnu_cflags ${CMAKE_C_FLAGS} -Wall -Wextra)
 set(nix_clang_cflags ${CMAKE_C_FLAGS} -Wall -Wextra)
-set(win_msvc_cflags ${CMAKE_C_FLAGS} /Wall -Wextra)
+set(win_msvc_cflags ${CMAKE_C_FLAGS} /Wall)
 
 file(GLOB source_files "test-*.c")
 file(GLOB shell_files "test-*.sh")
