@@ -36,7 +36,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-15, macos-14]
         gcc: [12, 14]
-        cmake_options: ["", "-DENABLE_TESTING=ON -DENABLE_ASAN=ON"]
+        cmake_options: ["", "-DENABLE_ASAN=ON"]
         exclude:
           - os: macos-15
             cmake_options: "-DENABLE_ASAN=ON"
@@ -71,6 +71,10 @@ jobs:
             gcc@${{ matrix.gcc }} \
             argp-standalone \
             libfyaml
+        echo '---'
+        find /opt/homebrew -type l -name '*.pc'
+        echo '---'
+        find /opt/homebrew/Cellar/argp-standalone/
 
     - name: Linux build
       if: startsWith(matrix.os, 'ubuntu')
@@ -80,6 +84,7 @@ jobs:
         cmake .. \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
+          -DENABLE_TESTING=YES \
           ${{ matrix.cmake_options }} \
           ${{ github.event.inputs.cmake_flags }}
         make ${{ github.event.inputs.make_flags }}
@@ -99,6 +104,7 @@ jobs:
         cmake .. \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
+          -DENABLE_TESTING=YES \
           ${{ matrix.cmake_options }} \
           ${{ github.event.inputs.cmake_flags }}
         make ${{ github.event.inputs.make_flags }}
