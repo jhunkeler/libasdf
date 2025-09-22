@@ -134,7 +134,6 @@ jobs:
       # Execute tests defined by the CMake configuration.
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
-        cd build
         ctest -C ${{env.BUILD_TYPE}} \
             ${{ github.event.inputs.ctest_flags }}
 
@@ -142,5 +141,4 @@ jobs:
     - name: Output test logs on failure
       if: failure()
       run: |
-        cd build
         cat Testing/Temporary/LastTest.log
