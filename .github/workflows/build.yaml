@@ -73,6 +73,8 @@ jobs:
             libfyaml
         echo '---'
         find /opt/homebrew -type l -name '*.pc'
+        echo '---'
+        find /opt/homebrew/Cellar/argp-standalone/
 
     - name: Linux build
       if: startsWith(matrix.os, 'ubuntu')
