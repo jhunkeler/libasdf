@@ -68,7 +68,7 @@ jobs:
       run: |
         brew update
         brew install \
-            gcc@${{ matrix.gcc }}
+            gcc@${{ matrix.gcc }} \
             argp-standalone \
             libfyaml
 
