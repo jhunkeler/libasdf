@@ -140,5 +140,6 @@ jobs:
 
     - name: Output test logs on failure
       if: failure()
+      working-directory: ${{github.workspace}}/build
       run: |
         cat Testing/Temporary/LastTest.log
