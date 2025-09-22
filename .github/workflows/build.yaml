@@ -71,6 +71,8 @@ jobs:
             gcc@${{ matrix.gcc }} \
             argp-standalone \
             libfyaml
+        echo '---'
+        find /opt/homebrew -type l -name '*.pc'
 
     - name: Linux build
       if: startsWith(matrix.os, 'ubuntu')
