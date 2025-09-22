@@ -47,5 +47,5 @@ check_function_exists(strptime HAVE_STRPTIME)
 
 # Write out the header
 include_directories(${CMAKE_SOURCE_DIR}/include)
-configure_file(config.h.cmake include/config.h @ONLY)
+configure_file(config.h.in include/config.h @ONLY)
 
