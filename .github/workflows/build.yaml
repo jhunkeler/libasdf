@@ -142,4 +142,9 @@ jobs:
       if: failure()
       working-directory: ${{github.workspace}}/build
       run: |
-        cat Testing/Temporary/LastTest.log
+        logfile=Testing/Temporary/LastTest.log
+        if ! [ -f "$logfile" ]; then
+            echo "No log file. Did the tests run at all?"
+            exit 0
+        fi
+        cat "$logfile"
