@@ -90,6 +90,7 @@ jobs:
         CC: gcc-${{ matrix.gcc }}
         CXX: g++-${{ matrix.gcc }}
         FC: gfortran-${{ matrix.gcc }}
+        PKG_CONFIG_PATH: /opt/homebrew/lib/pkgconfig:/usr/local/lib/pkgconfig
 
       run: |
         mkdir -p build
