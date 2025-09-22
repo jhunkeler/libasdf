@@ -7,76 +7,128 @@ on:
     branches: [main]
   workflow_dispatch:
     inputs:
+      cmake_flags:
+        description: Extra flags to pass to CMake
+        required: false
+        default: ''
+      ctest_flags:
+        description: Extra flags to pass to CTest
+        required: false
+        default: ''
       make_flags:
         description: Extra flags to pass to make
         required: false
         default: ''
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+  INSTALL_PREFIX: /tmp/libasdf
+
 jobs:
-  build-and-test:
-    name: Build and run `make check`
-    runs-on: ${{ matrix.os }}
+  build_matrix:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        cc: [gcc, clang]
+        os: [ubuntu-latest, macos-15, macos-14]
+        gcc: [12, 14]
+        cmake_options: ["", "-DENABLE_ASAN=ON"]
         exclude:
-          - os: macos-latest
-            cc: gcc
-
+          - os: macos-15
+            cmake_options: "-DENABLE_ASAN=ON"
+          - os: macos-15
+            gcc: 12
+          - os: macos-14
+            cmake_options: "-DENABLE_ASAN=ON"
+          - os: macos-14
+            gcc: 14
+          - os: ubuntu-latest
+            gcc: 14
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-        with:
-          submodules: true
+    - name: Checkout code
+      uses: actions/checkout@v3
+      with:
+        submodules: true
 
-      - name: Install dependencies (Ubuntu)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            autoconf \
-            automake \
-            libtool \
+    - name: Linux dependencies
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        sudo apt update
+        sudo apt install -y \
             build-essential \
             libfyaml-dev
 
-          if [ "${{ matrix.cc }}" = "clang" ]; then
-            sudo apt-get install -y clang
-          fi
-
-      - name: Install dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew update
-          brew install \
-            autoconf \
-            automake \
-            libtool \
+    - name: MacOS dependencies
+      if: startsWith(matrix.os, 'macos')
+      run: |
+        brew update
+        brew install \
+            gcc@${{ matrix.gcc }}
             argp-standalone \
             libfyaml
 
-      - name: Bootstrap autotools
-        run: ./autogen.sh
+    - name: Linux build
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        mkdir -p build
+        cd build
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
+          ${{ matrix.cmake_options }} \
+          ${{ github.event.inputs.cmake_flags }}
+        make ${{ github.event.inputs.make_flags }}
 
-      - name: Configure
-        run: ./configure CC=${{ matrix.cc }}
+    - name: MacOS build
+      if: startsWith(matrix.os, 'macos')
+      env:
+        CC: gcc-${{ matrix.gcc }}
+        CXX: g++-${{ matrix.gcc }}
+        FC: gfortran-${{ matrix.gcc }}
 
-      - name: Build
-        run: make ${{ github.event.inputs.make_flags }}
+      run: |
+        mkdir -p build
+        cd build
+        export SDKROOT="$(xcrun --show-sdk-path)"
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
+          ${{ matrix.cmake_options }} \
+          ${{ github.event.inputs.cmake_flags }}
+        make ${{ github.event.inputs.make_flags }}
 
-      - name: Check
-        run: make check ${{ github.event.inputs.make_flags }}
 
-      - name: Output test logs on failure
-        if: failure()
-        run: |
-          tail -n +1 tests/*.log
-          tail -n +1 tests/tmp/*.out.txt
+    - name: Install
+      run: |
+        cd build
+        make install
 
-      - name: Dist
-        run: make dist ${{ github.event.inputs.make_flags }}
+    - name: Generate source archive
+      run: |
+        cd build
+        make package_source
 
-      - name: Dist check
-        run: make distcheck ${{ github.event.inputs.make_flags }}
+    - name: Generate binary archives
+      run: |
+        cd build
+        make package
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: |
+        ctest --output-log test.log \
+            -C ${{env.BUILD_TYPE}} \
+            ${{ github.event.inputs.ctest_flags }}
+
+
+    - name: Output test logs on failure
+      if: failure()
+      run: |
+        cat test.log
