@@ -101,10 +101,14 @@ jobs:
         mkdir -p build
         cd build
         export SDKROOT="$(xcrun --show-sdk-path)"
+        hbroot=/opt/homebrew
         cmake .. \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
           -DENABLE_TESTING=YES \
+          -DARGP_NO_PKGCONFIG=YES \
+          -DARGP_LIBDIR=${hbroot}/lib \
+          -DARGP_INCLUDEDIR=${hbroot}/include \
           ${{ matrix.cmake_options }} \
           ${{ github.event.inputs.cmake_flags }}
         make ${{ github.event.inputs.make_flags }}
