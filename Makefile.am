@@ -83,6 +83,14 @@ docs:
 endif
 .PHONY: docs
 
+
+# Check building docs from the distribution if possible
+distcheck-hook:
+if BUILD_DOCS
+	$(MAKE) docs SPHINX_FLAGS=-W
+endif
+
+
 CODE_COVERAGE_IGNORE_PATTERN = \
     $(abs_top_srcdir)/tests/* \
     $(abs_top_srcdir)/tests/munit/*

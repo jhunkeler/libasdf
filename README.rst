@@ -9,8 +9,8 @@ libasdf
 
 .. _end-badges:
 
-C library for reading (and eventually writing) `ASDF
-<https://www.asdf-format.org/en/latest/>`__ files
+A C library for reading (and eventually writing) `ASDF
+<https://www.asdf-format.org/en/latest/>`__ files.
 
 
 Introduction

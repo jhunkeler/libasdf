@@ -32,6 +32,9 @@ ASDF_BEGIN_DECLS
  */
 typedef struct asdf_file asdf_file_t;
 
+// Forward-declaration for asdf_open
+asdf_file_t *asdf_open_file(const char *filename, const char* mode);
+
 /**
  * Opens an ASDF file for reading
  *
