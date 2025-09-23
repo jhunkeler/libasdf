@@ -37,3 +37,21 @@ if(APPLE)
         endif()
     endif()
 endif()
+
+if(ENABLE_DOCS)
+    find_package(Python3 REQUIRED)
+    if (PYTHON3_FOUND)
+        get_filename_component(python_prefix "${Python3_EXECUTABLE}" DIRECTORY)
+        set(python_bindirs
+            "${python_prefix}/bin"
+            "${python_prefix}/Scripts" # windows
+        )
+    endif()
+
+    find_program(SPHINX_BUILD_PROG
+        NAMES sphinx-build sphinx-build.exe
+        HINTS ${python_bindirs}
+        REQUIRED
+    )
+    find_package_handle_standard_args(Sphinx DEFAULT_MSG SPHINX_BUILD_PROG)
+endif()
