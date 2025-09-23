@@ -36,7 +36,7 @@ check_PROGRAMS = \
     test-value-util.unit
 
 TESTS_ENVIRONMENT = top_builddir=$(top_builddir) top_srcdir=$(top_srcdir)
-TESTS = $(check_PROGRAMS)
+TESTS = $(check_PROGRAMS) test-cpp-headers
 
 unit_test_cppflags = \
     $(AM_CPPFLAGS) \
@@ -164,42 +164,33 @@ $(cpp_header_test): $(asdf_public_headers) $(srcdir)/scripts/generate_test_cpp_h
 	$(srcdir)/scripts/generate_test_cpp_headers.sh $(top_srcdir)/include $@
 
 
-CLEANFILES = test-cpp-headers.cpp
-
-
-check-cpp-headers: $(cpp_header_test) $(top_builddir)/libasdf.la
+test-cpp-headers$(EXEEXT): $(cpp_header_test) $(top_builddir)/libasdf.la
 	$(LIBTOOL) --mode=link $(CXX) -std=c++17 -I$(top_srcdir)/include \
 	    $(ASDF_LDFLAGS) $(cpp_header_test) $(top_builddir)/libasdf.la \
-	    -o test-cpp-headers
-	./test-cpp-headers
-	@rm -f test-cpp-headers
+	    -o $@
 
-CONDITIONAL_CHECKS =
+CLEANFILES = test-cpp-headers.cpp test-cpp-headers$(EXEEXT)
+
+
 # Check examples in the documentation
 if HAVE_PYTHON
-
 DOC_EXAMPLES_DIR = $(builddir)/doc_examples
-.PHONY: extract-doc-examples
-extract-doc-examples: $(srcdir)/scripts/extract_doc_examples.py
-	$(PYTHON3) $(srcdir)/scripts/extract_doc_examples.py $(top_srcdir)/README.rst \
-	    --out-dir $(DOC_EXAMPLES_DIR)
+TESTS += $(DOC_EXAMPLES_DIR)/test-doc-examples.sh
 
-.PHONY: test-doc-examples
-check-doc-examples: extract-doc-examples
+
+$(DOC_EXAMPLES_DIR)/test-doc-examples.sh: $(top_srcdir)/README.rst $(srcdir)/scripts/extract_doc_examples.py $(top_builddir)/libasdf.la
+	$(PYTHON3) $(srcdir)/scripts/extract_doc_examples.py \
+	  $(top_srcdir)/README.rst --out-dir $(DOC_EXAMPLES_DIR) \
+	  --fixtures-dir $(srcdir)/fixtures
 	for f in $(DOC_EXAMPLES_DIR)/*.c; do \
 	    exe=$${f%.c}; \
 	    $(LIBTOOL) --mode=link $(CC) $(ASDF_CFLAGS) -I$(top_srcdir)/include \
-	        $$f $(top_builddir)/libasdf.la \
-	        -o $$exe; \
-	    ./$$exe $(srcdir)/fixtures/cube.asdf 2>&1 > $$exe.log; \
+	      $(ASDF_LDFLAGS) $$f $(top_builddir)/libasdf.la -o $$exe; \
 	done
 
-CONDITIONAL_CHECKS += check-doc-examples
+distclean-local:
+	rm -rf $(DOC_EXAMPLES_DIR)/*
 endif
-
-
-check-local: check-cpp-headers $(CONDITIONAL_CHECKS)
-
 
 AUTOMAKE_OPTIONS = parallel-tests
 

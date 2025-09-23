@@ -38,7 +38,8 @@ tests/*.log
 tests/*.trs
 tests/*.unit
 tests/doc_examples
-tests/test_cpp_headers.cpp
+tests/test-cpp-headers
+tests/test-cpp-headers.cpp
 tests/tmp
 
 # doc build outputs
