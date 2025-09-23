@@ -146,3 +146,47 @@ jobs:
             exit 0
         fi
         cat "$logfile"
+
+  # Test the documentation build if the build passes
+  docs:
+    name: 'Build documentation'
+    runs-on: ubuntu-latest
+    needs: build_matrix
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Install documentation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            libclang-dev \
+            libfyaml-dev \
+            llvm \
+            python3-sphinx \
+            python3-clang
+          # Don't use docs/requirements.txt here since we are trying with the
+          # system packages for sphinx and clang
+          pip install furo hawkmoth
+
+      - name: Set LD_LIBRARY_PATH
+        run: echo "LD_LIBRARY_PATH=$(llvm-config --libdir):$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+      - name: Configure
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. \
+              -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+              -DENABLE_DOCS=YES \
+              ${{ matrix.cmake_options }} \
+              ${{ github.event.inputs.cmake_flags }}
+
+      - name: Build Sphinx documentation
+        run: make docs SPHINX_FLAGS=-W
+
+      - name: Install Sphinx documentation
+        run: make install
