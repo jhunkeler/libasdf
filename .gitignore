@@ -36,10 +36,6 @@ stamp-h1
 Makefile.in
 */Makefile.in
 */Makefile
-# editor-related
-.idea
-*~*
-*.swp
 
 # build outputs
 /asdf
@@ -65,19 +61,6 @@ tests/doc_examples
 tests/test-cpp-headers
 tests/test-cpp-headers.cpp
 tests/tmp
-cmake-build-*
-CMakeLists.txt.user
-CMakeCache.txt
-CMakeFiles
-CMakeScripts
-Testing
-Makefile
-cmake_install.cmake
-install_manifest.txt
-compile_commands.json
-CTestTestfile.cmake
-_deps
-CMakeUserPresets.json
 
 # doc build outputs
 docs/_build
