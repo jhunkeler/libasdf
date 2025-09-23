@@ -159,15 +159,18 @@ endif
 asdf_public_headers = $(wildcard $(top_srcdir)/include/asdf/*.h)
 cpp_header_test = $(builddir)/test-cpp-headers.cpp
 
+QUIET_OUT = $(if $(filter 1,$(V)),, > /dev/null)
+
 # Generate the C++ header test file
 $(cpp_header_test): $(asdf_public_headers) $(srcdir)/scripts/generate_test_cpp_headers.sh
-	$(srcdir)/scripts/generate_test_cpp_headers.sh $(top_srcdir)/include $@
+	$(AM_V_at)$(srcdir)/scripts/generate_test_cpp_headers.sh $(top_srcdir)/include $@ \
+	    $(QUIET_OUT)
 
 
 test-cpp-headers$(EXEEXT): $(cpp_header_test) $(top_builddir)/libasdf.la
-	$(LIBTOOL) --mode=link $(CXX) -std=c++17 -I$(top_srcdir)/include \
+	$(AM_V_at)$(LIBTOOL) --mode=link $(CXX) -std=c++17 -I$(top_srcdir)/include \
 	    $(ASDF_LDFLAGS) $(cpp_header_test) $(top_builddir)/libasdf.la \
-	    -o $@
+	    -o $@ $(QUIET_OUT)
 
 CLEANFILES = test-cpp-headers.cpp test-cpp-headers$(EXEEXT)
 
@@ -179,13 +182,13 @@ TESTS += $(DOC_EXAMPLES_DIR)/test-doc-examples.sh
 
 
 $(DOC_EXAMPLES_DIR)/test-doc-examples.sh: $(top_srcdir)/README.rst $(srcdir)/scripts/extract_doc_examples.py $(top_builddir)/libasdf.la
-	$(PYTHON3) $(srcdir)/scripts/extract_doc_examples.py \
+	$(AM_V_at)$(PYTHON3) $(srcdir)/scripts/extract_doc_examples.py \
 	  $(top_srcdir)/README.rst --out-dir $(DOC_EXAMPLES_DIR) \
-	  --fixtures-dir $(srcdir)/fixtures
-	for f in $(DOC_EXAMPLES_DIR)/*.c; do \
+	  --fixtures-dir $(srcdir)/fixtures $(QUIET_OUT)
+	$(AM_V_at)for f in $(DOC_EXAMPLES_DIR)/*.c; do \
 	    exe=$${f%.c}; \
 	    $(LIBTOOL) --mode=link $(CC) $(ASDF_CFLAGS) -I$(top_srcdir)/include \
-	      $(ASDF_LDFLAGS) $$f $(top_builddir)/libasdf.la -o $$exe; \
+	      $(ASDF_LDFLAGS) $$f $(top_builddir)/libasdf.la -o $$exe $(QUIET_OUT); \
 	done
 
 distclean-local:
