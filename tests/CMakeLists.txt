@@ -70,5 +70,5 @@ foreach(source_file ${source_files})
 
     set(ENV{OBJC_DISABLE_INITIALIZE_FORK_SAFETY} "YES")
     set_property(TEST ${test_executable}
-         PROPERTY ENVIRONMENT_MODIFICATION "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=set:YES;srcdir=set:${CMAKE_CURRENT_SOURCE_DIR};top_srcdir=set:${CMAKE_SOURCE_DIR}")
+         PROPERTY ENVIRONMENT_MODIFICATION "WITH_CMAKE=set:YES;OBJC_DISABLE_INITIALIZE_FORK_SAFETY=set:YES;srcdir=set:${CMAKE_CURRENT_SOURCE_DIR};top_srcdir=set:${CMAKE_SOURCE_DIR}")
 endforeach()
