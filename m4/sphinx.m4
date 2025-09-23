@@ -1,6 +1,6 @@
 dnl -- Check for sphinx installation and required dependencies to build the docs
 AC_DEFUN([_ASDF_DOCS_DISABLE_OR_ERROR], [
-  AS_IF([test "x$enable_doc" = "xyes"], [
+  AS_IF([test "x$enable_docs" = "xyes"], [
     AC_MSG_ERROR([$1, needed to build docs])
   ], [
     AC_MSG_NOTICE([$1, docs disabled])
