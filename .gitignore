@@ -9,6 +9,7 @@ config.h.in~
 config.log
 config.status
 configure
+configure~
 stamp-h1
 Makefile.in
 Makefile
@@ -36,8 +37,12 @@ third_party/*.la
 tests/*.log
 tests/*.trs
 tests/*.unit
+tests/doc_examples
 tests/test_cpp_headers.cpp
 tests/tmp
+
+# doc build outputs
+docs/_build
 
 # coverage outputs
 *-coverage.info
@@ -49,3 +54,6 @@ tests/tmp
 
 # distcheck outputs
 libasdf-*/
+
+# misc
+.gdb_history

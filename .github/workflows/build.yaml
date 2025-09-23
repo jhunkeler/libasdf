@@ -80,3 +80,44 @@ jobs:
 
       - name: Dist check
         run: make distcheck ${{ github.event.inputs.make_flags }}
+
+  # Test the documentation build if the build passes
+  docs:
+    name: 'Build documentation'
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Install documentation dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            autoconf \
+            automake \
+            libtool \
+            build-essential \
+            libclang-dev \
+            libfyaml-dev \
+            llvm \
+            python3-sphinx \
+            python3-clang
+          # Don't use docs/requirements.txt here since we are trying with the
+          # system packages for sphinx and clang
+          pip install furo hawkmoth
+
+      - name: Set LD_LIBRARY_PATH
+        run: echo "LD_LIBRARY_PATH=$(llvm-config --libdir):$LD_LIBRARY_PATH" >> $GITHUB_ENV
+
+      - name: Bootstrap autotools
+        run: ./autogen.sh
+
+      - name: Configure
+        run: |
+          ./configure --enable-docs
+
+      - name: Build Sphinx documentation
+        run: make docs SPHINX_FLAGS=-W

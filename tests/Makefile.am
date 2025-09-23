@@ -157,25 +157,48 @@ endif
 
 # Test headers on C++
 asdf_public_headers = $(wildcard $(top_srcdir)/include/asdf/*.h)
-cpp_header_test = $(builddir)/test_cpp_headers.cpp
+cpp_header_test = $(builddir)/test-cpp-headers.cpp
 
 # Generate the C++ header test file
 $(cpp_header_test): $(asdf_public_headers) $(srcdir)/scripts/generate_test_cpp_headers.sh
 	$(srcdir)/scripts/generate_test_cpp_headers.sh $(top_srcdir)/include $@
 
 
-CLEANFILES = test_cpp_headers.cpp
+CLEANFILES = test-cpp-headers.cpp
 
 
 check-cpp-headers: $(cpp_header_test) $(top_builddir)/libasdf.la
 	$(LIBTOOL) --mode=link $(CXX) -std=c++17 -I$(top_srcdir)/include \
 	    $(cpp_header_test) $(top_builddir)/libasdf.la \
-	    -o test_cpp_headers
-	./test_cpp_headers
-	@rm -f test_cpp_headers
+	    -o test-cpp-headers
+	./test-cpp-headers
+	@rm -f test-cpp-headers
+
+CONDITIONAL_CHECKS =
+# Check examples in the documentation
+if HAVE_PYTHON
+
+DOC_EXAMPLES_DIR = $(builddir)/doc_examples
+.PHONY: extract-doc-examples
+extract-doc-examples: $(srcdir)/scripts/extract_doc_examples.py
+	$(PYTHON3) $(srcdir)/scripts/extract_doc_examples.py $(top_srcdir)/README.rst \
+	    --out-dir $(DOC_EXAMPLES_DIR)
+
+.PHONY: test-doc-examples
+check-doc-examples: extract-doc-examples
+	@for f in $(DOC_EXAMPLES_DIR)/*.c; do \
+	    exe=$${f%.c}; \
+	    $(LIBTOOL) --mode=link $(CC) $(ASDF_CFLAGS) -I$(top_srcdir)/include \
+	        $$f $(top_builddir)/libasdf.la \
+	        -o $$exe; \
+	    ./$$exe $(srcdir)/fixtures/cube.asdf 2>&1 > $$exe.log; \
+	done
+
+CONDITIONAL_CHECKS += check-doc-examples
+endif
 
 
-check-local: check-cpp-headers
+check-local: check-cpp-headers $(CONDITIONAL_CHECKS)
 
 
 AUTOMAKE_OPTIONS = parallel-tests
@@ -187,6 +210,7 @@ EXTRA_DIST += \
     util.h \
     fixtures/255.asdf \
     fixtures/byteorder.asdf \
+    fixtures/cube.asdf \
     fixtures/events/basic.events.txt \
     fixtures/events/complex.events.txt \
     fixtures/events/compressed.events.txt \
@@ -217,6 +241,7 @@ EXTRA_DIST += \
     munit/COPYING \
     munit/munit.c \
     munit/munit.h \
+    scripts/extract_doc_examples.py \
     scripts/generate_test_cpp_headers.sh
 
 
@@ -226,6 +251,7 @@ check-am: $(submodules)
 # Clean up temp files from tests
 distclean-local:
 	rm -rf $(builddir)/tmp
+	rm -rf $(builddir)/doc_examples
 
 update-fixtures:
 	./test-events.sh --update
