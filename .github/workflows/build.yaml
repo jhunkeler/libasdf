@@ -105,7 +105,9 @@ jobs:
             llvm \
             python3-sphinx \
             python3-clang
-          pip install -r docs/requirements.txt
+          # Don't use docs/requirements.txt here since we are trying with the
+          # system packages for sphinx and clang
+          pip install furo hawkmoth
 
       - name: Set LD_LIBRARY_PATH
         run: echo "LD_LIBRARY_PATH=$(llvm-config --libdir):$LD_LIBRARY_PATH" >> $GITHUB_ENV
