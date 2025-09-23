@@ -182,7 +182,11 @@ jobs:
               ${{ github.event.inputs.cmake_flags }}
 
       - name: Build Sphinx documentation
-        run: make docs SPHINX_FLAGS=-W
+        run: |
+          cd build
+          make docs SPHINX_FLAGS=-W
 
       - name: Install Sphinx documentation
-        run: make install
+        run: |
+          cd build
+          make install
