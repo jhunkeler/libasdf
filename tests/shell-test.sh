@@ -60,13 +60,11 @@ for input in $@; do
 
   mkdir -p tmp
 
-  set -x
   asdfprog="${top_builddir}/asdf"
   if [ "x${WITH_CMAKE}" != "x" ]; then
       asdfprog="${top_builddir}/src/asdf"
   fi
   ${asdfprog} ${SUBCOMMAND} ${EXTRA_ARGS} "$input" 2>&1 > "$actual" || true
-  set +x
 
   if [ "$UPDATE" -eq 1 ]; then
     cp "$actual" "$expected"
