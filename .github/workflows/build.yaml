@@ -100,16 +100,22 @@ jobs:
             automake \
             libtool \
             build-essential \
+            libclang-dev \
             libfyaml-dev \
+            llvm \
             python3-sphinx \
             python3-clang
           pip install -r docs/requirements.txt
+
+      - name: Set LD_LIBRARY_PATH
+        run: echo "LD_LIBRARY_PATH=$(llvm-config --libdir):$LD_LIBRARY_PATH" >> $GITHUB_ENV
 
       - name: Bootstrap autotools
         run: ./autogen.sh
 
       - name: Configure
-        run: ./configure --enable-docs
+        run: |
+          ./configure --enable-docs
 
       - name: Build Sphinx documentation
         run: make docs SPHINX_FLAGS=-W
