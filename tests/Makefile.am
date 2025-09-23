@@ -169,7 +169,7 @@ CLEANFILES = test-cpp-headers.cpp
 
 check-cpp-headers: $(cpp_header_test) $(top_builddir)/libasdf.la
 	$(LIBTOOL) --mode=link $(CXX) -std=c++17 -I$(top_srcdir)/include \
-	    $(cpp_header_test) $(top_builddir)/libasdf.la \
+	    $(ASDF_LDFLAGS) $(cpp_header_test) $(top_builddir)/libasdf.la \
 	    -o test-cpp-headers
 	./test-cpp-headers
 	@rm -f test-cpp-headers
@@ -186,7 +186,7 @@ extract-doc-examples: $(srcdir)/scripts/extract_doc_examples.py
 
 .PHONY: test-doc-examples
 check-doc-examples: extract-doc-examples
-	@for f in $(DOC_EXAMPLES_DIR)/*.c; do \
+	for f in $(DOC_EXAMPLES_DIR)/*.c; do \
 	    exe=$${f%.c}; \
 	    $(LIBTOOL) --mode=link $(CC) $(ASDF_CFLAGS) -I$(top_srcdir)/include \
 	        $$f $(top_builddir)/libasdf.la \
