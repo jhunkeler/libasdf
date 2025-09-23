@@ -36,7 +36,7 @@ check_PROGRAMS = \
     test-value-util.unit
 
 TESTS_ENVIRONMENT = top_builddir=$(top_builddir) top_srcdir=$(top_srcdir)
-TESTS = $(check_PROGRAMS)
+TESTS = $(check_PROGRAMS) test-cpp-headers
 
 unit_test_cppflags = \
     $(AM_CPPFLAGS) \
@@ -159,47 +159,39 @@ endif
 asdf_public_headers = $(wildcard $(top_srcdir)/include/asdf/*.h)
 cpp_header_test = $(builddir)/test-cpp-headers.cpp
 
+QUIET_OUT = $(if $(filter 1,$(V)),, > /dev/null)
+
 # Generate the C++ header test file
 $(cpp_header_test): $(asdf_public_headers) $(srcdir)/scripts/generate_test_cpp_headers.sh
-	$(srcdir)/scripts/generate_test_cpp_headers.sh $(top_srcdir)/include $@
+	$(AM_V_at)$(srcdir)/scripts/generate_test_cpp_headers.sh $(top_srcdir)/include $@ \
+	    $(QUIET_OUT)
 
 
-CLEANFILES = test-cpp-headers.cpp
+test-cpp-headers$(EXEEXT): $(cpp_header_test) $(top_builddir)/libasdf.la
+	$(AM_V_at)$(LIBTOOL) --mode=link $(CXX) -std=c++17 -I$(top_srcdir)/include \
+	    $(ASDF_LDFLAGS) $(cpp_header_test) $(top_builddir)/libasdf.la \
+	    -o $@ $(QUIET_OUT)
+
+CLEANFILES = test-cpp-headers.cpp test-cpp-headers$(EXEEXT)
 
 
-check-cpp-headers: $(cpp_header_test) $(top_builddir)/libasdf.la
-	$(LIBTOOL) --mode=link $(CXX) -std=c++17 -I$(top_srcdir)/include \
-	    $(cpp_header_test) $(top_builddir)/libasdf.la \
-	    -o test-cpp-headers
-	./test-cpp-headers
-	@rm -f test-cpp-headers
-
-CONDITIONAL_CHECKS =
 # Check examples in the documentation
 if HAVE_PYTHON
-
 DOC_EXAMPLES_DIR = $(builddir)/doc_examples
-.PHONY: extract-doc-examples
-extract-doc-examples: $(srcdir)/scripts/extract_doc_examples.py
-	$(PYTHON3) $(srcdir)/scripts/extract_doc_examples.py $(top_srcdir)/README.rst \
-	    --out-dir $(DOC_EXAMPLES_DIR)
+TESTS += $(DOC_EXAMPLES_DIR)/test-doc-examples.sh
 
-.PHONY: test-doc-examples
-check-doc-examples: extract-doc-examples
-	@for f in $(DOC_EXAMPLES_DIR)/*.c; do \
+
+$(DOC_EXAMPLES_DIR)/test-doc-examples.sh: $(top_srcdir)/README.rst $(srcdir)/scripts/extract_doc_examples.py $(top_builddir)/libasdf.la
+	$(AM_V_at)$(PYTHON3) $(srcdir)/scripts/extract_doc_examples.py \
+	  $(top_srcdir)/README.rst --out-dir $(DOC_EXAMPLES_DIR) \
+	  --fixtures-dir $(srcdir)/fixtures $(QUIET_OUT)
+	$(AM_V_at)for f in $(DOC_EXAMPLES_DIR)/*.c; do \
 	    exe=$${f%.c}; \
 	    $(LIBTOOL) --mode=link $(CC) $(ASDF_CFLAGS) -I$(top_srcdir)/include \
-	        $$f $(top_builddir)/libasdf.la \
-	        -o $$exe; \
-	    ./$$exe $(srcdir)/fixtures/cube.asdf 2>&1 > $$exe.log; \
+	      $(ASDF_LDFLAGS) $$f $(top_builddir)/libasdf.la -o $$exe $(QUIET_OUT); \
 	done
 
-CONDITIONAL_CHECKS += check-doc-examples
 endif
-
-
-check-local: check-cpp-headers $(CONDITIONAL_CHECKS)
-
 
 AUTOMAKE_OPTIONS = parallel-tests
 
@@ -251,6 +243,7 @@ check-am: $(submodules)
 # Clean up temp files from tests
 distclean-local:
 	rm -rf $(builddir)/tmp
+	rm -rf $(srcdir)/doc_examples
 	rm -rf $(builddir)/doc_examples
 
 update-fixtures:

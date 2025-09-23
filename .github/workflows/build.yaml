@@ -19,11 +19,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]
-        cc: [gcc, clang]
-        exclude:
+        include:
           - os: macos-latest
+            cc: clang
+            asan: no
+          - os: ubuntu-latest
             cc: gcc
+            asan: no
+          - os: ubuntu-latest
+            cc: gcc
+            asan: yes
+          - os: ubuntu-latest
+            cc: clang
+            asan: no
 
     steps:
       - name: Checkout code
@@ -61,7 +69,12 @@ jobs:
         run: ./autogen.sh
 
       - name: Configure
-        run: ./configure CC=${{ matrix.cc }}
+        run: |
+          CONFIGURE_FLAGS=""
+          if [ "${{ matrix.asan }}" = "yes" ]; then
+            CONFIGURE_FLAGS="--with-asan"
+          fi
+          ./configure CC=${{ matrix.cc }} $CONFIGURE_FLAGS
 
       - name: Build
         run: make ${{ github.event.inputs.make_flags }}
