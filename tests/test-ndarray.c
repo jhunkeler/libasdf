@@ -140,6 +140,7 @@ MU_TEST(test_asdf_ndarray_read_3d_tile) {
     assert_not_null(tile); \
     dtype##_t expected[] = {0, 1, 2, 3, 4, 5, 6, 7}; \
     assert_memory_equal(8 * sizeof(dtype##_t), tile, expected); \
+    free(tile); \
     asdf_ndarray_destroy(ndarray); \
 } while (0)
 
