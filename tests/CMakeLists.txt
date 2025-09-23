@@ -23,13 +23,15 @@ add_library(util util.c)
 add_compile_definitions(REFERENCE_FILES_DIR=\"${REFERENCE_FILES_DIR}\")
 add_compile_definitions(FIXTURES_DIR=\"${FIXTURES_DIR}\")
 
+set(runtime "WITH_CMAKE=set:YES;OBJC_DISABLE_INITIALIZE_FORK_SAFETY=set:YES;srcdir=set:${CMAKE_CURRENT_SOURCE_DIR};top_srcdir=set:${CMAKE_SOURCE_DIR};top_builddir=set:${CMAKE_BINARY_DIR}")
+
 if (BASH_PROGRAM AND ENABLE_TESTING_SHELL)
     foreach(shell_file ${shell_files})
         file(REAL_PATH ${shell_file} shell_name)
         string(REGEX REPLACE ${ext_pattern} "" shell_name ${shell_file})
         add_test (${shell_name} ${BASH_PROGRAM} ${shell_file})
         set_property(TEST ${shell_name}
-		PROPERTY ENVIRONMENT_MODIFICATION "OBJC_DISABLE_INITIALIZE_FORK_SAFETY=set:YES;srcdir=set:${CMAKE_CURRENT_SOURCE_DIR};top_srcdir=set:${CMAKE_SOURCE_DIR};top_builddir=set:${CMAKE_BINARY_DIR}")
+		PROPERTY ENVIRONMENT_MODIFICATION "${runtime}")
     endforeach()
 endif()
 
@@ -62,13 +64,12 @@ foreach(source_file ${source_files})
     )
     add_test(${test_executable} ${test_executable})
     set_tests_properties(${test_executable}
-            PROPERTIES
-            TIMEOUT 240)
+        PROPERTIES TIMEOUT 240)
     set_tests_properties(${test_executable}
-            PROPERTIES
-            SKIP_RETURN_CODE 127)
+        PROPERTIES
+        SKIP_RETURN_CODE 127)
 
     set(ENV{OBJC_DISABLE_INITIALIZE_FORK_SAFETY} "YES")
     set_property(TEST ${test_executable}
-         PROPERTY ENVIRONMENT_MODIFICATION "WITH_CMAKE=set:YES;OBJC_DISABLE_INITIALIZE_FORK_SAFETY=set:YES;srcdir=set:${CMAKE_CURRENT_SOURCE_DIR};top_srcdir=set:${CMAKE_SOURCE_DIR}")
+        PROPERTY ENVIRONMENT_MODIFICATION "${runtime}")
 endforeach()
