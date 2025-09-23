@@ -191,8 +191,6 @@ $(DOC_EXAMPLES_DIR)/test-doc-examples.sh: $(top_srcdir)/README.rst $(srcdir)/scr
 	      $(ASDF_LDFLAGS) $$f $(top_builddir)/libasdf.la -o $$exe $(QUIET_OUT); \
 	done
 
-distclean-local:
-	rm -rf $(DOC_EXAMPLES_DIR)/*
 endif
 
 AUTOMAKE_OPTIONS = parallel-tests
@@ -245,6 +243,7 @@ check-am: $(submodules)
 # Clean up temp files from tests
 distclean-local:
 	rm -rf $(builddir)/tmp
+	rm -rf $(srcdir)/doc_examples
 	rm -rf $(builddir)/doc_examples
 
 update-fixtures:

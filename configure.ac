@@ -76,10 +76,14 @@ AC_ARG_ENABLE([debug],
   [enable_debug=no]
 )
 
-if test "x$enable_debug" = "xyes"; then
+
+ASDF_BUILD_MODE=
+
+AS_IF([test "x$enable_debug" = "xyes"], [
   ASDF_CFLAGS="$ASDF_CFLAGS -g -O0"
   AC_DEFINE([DEBUG], [1], [Define if debugging is enabled])
-fi
+  ASDF_BUILD_MODE="${ASDF_BUILD_MODE}debug "
+])
 
 AM_CONDITIONAL([DEBUG], [test "x$enable_debug" = "xyes"])
 
@@ -97,11 +101,12 @@ AC_ARG_WITH([asan],
   [with_asan=yes],
   [with_asan=no])
 
-if test "x$with_asan" = "xyes"; then
+AS_IF([test "x$with_asan" = "xyes"], [
   ASDF_CFLAGS="$ASDF_CFLAGS -O1 -g -fsanitize=address -fno-omit-frame-pointer"
   ASDF_LDFLAGS="$ASDF_LDFLAGS -fsanitize=address"
   AC_DEFINE([WITH_ASAN], [1], [Defined if building with AddressSanitizer])
-fi
+  ASDF_BUILD_MODE="${ASDF_BUILD_MODE}asan "
+])
 
 # Logging flags
 AC_ARG_ENABLE([logging],
@@ -195,8 +200,11 @@ AC_OUTPUT
 # Report
 CC_VERSION=`$CC --version | head -n 1`
 FYAML_VERSION=`$PKG_CONFIG --modversion libfyaml`
-printf "\n==================== Configuration Summary ====================\n"
+printf "\n===================== Configuration Summary =====================\n"
 printf "  %18s %s\n" "$PACKAGE_NAME version:" "$VERSION"
 printf "  %18s %s\n" "compiler version:" "$CC_VERSION"
 printf "  %18s %s\n" "libfyaml version:" "$FYAML_VERSION"
-printf "===============================================================\n\n"
+AS_IF([test "x$ASDF_BUILD_MODE" != "x"], [
+  printf "  %18s %s\n" "build:" "$ASDF_BUILD_MODE"
+])
+printf "=================================================================\n\n"
