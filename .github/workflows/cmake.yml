@@ -177,6 +177,7 @@ jobs:
           cd build
           cmake .. \
               -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+              -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
               -DENABLE_DOCS=YES \
               ${{ matrix.cmake_options }} \
               ${{ github.event.inputs.cmake_flags }}
