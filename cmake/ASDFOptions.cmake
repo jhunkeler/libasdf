@@ -10,6 +10,9 @@ set(ASDF_DEBUG OFF CACHE BOOL "Enable DEBUG code")
 
 # Documentation
 option(ENABLE_DOCS OFF)
+if (ENABLE_DOCS)
+    set(SPHINX_FLAGS "-W" CACHE STRING "Flags to pass to sphinx-build")
+endif ()
 
 # Testing
 option(ENABLE_TESTING OFF)
