@@ -9,8 +9,6 @@ add_custom_target(docs_clean
     COMMAND cmake -E remove_directory "${outdir}"
 )
 
-if(EXISTS ${outdir})
-    install(DIRECTORY "${outdir}"
-        DESTINATION "${CMAKE_INSTALL_DOCDIR}"
-    )
-endif()
+install(DIRECTORY "${outdir}"
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}"
+)
