@@ -5,6 +5,10 @@ include(CheckFunctionExists)
 include(CheckIncludeFile)
 
 add_compile_options(-fvisibility=hidden)
+
+if(ASDF_DEBUG)
+    add_compile_definitions(DEBUG)
+endif()
 add_compile_definitions(HAVE_CONFIG_H)
 add_compile_definitions(__USE_MISC)
 add_compile_definitions(_XOPEN_SOURCE)
