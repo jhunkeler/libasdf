@@ -22,7 +22,9 @@ MU_TEST(test_asdf_ndarray_read_1d_tile_contiguous) {
     uint64_t shape1[] = {2};
     uint8_t expected1[] = {2, 3};
     void* tile = NULL;
-    assert_int(asdf_ndarray_read_tile_ndim(ndarray, origin1, shape1, &tile), ==, ASDF_NDARRAY_OK);
+    asdf_ndarray_err_t err = asdf_ndarray_read_tile_ndim(
+        ndarray, origin1, shape1, ASDF_DATATYPE_SOURCE, &tile);
+    assert_int(err, ==, ASDF_NDARRAY_OK);
     assert_not_null(tile);
     assert_memory_equal(2 * sizeof(uint8_t), tile, expected1);
     free(tile);
@@ -35,7 +37,8 @@ MU_TEST(test_asdf_ndarray_read_1d_tile_contiguous) {
     uint64_t shape2[] = {1, 2};
     uint16_t expected2[] = {22, 23};
     tile = NULL;
-    assert_int(asdf_ndarray_read_tile_ndim(ndarray, origin2, shape2, &tile), ==, ASDF_NDARRAY_OK);
+    err = asdf_ndarray_read_tile_ndim(ndarray, origin2, shape2, ASDF_DATATYPE_SOURCE, &tile);
+    assert_int(err, ==, ASDF_NDARRAY_OK);
     assert_not_null(tile);
     assert_memory_equal(2 * sizeof(uint16_t), tile, expected2);
     free(tile);
@@ -48,7 +51,8 @@ MU_TEST(test_asdf_ndarray_read_1d_tile_contiguous) {
     uint64_t shape3[] = {1, 1, 2};
     int32_t expected3[] = {222, 223};
     tile = NULL;
-    assert_int(asdf_ndarray_read_tile_ndim(ndarray, origin3, shape3, &tile), ==, ASDF_NDARRAY_OK);
+    err = asdf_ndarray_read_tile_ndim(ndarray, origin3, shape3, ASDF_DATATYPE_SOURCE, &tile);
+    assert_int(err, ==, ASDF_NDARRAY_OK);
     assert_not_null(tile);
     assert_memory_equal(2 * sizeof(int32_t), tile, expected3);
     free(tile);
@@ -72,7 +76,9 @@ MU_TEST(test_asdf_ndarray_read_2d_tile) {
     assert_not_null(ndarray);
     uint16_t expected2[2][2] = {{22, 23}, {32, 33}};
     void* tile = NULL;
-    assert_int(asdf_ndarray_read_tile_2d(ndarray, 1, 1, 2, 2, NULL, &tile), ==, ASDF_NDARRAY_OK);
+    asdf_ndarray_err_t err = asdf_ndarray_read_tile_2d(
+        ndarray, 1, 1, 2, 2, NULL, ASDF_DATATYPE_SOURCE, &tile);
+    assert_int(err, ==, ASDF_NDARRAY_OK);
     assert_not_null(tile);
     assert_memory_equal(4 * sizeof(uint16_t), tile, expected2);
     free(tile);
@@ -84,7 +90,8 @@ MU_TEST(test_asdf_ndarray_read_2d_tile) {
     uint64_t origin3[] = {1};
     int32_t expected3[2][2] = {{222, 223}, {232, 233}};
     tile = NULL;
-    assert_int(asdf_ndarray_read_tile_2d(ndarray, 1, 1, 2, 2, origin3, &tile), ==, ASDF_NDARRAY_OK);
+    err = asdf_ndarray_read_tile_2d(ndarray, 1, 1, 2, 2, origin3, ASDF_DATATYPE_SOURCE, &tile);
+    assert_int(err, ==, ASDF_NDARRAY_OK);
     assert_not_null(tile);
     assert_memory_equal(4 * sizeof(int32_t), tile, expected3);
     free(tile);
@@ -108,7 +115,9 @@ MU_TEST(test_asdf_ndarray_read_3d_tile) {
     uint64_t shape3[] = {2, 2, 2};
     int32_t expected3[2][2][2] = {{{222, 223}, {232, 233}}, {{322, 323}, {332, 333}}};
     void *tile = NULL;
-    assert_int(asdf_ndarray_read_tile_ndim(ndarray, origin3, shape3, &tile), ==, ASDF_NDARRAY_OK);
+    asdf_ndarray_err_t err = asdf_ndarray_read_tile_ndim(
+        ndarray, origin3, shape3, ASDF_DATATYPE_SOURCE, &tile);
+    assert_int(err, ==, ASDF_NDARRAY_OK);
     assert_not_null(tile);
     assert_memory_equal(8 * sizeof(int32_t), tile, expected3);
     free(tile);
@@ -136,7 +145,8 @@ MU_TEST(test_asdf_ndarray_read_3d_tile) {
     assert_int(ndarray->byteorder, ==, (endian)); \
     void *tile = NULL; \
     uint64_t origin[] = {0}; \
-    assert_int(asdf_ndarray_read_tile_ndim(ndarray, origin, ndarray->shape, &tile), ==, ASDF_NDARRAY_OK); \
+    asdf_ndarray_err_t err = asdf_ndarray_read_tile_ndim(ndarray, origin, ndarray->shape, ASDF_DATATYPE_SOURCE, &tile); \
+    assert_int(err, ==, ASDF_NDARRAY_OK); \
     assert_not_null(tile); \
     dtype##_t expected[] = {0, 1, 2, 3, 4, 5, 6, 7}; \
     assert_memory_equal(8 * sizeof(dtype##_t), tile, expected); \

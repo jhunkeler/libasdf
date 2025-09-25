@@ -152,6 +152,7 @@ the ASDF tree, as well as extract block data.  Inline comments provide further e
            ndarray,
            origin,
            shape,
+           ASDF_DATATYPE_SOURCE,
            &tile
        );
  

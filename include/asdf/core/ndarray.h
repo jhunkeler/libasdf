@@ -72,6 +72,16 @@ typedef enum {
 } asdf_datatype_t;
 
 
+/**
+ * Alias for `ASDF_DATATYPE_UNKNOWN`
+ *
+ * This is used primarily in the `asdf_ndarray_read_tile_ndim` family of functions indicating
+ * that the destination data type is the same as the source datatype.  This alias is clearer
+ * in intent than `ASDF_DATATYPE_UNKNOWN` in this context.
+ */
+#define ASDF_DATATYPE_SOURCE ASDF_DATATYPE_UNKNOWN
+
+
 typedef enum {
     ASDF_BYTEORDER_BIG = '>',
     ASDF_BYTEORDER_LITTLE = '<'
@@ -84,6 +94,7 @@ typedef enum {
     ASDF_NDARRAY_ERR_OUT_OF_BOUNDS,
     ASDF_NDARRAY_ERR_OOM,
     ASDF_NDARRAY_ERR_INVAL,
+    ASDF_NDARRAY_ERR_OVERFLOW,
 } asdf_ndarray_err_t;
 
 
@@ -110,13 +121,16 @@ typedef struct asdf_ndarray asdf_ndarray_t;
 ASDF_DECLARE_EXTENSION(ndarray, asdf_ndarray_t);
 
 
-/* ndarray methods */
+/** ndarray methods */
 ASDF_EXPORT void *asdf_ndarray_data_raw(asdf_ndarray_t *ndarray, size_t *size);
+
 ASDF_EXPORT asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
-    asdf_ndarray_t *ndarray, const uint64_t *origin, const uint64_t *shape, void **out);
+    asdf_ndarray_t *ndarray, const uint64_t *origin, const uint64_t *shape, asdf_datatype_t dst_t,
+    void **dst);
+
 ASDF_EXPORT asdf_ndarray_err_t asdf_ndarray_read_tile_2d(
     asdf_ndarray_t *ndarray, uint64_t x, uint64_t y, uint64_t width, uint64_t height,
-    const uint64_t *plane_origin, void **out);
+    const uint64_t *plane_origin, asdf_datatype_t dst_t, void **dst);
 
 
 /**
