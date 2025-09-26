@@ -12,6 +12,7 @@
 #include "../log.h"
 #include "../util.h"
 #include "../value.h"
+#include "ndarray_convert.h"
 
 
 /* Internal definition of the asdf_ndarray_t type with extended internal fields */
@@ -97,52 +98,7 @@ static void warn_unsupported_datatype(asdf_value_t *value) {
 #endif
 
 
-asdf_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
-    if (!value)
-        return ASDF_DATATYPE_UNKNOWN;
-
-    const char *s = NULL;
-
-    /* Parse string datatypes partially, but we don't currently store the string length; they are
-     * not fully supported.  Structured datatypes are not supported at all but are at least
-     * indicated as structured.
-     */
-    if (asdf_value_is_sequence(value)) {
-        if (asdf_sequence_size(value) == 2) {
-            asdf_value_t *stringlen = asdf_sequence_get(value, 1);
-            if (!stringlen || !asdf_value_is_uint64(stringlen)) {
-                // Maybe it is a record array but we don't fully parse them yet
-                warn_unsupported_datatype(value);
-                return ASDF_DATATYPE_RECORD;
-            }
-
-            asdf_value_t *datatype = asdf_sequence_get(value, 0);
-
-            if (ASDF_VALUE_OK != asdf_value_as_string0(datatype, &s)) {
-                warn_unsupported_datatype(value);
-                return ASDF_DATATYPE_UNKNOWN;
-            }
-
-            if (strcmp(s, "ascii") == 0) {
-                warn_unsupported_datatype(value);
-                return ASDF_DATATYPE_ASCII;
-            } else if (strcmp(s, "ucs4") == 0) {
-                warn_unsupported_datatype(value);
-                return ASDF_DATATYPE_UCS4;
-            }
-        }
-        warn_unsupported_datatype(value);
-        return ASDF_DATATYPE_RECORD;
-    } else if (asdf_value_is_mapping(value)) {
-        warn_unsupported_datatype(value);
-        return ASDF_DATATYPE_RECORD;
-    }
-
-    if (ASDF_VALUE_OK != asdf_value_as_string0(value, &s)) {
-        warn_unsupported_datatype(value);
-        return ASDF_DATATYPE_UNKNOWN;
-    }
-
+asdf_datatype_t asdf_ndarray_datatype_from_string(const char *s) {
     if (strncmp(s, "int", 3) == 0) {
         const char *p = s + 3;
         if (*p && strspn(p, "123468") == strlen(p)) {
@@ -200,13 +156,67 @@ asdf_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
     if (strcmp(s, "bool8") == 0)
         return ASDF_DATATYPE_BOOL8;
 
-unknown : {
-#ifdef ASDF_LOG_ENABLED
-    const char *path = asdf_value_path(value);
-    ASDF_LOG(value->file, ASDF_LOG_WARN, "unknown datatype for ndarray at %s: %s", path, s);
-#endif
-}
+unknown:
     return ASDF_DATATYPE_UNKNOWN;
+}
+
+
+asdf_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
+    if (!value)
+        return ASDF_DATATYPE_UNKNOWN;
+
+    const char *s = NULL;
+
+    /* Parse string datatypes partially, but we don't currently store the string length; they are
+     * not fully supported.  Structured datatypes are not supported at all but are at least
+     * indicated as structured.
+     */
+    if (asdf_value_is_sequence(value)) {
+        if (asdf_sequence_size(value) == 2) {
+            asdf_value_t *stringlen = asdf_sequence_get(value, 1);
+            if (!stringlen || !asdf_value_is_uint64(stringlen)) {
+                // Maybe it is a record array but we don't fully parse them yet
+                warn_unsupported_datatype(value);
+                return ASDF_DATATYPE_RECORD;
+            }
+
+            asdf_value_t *datatype = asdf_sequence_get(value, 0);
+
+            if (ASDF_VALUE_OK != asdf_value_as_string0(datatype, &s)) {
+                warn_unsupported_datatype(value);
+                return ASDF_DATATYPE_UNKNOWN;
+            }
+
+            if (strcmp(s, "ascii") == 0) {
+                warn_unsupported_datatype(value);
+                return ASDF_DATATYPE_ASCII;
+            } else if (strcmp(s, "ucs4") == 0) {
+                warn_unsupported_datatype(value);
+                return ASDF_DATATYPE_UCS4;
+            }
+        }
+        warn_unsupported_datatype(value);
+        return ASDF_DATATYPE_RECORD;
+    } else if (asdf_value_is_mapping(value)) {
+        warn_unsupported_datatype(value);
+        return ASDF_DATATYPE_RECORD;
+    }
+
+    if (ASDF_VALUE_OK != asdf_value_as_string0(value, &s)) {
+        warn_unsupported_datatype(value);
+        return ASDF_DATATYPE_UNKNOWN;
+    }
+
+    asdf_datatype_t datatype = asdf_ndarray_datatype_from_string(s);
+
+#ifdef ASDF_LOG_ENABLED
+    if (datatype == ASDF_DATATYPE_UNKNOWN) {
+        const char *path = asdf_value_path(value);
+        ASDF_LOG(value->file, ASDF_LOG_WARN, "unknown datatype for ndarray at %s: %s", path, s);
+    }
+#endif
+
+    return datatype;
 }
 
 
@@ -491,91 +501,6 @@ ASDF_REGISTER_EXTENSION(
     NULL);
 
 
-static inline ssize_t asdf_ndarray_datatype_size(asdf_datatype_t type) {
-    switch (type) {
-    case ASDF_DATATYPE_INT8:
-    case ASDF_DATATYPE_UINT8:
-    case ASDF_DATATYPE_BOOL8:
-        return 1;
-    case ASDF_DATATYPE_INT16:
-    case ASDF_DATATYPE_UINT16:
-    case ASDF_DATATYPE_FLOAT16:
-        return 2;
-    case ASDF_DATATYPE_INT32:
-    case ASDF_DATATYPE_UINT32:
-    case ASDF_DATATYPE_FLOAT32:
-        return 4;
-    case ASDF_DATATYPE_INT64:
-    case ASDF_DATATYPE_UINT64:
-    case ASDF_DATATYPE_FLOAT64:
-    case ASDF_DATATYPE_COMPLEX64:
-        return 8;
-    case ASDF_DATATYPE_COMPLEX128:
-        return 16;
-
-    // These need additional context to determine size, not implemented yet
-    case ASDF_DATATYPE_ASCII:
-    case ASDF_DATATYPE_UCS4:
-    case ASDF_DATATYPE_RECORD:
-    case ASDF_DATATYPE_UNKNOWN:
-        return -1;
-    default:
-        UNREACHABLE();
-    }
-}
-
-
-typedef void (*asdf_ndarray_tile_copy_fn_t)(
-    void *restrict dst, const void *restrict src, size_t bytes, size_t elem_size);
-
-
-// Plain memcpy
-// TODO: For all these copy functions also pass in an argument specifying whether the src
-// and dst are aligned; then we can use __builtin_assume_aligned here though need to
-// have a clear routine for checking it first
-static inline void copy_memcpy(
-    void *restrict dst, const void *restrict src, size_t bytes, UNUSED(size_t elem_size)) {
-    memcpy(dst, src, bytes);
-}
-
-
-static inline void copy_and_bswap(
-    void *restrict dst, const void *restrict src, size_t bytes, size_t elem_size) {
-    switch (elem_size) {
-    case 2: {
-        uint16_t *d = dst;
-        const uint16_t *s = src;
-        for (size_t idx = 0; idx < bytes / 2; idx++)
-            d[idx] = __builtin_bswap16(s[idx]);
-        break;
-    }
-    case 4: {
-        uint32_t *d = dst;
-        const uint32_t *s = src;
-        for (size_t idx = 0; idx < bytes / 4; idx++)
-            d[idx] = __builtin_bswap32(s[idx]);
-        break;
-    }
-    case 8: {
-        uint64_t *d = dst;
-        const uint64_t *s = src;
-        for (size_t idx = 0; idx < bytes / 8; idx++)
-            d[idx] = __builtin_bswap64(s[idx]);
-        break;
-    }
-    default: {
-        uint8_t *d = dst;
-        const uint8_t *s = src;
-        // TODO: This only works if elem_size is a power of two
-        // May need an even more generic case for record types...
-        for (size_t idx = 0; idx < bytes / elem_size; idx++)
-            d[idx] = s[idx ^ (elem_size - 1)];
-        break;
-    }
-    }
-}
-
-
 static inline asdf_byteorder_t asdf_host_byteorder() {
     uint16_t x = 1;
     return (*(uint8_t *)&x) == 1 ? ASDF_BYTEORDER_LITTLE : ASDF_BYTEORDER_BIG;
@@ -600,18 +525,41 @@ void *asdf_ndarray_data_raw(asdf_ndarray_t *ndarray, size_t *size) {
 }
 
 
+size_t asdf_ndarray_size(asdf_ndarray_t *ndarray) {
+    if (UNLIKELY(!ndarray || ndarray->ndim == 0))
+        return 0;
+
+    size_t size = 1;
+
+    for (size_t idx = 0; idx < ndarray->ndim; idx++)
+        size *= ndarray->shape[idx];
+
+    return size;
+}
+
+
 asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
-    asdf_ndarray_t *ndarray, const uint64_t *origin, const uint64_t *shape, void **out) {
+    asdf_ndarray_t *ndarray,
+    const uint64_t *origin,
+    const uint64_t *shape,
+    asdf_datatype_t dst_t,
+    void **dst) {
     uint32_t ndim = ndarray->ndim;
 
-    if (UNLIKELY(!out || !ndarray || !origin || !shape))
+    if (UNLIKELY(!dst || !ndarray || !origin || !shape))
         // Invalid argument, must be non-NULL
         return ASDF_NDARRAY_ERR_INVAL;
 
-    ssize_t elsize = asdf_ndarray_datatype_size(ndarray->datatype);
+    asdf_datatype_t src_t = ndarray->datatype;
+
+    if (dst_t == ASDF_DATATYPE_SOURCE)
+        dst_t = src_t;
+
+    ssize_t src_elsize = asdf_ndarray_datatype_size(src_t);
+    ssize_t dst_elsize = asdf_ndarray_datatype_size(dst_t);
 
     // For not-yet-supported datatypes return ERR_INVAL
-    if (elsize < 1)
+    if (src_elsize < 1 || dst_elsize < 1)
         return ASDF_NDARRAY_ERR_INVAL;
 
     // Check bounds
@@ -633,31 +581,32 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
         }
     }
 
-    size_t tile_size = elsize * tile_nelems;
+    size_t src_tile_size = src_elsize * tile_nelems;
+    size_t tile_size = dst_elsize * tile_nelems;
     size_t data_size = 0;
     void *data = asdf_ndarray_data_raw(ndarray, &data_size);
 
-    if (data_size < tile_size)
+    if (data_size < src_tile_size)
         return ASDF_NDARRAY_ERR_OUT_OF_BOUNDS;
     //
     // If the function is passed a null pointer, allocate memory for the tile ourselves
     // User is responsible for freeing it.
-    void *dst = *out;
-    void *new_dst = NULL;
+    void *tile = *dst;
+    void *new_buf = NULL;
 
-    if (!dst) {
-        dst = malloc(tile_size);
+    if (!tile) {
+        tile = malloc(tile_size);
 
-        if (!dst)
+        if (!tile)
             return ASDF_NDARRAY_ERR_OOM;
 
-        new_dst = dst;
+        new_buf = tile;
     }
 
     // Special case, if size of the array is 0 just return now.  We do still malloc though even if
     // it's a bit pointless, just to ensure that the returned pointer can be freed successfully
     if (UNLIKELY(0 == ndim || 0 == tile_size)) {
-        *out = dst;
+        *dst = tile;
         return ASDF_NDARRAY_OK;
     }
 
@@ -666,7 +615,7 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
     int64_t *strides = malloc(sizeof(int64_t) * ndim);
 
     if (!strides) {
-        free(new_dst);
+        free(new_buf);
         return ASDF_NDARRAY_ERR_OOM;
     }
 
@@ -679,12 +628,27 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
 
     // Determine the copy strategy to use; right now this just handles whether-or-not byteswap
     // is needed, may have others depending on alignment, vectorization etc.
-    asdf_ndarray_tile_copy_fn_t copy_fn = copy_memcpy;
-    if (elsize > 1) {
+    bool byteswap = false;
+
+    if (src_elsize > 1) {
         asdf_byteorder_t host_byteorder = asdf_host_byteorder();
 
         if (host_byteorder != ndarray->byteorder)
-            copy_fn = copy_and_bswap;
+            byteswap = true;
+    }
+
+    asdf_ndarray_convert_fn_t convert = asdf_ndarray_get_convert_fn(src_t, dst_t, byteswap);
+
+    if (convert == NULL) {
+        const char *src_datatype = asdf_ndarray_datatype_to_string(src_t);
+        const char *dst_datatype = asdf_ndarray_datatype_to_string(dst_t);
+        ASDF_LOG(
+            ndarray->file,
+            ASDF_LOG_WARN,
+            "datatype conversion from \"%s\" to \"%s\" not supported for ndarray tile copy; "
+            "source bytes will be copied without conversion",
+            src_datatype,
+            dst_datatype);
     }
 
     size_t offset = origin[inner_dim];
@@ -698,17 +662,26 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
                 is_1d = false;
             }
         }
-        offset *= elsize;
+        offset *= src_elsize;
     } else {
-        offset = origin[0] * elsize;
+        offset = origin[0] * src_elsize;
     }
+
+    bool overflow = false;
 
     // Special case if the "tile" is one-dimensional, C-contiguous
     if (is_1d) {
         const void *src = data + offset;
-        copy_fn(dst, src, tile_size, elsize);
+        // If convert() returns non-zero it means an overflow occurred
+        // while copying; this does not necessarily have to be treated as an error depending
+        // on the application.
+        overflow = convert(tile, src, tile_nelems, dst_elsize);
         free(strides);
-        *out = dst;
+        *dst = tile;
+
+        if (overflow)
+            return ASDF_NDARRAY_ERR_OVERFLOW;
+
         return ASDF_NDARRAY_OK;
     }
 
@@ -716,25 +689,25 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
 
     if (!odometer) {
         free(strides);
-        free(new_dst);
+        free(new_buf);
         return ASDF_NDARRAY_ERR_OOM;
     }
 
     memcpy(odometer, origin, sizeof(uint64_t) * inner_dim);
     bool done = false;
     uint64_t inner_nelem = shape[inner_dim];
-    size_t inner_size = inner_nelem * elsize;
+    size_t inner_size = inner_nelem * dst_elsize;
     const void *src = data + offset;
-    void *dst_tmp = dst;
+    void *dst_tmp = tile;
 
     while (!done) {
-        copy_fn(dst_tmp, src, inner_size, elsize);
+        overflow = convert(dst_tmp, src, inner_nelem, dst_elsize);
         dst_tmp += inner_size;
 
         uint32_t dim = inner_dim - 1;
         do {
             odometer[dim]++;
-            src += strides[dim] * elsize;
+            src += strides[dim] * src_elsize;
 
             if (odometer[dim] < origin[dim] + shape[dim]) {
                 break;
@@ -746,15 +719,38 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
 
                 odometer[dim] = origin[dim];
                 // Back up
-                src -= shape[dim] * strides[dim] * elsize;
+                src -= shape[dim] * strides[dim] * src_elsize;
             }
         } while (dim-- > 0);
     }
 
     free(odometer);
     free(strides);
-    *out = dst;
+    *dst = tile;
+
+    if (overflow)
+        return ASDF_NDARRAY_ERR_OVERFLOW;
+
     return ASDF_NDARRAY_OK;
+}
+
+
+asdf_ndarray_err_t asdf_ndarray_read_all(
+    asdf_ndarray_t *ndarray, asdf_datatype_t dst_t, void **dst) {
+    if (UNLIKELY(!ndarray))
+        // Invalid argument, must be non-NULL
+        return ASDF_NDARRAY_ERR_INVAL;
+
+    const uint64_t *origin = calloc(ndarray->ndim, sizeof(uint64_t));
+
+    if (!origin)
+        return ASDF_NDARRAY_ERR_OOM;
+
+    asdf_ndarray_err_t err =
+        asdf_ndarray_read_tile_ndim(ndarray, origin, ndarray->shape, dst_t, dst);
+
+    free((void *)origin);
+    return err;
 }
 
 
@@ -765,7 +761,8 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_2d(
     uint64_t width,
     uint64_t height,
     const uint64_t *plane_origin,
-    void **out) {
+    asdf_datatype_t dst_t,
+    void **dst) {
     uint32_t ndim = ndarray->ndim;
 
     if (ndim < 2)
@@ -787,7 +784,7 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_2d(
     shape[ndim - 2] = height;
     shape[ndim - 1] = width;
 
-    asdf_ndarray_err_t err = asdf_ndarray_read_tile_ndim(ndarray, origin, shape, out);
+    asdf_ndarray_err_t err = asdf_ndarray_read_tile_ndim(ndarray, origin, shape, dst_t, dst);
     free(origin);
     free(shape);
     return err;

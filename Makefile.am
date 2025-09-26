@@ -5,6 +5,7 @@ src_files = \
     src/core/extension_metadata.c \
     src/core/history_entry.c \
     src/core/ndarray.c \
+    src/core/ndarray_convert.c \
     src/core/software.c \
     src/error.c \
     src/event.c \
@@ -23,6 +24,7 @@ src_headers = \
     src/block.h \
     src/compat/endian.h \
     src/context.h \
+    src/core/ndarray_convert.h \
     src/error.h \
     src/extension_registry.h \
     src/event.h \
