@@ -1,4 +1,0 @@
-sphinx>=8
-clang
-furo
-hawkmoth
