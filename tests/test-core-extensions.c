@@ -148,7 +148,7 @@ MU_TEST(test_asdf_ndarray) {
     assert_int(ndarray->source, ==, 0);
     assert_int(ndarray->ndim, ==, 1);
     assert_int(ndarray->shape[0], ==, 8);
-    assert_int(ndarray->datatype, ==, ASDF_DATATYPE_INT64);
+    assert_int(asdf_ndarray_datatype_type(ndarray->datatype), ==, ASDF_DATATYPE_INT64);
     assert_int(ndarray->byteorder, ==, ASDF_BYTEORDER_LITTLE);
     assert_int(ndarray->offset, ==, 0);
     assert_null(ndarray->strides);

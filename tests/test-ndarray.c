@@ -199,10 +199,10 @@ static MunitParameterEnum test_numeric_conversion_params[] = {
  * certain cases.
  *
  * For now this is just a big dumb switch statement--in issue #50 we will
- * refactor asdf_datatype_t to contain more information that can be used to
+ * refactor asdf_scalar_datatype_t to contain more information that can be used to
  * determine this.
  */
-static bool should_overflow(asdf_datatype_t src_t, asdf_datatype_t dst_t) {
+static bool should_overflow(asdf_scalar_datatype_t src_t, asdf_scalar_datatype_t dst_t) {
     if (src_t == dst_t)
         return false;
 
@@ -309,7 +309,7 @@ static bool should_overflow(asdf_datatype_t src_t, asdf_datatype_t dst_t) {
 }
 
 
-static double normalize_to_double(const void *src, asdf_datatype_t src_type, size_t idx) {
+static double normalize_to_double(const void *src, asdf_scalar_datatype_t src_type, size_t idx) {
     switch (src_type) {
         case ASDF_DATATYPE_INT8:    return ((const int8_t*)src)[idx];
         case ASDF_DATATYPE_UINT8:   return ((const uint8_t*)src)[idx];
@@ -332,7 +332,7 @@ typedef struct {
 } dtype_limits_t;
 
 
-static inline dtype_limits_t get_dtype_limits(asdf_datatype_t t) {
+static inline dtype_limits_t get_dtype_limits(asdf_scalar_datatype_t t) {
     switch (t) {
     case ASDF_DATATYPE_INT8:   return (dtype_limits_t){ INT8_MIN,  INT8_MAX };
     case ASDF_DATATYPE_INT16:  return (dtype_limits_t){ INT16_MIN, INT16_MAX };
@@ -361,7 +361,7 @@ static double clamp_value(double val, double min, double max) {
 }
 
 
-static void check_expected_values(void *arr, asdf_datatype_t src_t, asdf_datatype_t dst_t) {
+static void check_expected_values(void *arr, asdf_scalar_datatype_t src_t, asdf_scalar_datatype_t dst_t) {
     dtype_limits_t src_limits = get_dtype_limits(src_t);
     dtype_limits_t dst_limits = get_dtype_limits(dst_t);
     switch (src_t) {
@@ -444,8 +444,8 @@ MU_TEST(test_asdf_ndarray_numeric_conversion) {
     const char *src_dtype = munit_parameters_get(params, "src_dtype");
     const char *dst_dtype = munit_parameters_get(params, "dst_dtype");
     const char *src_byteorder = munit_parameters_get(params, "src_byteorder");
-    asdf_datatype_t src_t = asdf_ndarray_datatype_from_string(src_dtype);
-    asdf_datatype_t dst_t = asdf_ndarray_datatype_from_string(dst_dtype);
+    asdf_scalar_datatype_t src_t = asdf_ndarray_datatype_from_string(src_dtype);
+    asdf_scalar_datatype_t dst_t = asdf_ndarray_datatype_from_string(dst_dtype);
     assert_int(src_t, !=, ASDF_DATATYPE_UNKNOWN);
     assert_int(dst_t, !=, ASDF_DATATYPE_UNKNOWN);
     const char *path = get_fixture_file_path("numeric.asdf");

@@ -15,12 +15,18 @@
 #include "ndarray_convert.h"
 
 
-/* Internal definition of the asdf_ndarray_t type with extended internal fields */
+/** Internal definition of the asdf_datatype_t type */
+typedef struct asdf_datatype {
+    asdf_scalar_datatype_t datatype;
+} asdf_datatype_t;
+
+
+/** Internal definition of the asdf_ndarray_t type with extended internal fields */
 typedef struct asdf_ndarray {
     size_t source;
     uint32_t ndim;
     uint64_t *shape;
-    asdf_datatype_t datatype;
+    asdf_datatype_t *datatype;
     asdf_byteorder_t byteorder;
     uint64_t offset;
     int64_t *strides;
@@ -98,7 +104,7 @@ static void warn_unsupported_datatype(asdf_value_t *value) {
 #endif
 
 
-asdf_datatype_t asdf_ndarray_datatype_from_string(const char *s) {
+asdf_scalar_datatype_t asdf_ndarray_datatype_from_string(const char *s) {
     if (strncmp(s, "int", 3) == 0) {
         const char *p = s + 3;
         if (*p && strspn(p, "123468") == strlen(p)) {
@@ -161,7 +167,8 @@ unknown:
 }
 
 
-asdf_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
+// TODO: Full deserialization of compound datatypes; return an asdf_datatype_t *
+asdf_scalar_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
     if (!value)
         return ASDF_DATATYPE_UNKNOWN;
 
@@ -207,7 +214,7 @@ asdf_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
         return ASDF_DATATYPE_UNKNOWN;
     }
 
-    asdf_datatype_t datatype = asdf_ndarray_datatype_from_string(s);
+    asdf_scalar_datatype_t datatype = asdf_ndarray_datatype_from_string(s);
 
 #ifdef ASDF_LOG_ENABLED
     if (datatype == ASDF_DATATYPE_UNKNOWN) {
@@ -220,7 +227,7 @@ asdf_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
 }
 
 
-const char *asdf_ndarray_datatype_to_string(asdf_datatype_t datatype) {
+const char *asdf_ndarray_datatype_to_string(asdf_scalar_datatype_t datatype) {
     switch (datatype) {
     case ASDF_DATATYPE_UNKNOWN:
         return "<unknown>";
@@ -314,7 +321,7 @@ static asdf_value_err_t asdf_ndarray_deserialize(
     uint64_t source = 0;
     uint32_t ndim = 0; /* Will be determined from the "shape" property */
     uint64_t *shape = NULL;
-    asdf_datatype_t datatype = ASDF_DATATYPE_UNKNOWN;
+    asdf_scalar_datatype_t scalar_datatype = ASDF_DATATYPE_UNKNOWN;
     asdf_byteorder_t byteorder = ASDF_BYTEORDER_LITTLE;
     uint64_t offset = 0;
     int64_t *strides = NULL;
@@ -389,7 +396,7 @@ static asdf_value_err_t asdf_ndarray_deserialize(
     if (!(prop = get_required_property(value, "datatype")))
         goto failure;
 
-    datatype = asdf_ndarray_deserialize_datatype(prop);
+    scalar_datatype = asdf_ndarray_deserialize_datatype(prop);
     asdf_value_destroy(prop);
 
     /* Parse byteorder */
@@ -450,10 +457,19 @@ static asdf_value_err_t asdf_ndarray_deserialize(
         asdf_value_destroy(prop);
     }
 
+    asdf_datatype_t *datatype = calloc(1, sizeof(asdf_datatype_t));
+
+    if (!datatype)
+        return ASDF_VALUE_ERR_OOM;
+
+    datatype->datatype = scalar_datatype;
+
     asdf_ndarray_t *ndarray = calloc(1, sizeof(asdf_ndarray_t));
 
-    if (!ndarray)
+    if (!ndarray) {
+        free(datatype); // TODO: Will need some datatype_destroy function
         return ASDF_VALUE_ERR_OOM;
+    }
 
     ndarray->source = source;
     ndarray->ndim = ndim;
@@ -481,6 +497,7 @@ static void asdf_ndarray_dealloc(void *value) {
     asdf_block_close(ndarray->block);
     free(ndarray->shape);
     free(ndarray->strides);
+    free(ndarray->datatype);
     ZERO_MEMORY(ndarray, sizeof(asdf_ndarray_t));
     free(ndarray);
 }
@@ -542,7 +559,7 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
     asdf_ndarray_t *ndarray,
     const uint64_t *origin,
     const uint64_t *shape,
-    asdf_datatype_t dst_t,
+    asdf_scalar_datatype_t dst_t,
     void **dst) {
     uint32_t ndim = ndarray->ndim;
 
@@ -550,13 +567,13 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
         // Invalid argument, must be non-NULL
         return ASDF_NDARRAY_ERR_INVAL;
 
-    asdf_datatype_t src_t = ndarray->datatype;
+    asdf_scalar_datatype_t src_t = ndarray->datatype->datatype;
 
     if (dst_t == ASDF_DATATYPE_SOURCE)
         dst_t = src_t;
 
-    ssize_t src_elsize = asdf_ndarray_datatype_size(src_t);
-    ssize_t dst_elsize = asdf_ndarray_datatype_size(dst_t);
+    ssize_t src_elsize = asdf_ndarray_scalar_datatype_size(src_t);
+    ssize_t dst_elsize = asdf_ndarray_scalar_datatype_size(dst_t);
 
     // For not-yet-supported datatypes return ERR_INVAL
     if (src_elsize < 1 || dst_elsize < 1)
@@ -736,7 +753,7 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
 
 
 asdf_ndarray_err_t asdf_ndarray_read_all(
-    asdf_ndarray_t *ndarray, asdf_datatype_t dst_t, void **dst) {
+    asdf_ndarray_t *ndarray, asdf_scalar_datatype_t dst_t, void **dst) {
     if (UNLIKELY(!ndarray))
         // Invalid argument, must be non-NULL
         return ASDF_NDARRAY_ERR_INVAL;
@@ -761,7 +778,7 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_2d(
     uint64_t width,
     uint64_t height,
     const uint64_t *plane_origin,
-    asdf_datatype_t dst_t,
+    asdf_scalar_datatype_t dst_t,
     void **dst) {
     uint32_t ndim = ndarray->ndim;
 
@@ -788,4 +805,10 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_2d(
     free(origin);
     free(shape);
     return err;
+}
+
+
+/** Datatype functions */
+asdf_scalar_datatype_t asdf_ndarray_datatype_type(asdf_datatype_t *datatype) {
+    return datatype->datatype;
 }
