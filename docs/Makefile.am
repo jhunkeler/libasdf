@@ -1,7 +1,7 @@
 EXTRA_DIST = \
     conf.py \
+    environment.yml \
     index.rst \
-    requirements.txt \
     _static/css/globalnav.css \
     _static/images/favicon.ico \
     _static/images/logo-dark-mode.png \
