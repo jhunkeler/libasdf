@@ -45,6 +45,58 @@ def make_cube_asdf():
     return f
 
 
+def make_numeric():
+    f = asdf.AsdfFile()
+
+    # Map asdf datatypes to numpy dtypes; later we will also ensure
+    # little-endian and big-endian variants
+    datatypes = {
+        'int8': np.dtype('i1'),
+        'uint8': np.dtype('u1'),
+        'int16': np.dtype('i2'),
+        'uint16': np.dtype('u2'),
+        'int32': np.dtype('i4'),
+        'uint32': np.dtype('u4'),
+        'int64': np.dtype('i8'),
+        'uint64': np.dtype('u8'),
+        'float32': np.dtype('f4'),
+        'float64': np.dtype('f8')
+    }
+
+    def test_values_for_dtype(dt):
+        """Test values for each dtype, -1/0, 0, 1 and boundary values"""
+        if np.issubdtype(dt, np.integer):
+            info = np.iinfo(dt)
+            values = [
+                info.min,
+                -1 if info.min < 0 else 0,
+                0,
+                1,
+                info.max,
+            ]
+            return np.array(values, dtype=dt)
+
+        elif np.issubdtype(dt, np.floating):
+            info = np.finfo(dt)
+            values = [
+                info.min, -1.0, -info.tiny, 0.0, info.tiny, 1.0, info.max,
+                np.nan, np.inf, -np.inf
+            ]
+            return np.array(values, dtype=dt)
+
+        else:
+            raise TypeError(f"unsupported dtype {dt}")
+
+    for datatype, dtype in datatypes.items():
+        for endian in ('<', '>'):
+            name = datatype + endian
+            dtype = dtype.newbyteorder(endian)
+            array = test_values_for_dtype(dtype)
+            f[name] = array
+
+    return f
+
+
 def make_tiles_asdf():
     f = asdf.AsdfFile()
 
@@ -74,6 +126,7 @@ TEST_FILES = {
     '255.asdf': make_255_asdf,
     'byteorder.asdf': make_byteorder_asdf,
     'cube.asdf': make_cube_asdf,
+    'numeric.asdf': make_numeric,
     'tiles.asdf': make_tiles_asdf,
 }
 """Maps the names of test files to the function that generates it"""

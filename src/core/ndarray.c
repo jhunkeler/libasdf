@@ -98,52 +98,7 @@ static void warn_unsupported_datatype(asdf_value_t *value) {
 #endif
 
 
-asdf_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
-    if (!value)
-        return ASDF_DATATYPE_UNKNOWN;
-
-    const char *s = NULL;
-
-    /* Parse string datatypes partially, but we don't currently store the string length; they are
-     * not fully supported.  Structured datatypes are not supported at all but are at least
-     * indicated as structured.
-     */
-    if (asdf_value_is_sequence(value)) {
-        if (asdf_sequence_size(value) == 2) {
-            asdf_value_t *stringlen = asdf_sequence_get(value, 1);
-            if (!stringlen || !asdf_value_is_uint64(stringlen)) {
-                // Maybe it is a record array but we don't fully parse them yet
-                warn_unsupported_datatype(value);
-                return ASDF_DATATYPE_RECORD;
-            }
-
-            asdf_value_t *datatype = asdf_sequence_get(value, 0);
-
-            if (ASDF_VALUE_OK != asdf_value_as_string0(datatype, &s)) {
-                warn_unsupported_datatype(value);
-                return ASDF_DATATYPE_UNKNOWN;
-            }
-
-            if (strcmp(s, "ascii") == 0) {
-                warn_unsupported_datatype(value);
-                return ASDF_DATATYPE_ASCII;
-            } else if (strcmp(s, "ucs4") == 0) {
-                warn_unsupported_datatype(value);
-                return ASDF_DATATYPE_UCS4;
-            }
-        }
-        warn_unsupported_datatype(value);
-        return ASDF_DATATYPE_RECORD;
-    } else if (asdf_value_is_mapping(value)) {
-        warn_unsupported_datatype(value);
-        return ASDF_DATATYPE_RECORD;
-    }
-
-    if (ASDF_VALUE_OK != asdf_value_as_string0(value, &s)) {
-        warn_unsupported_datatype(value);
-        return ASDF_DATATYPE_UNKNOWN;
-    }
-
+asdf_datatype_t asdf_ndarray_datatype_from_string(const char *s) {
     if (strncmp(s, "int", 3) == 0) {
         const char *p = s + 3;
         if (*p && strspn(p, "123468") == strlen(p)) {
@@ -201,13 +156,67 @@ asdf_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
     if (strcmp(s, "bool8") == 0)
         return ASDF_DATATYPE_BOOL8;
 
-unknown : {
-#ifdef ASDF_LOG_ENABLED
-    const char *path = asdf_value_path(value);
-    ASDF_LOG(value->file, ASDF_LOG_WARN, "unknown datatype for ndarray at %s: %s", path, s);
-#endif
-}
+unknown:
     return ASDF_DATATYPE_UNKNOWN;
+}
+
+
+asdf_datatype_t asdf_ndarray_deserialize_datatype(asdf_value_t *value) {
+    if (!value)
+        return ASDF_DATATYPE_UNKNOWN;
+
+    const char *s = NULL;
+
+    /* Parse string datatypes partially, but we don't currently store the string length; they are
+     * not fully supported.  Structured datatypes are not supported at all but are at least
+     * indicated as structured.
+     */
+    if (asdf_value_is_sequence(value)) {
+        if (asdf_sequence_size(value) == 2) {
+            asdf_value_t *stringlen = asdf_sequence_get(value, 1);
+            if (!stringlen || !asdf_value_is_uint64(stringlen)) {
+                // Maybe it is a record array but we don't fully parse them yet
+                warn_unsupported_datatype(value);
+                return ASDF_DATATYPE_RECORD;
+            }
+
+            asdf_value_t *datatype = asdf_sequence_get(value, 0);
+
+            if (ASDF_VALUE_OK != asdf_value_as_string0(datatype, &s)) {
+                warn_unsupported_datatype(value);
+                return ASDF_DATATYPE_UNKNOWN;
+            }
+
+            if (strcmp(s, "ascii") == 0) {
+                warn_unsupported_datatype(value);
+                return ASDF_DATATYPE_ASCII;
+            } else if (strcmp(s, "ucs4") == 0) {
+                warn_unsupported_datatype(value);
+                return ASDF_DATATYPE_UCS4;
+            }
+        }
+        warn_unsupported_datatype(value);
+        return ASDF_DATATYPE_RECORD;
+    } else if (asdf_value_is_mapping(value)) {
+        warn_unsupported_datatype(value);
+        return ASDF_DATATYPE_RECORD;
+    }
+
+    if (ASDF_VALUE_OK != asdf_value_as_string0(value, &s)) {
+        warn_unsupported_datatype(value);
+        return ASDF_DATATYPE_UNKNOWN;
+    }
+
+    asdf_datatype_t datatype = asdf_ndarray_datatype_from_string(s);
+
+#ifdef ASDF_LOG_ENABLED
+    if (datatype == ASDF_DATATYPE_UNKNOWN) {
+        const char *path = asdf_value_path(value);
+        ASDF_LOG(value->file, ASDF_LOG_WARN, "unknown datatype for ndarray at %s: %s", path, s);
+    }
+#endif
+
+    return datatype;
 }
 
 
@@ -492,40 +501,6 @@ ASDF_REGISTER_EXTENSION(
     NULL);
 
 
-static inline ssize_t asdf_ndarray_datatype_size(asdf_datatype_t type) {
-    switch (type) {
-    case ASDF_DATATYPE_INT8:
-    case ASDF_DATATYPE_UINT8:
-    case ASDF_DATATYPE_BOOL8:
-        return 1;
-    case ASDF_DATATYPE_INT16:
-    case ASDF_DATATYPE_UINT16:
-    case ASDF_DATATYPE_FLOAT16:
-        return 2;
-    case ASDF_DATATYPE_INT32:
-    case ASDF_DATATYPE_UINT32:
-    case ASDF_DATATYPE_FLOAT32:
-        return 4;
-    case ASDF_DATATYPE_INT64:
-    case ASDF_DATATYPE_UINT64:
-    case ASDF_DATATYPE_FLOAT64:
-    case ASDF_DATATYPE_COMPLEX64:
-        return 8;
-    case ASDF_DATATYPE_COMPLEX128:
-        return 16;
-
-    // These need additional context to determine size, not implemented yet
-    case ASDF_DATATYPE_ASCII:
-    case ASDF_DATATYPE_UCS4:
-    case ASDF_DATATYPE_RECORD:
-    case ASDF_DATATYPE_UNKNOWN:
-        return -1;
-    default:
-        UNREACHABLE();
-    }
-}
-
-
 static inline asdf_byteorder_t asdf_host_byteorder() {
     uint16_t x = 1;
     return (*(uint8_t *)&x) == 1 ? ASDF_BYTEORDER_LITTLE : ASDF_BYTEORDER_BIG;
@@ -547,6 +522,19 @@ void *asdf_ndarray_data_raw(asdf_ndarray_t *ndarray, size_t *size) {
     }
 
     return asdf_block_data(ndarray->block, size);
+}
+
+
+size_t asdf_ndarray_size(asdf_ndarray_t *ndarray) {
+    if (UNLIKELY(!ndarray || ndarray->ndim == 0))
+        return 0;
+
+    size_t size = 1;
+
+    for (size_t idx = 0; idx < ndarray->ndim; idx++)
+        size *= ndarray->shape[idx];
+
+    return size;
 }
 
 
@@ -593,11 +581,12 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
         }
     }
 
+    size_t src_tile_size = src_elsize * tile_nelems;
     size_t tile_size = dst_elsize * tile_nelems;
     size_t data_size = 0;
     void *data = asdf_ndarray_data_raw(ndarray, &data_size);
 
-    if (data_size < tile_size)
+    if (data_size < src_tile_size)
         return ASDF_NDARRAY_ERR_OUT_OF_BOUNDS;
     //
     // If the function is passed a null pointer, allocate memory for the tile ourselves
@@ -743,6 +732,25 @@ asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
         return ASDF_NDARRAY_ERR_OVERFLOW;
 
     return ASDF_NDARRAY_OK;
+}
+
+
+asdf_ndarray_err_t asdf_ndarray_read_all(
+    asdf_ndarray_t *ndarray, asdf_datatype_t dst_t, void **dst) {
+    if (UNLIKELY(!ndarray))
+        // Invalid argument, must be non-NULL
+        return ASDF_NDARRAY_ERR_INVAL;
+
+    const uint64_t *origin = calloc(ndarray->ndim, sizeof(uint64_t));
+
+    if (!origin)
+        return ASDF_NDARRAY_ERR_OOM;
+
+    asdf_ndarray_err_t err =
+        asdf_ndarray_read_tile_ndim(ndarray, origin, ndarray->shape, dst_t, dst);
+
+    free((void *)origin);
+    return err;
 }
 
 

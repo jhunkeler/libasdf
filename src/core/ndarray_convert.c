@@ -6,6 +6,7 @@
  */
 
 #include <float.h>
+#include <math.h>
 #include <stdatomic.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -30,13 +31,17 @@ static inline float bswap_float(float x) {
     /* Use memcpy to avoid strict aliasing issues */
     uint32_t v;
     memcpy(&v, &x, sizeof(v));
-    return bswap_uint32_t(v);
+    v = bswap_uint32_t(v);
+    memcpy(&x, &v, sizeof(x));
+    return x;
 }
-static inline float bswap_double(double x) {
+static inline double bswap_double(double x) {
     /* Use memcpy to avoid strict aliasing issues */
     uint64_t v;
     memcpy(&v, &x, sizeof(v));
-    return bswap_uint64_t(v);
+    v = bswap_uint64_t(v);
+    memcpy(&x, &v, sizeof(x));
+    return x;
 }
 
 #define bswap_int8_t(x) (x)
@@ -45,8 +50,8 @@ static inline float bswap_double(double x) {
 #define bswap_int32_t(x) ((int32_t)bswap_uint32_t((uint32_t)(x)))
 #define bswap_int64_t(x) ((int64_t)bswap_uint64_t((uint64_t)(x)))
 
-#define _DO_BSWAP_0(src_t, val) /* no-op */
-#define _DO_BSWAP_1(src_t, val) val = bswap_##src_t(val);
+#define _DO_BSWAP_0(src_t, val) val = (val) /* no-op */
+#define _DO_BSWAP_1(src_t, val) val = bswap_##src_t(val)
 
 
 // TODO: For all these conversion functions also pass in an argument specifying whether the src
@@ -77,7 +82,8 @@ static atomic_bool conversion_table_initialized = false;
         const src_t *_src = (const src_t *)src; \
         for (size_t idx = 0; idx < n; idx++) { \
             src_t val = _src[idx]; \
-            _DO_BSWAP_##bswap(src_t, val) _dst[idx] = (dst_t)val; \
+            _DO_BSWAP_##bswap(src_t, val); \
+            _dst[idx] = (dst_t)val; \
         } \
         return 0; \
     }
@@ -97,15 +103,41 @@ static atomic_bool conversion_table_initialized = false;
         int overflow = 0; \
         for (size_t idx = 0; idx < n; idx++) { \
             src_t val = _src[idx]; \
-            _DO_BSWAP_##bswap(src_t, val) if (val < (src_t)(minval)) { \
-                val = (src_t)(minval); \
+            _DO_BSWAP_##bswap(src_t, val); \
+            if (val < (src_t)(minval)) { \
+                _dst[idx] = minval; \
                 overflow = 1; \
-            } \
-            else if (val > (src_t)(maxval)) { \
-                val = (src_t)(maxval); \
+            } else if (val > (src_t)(maxval)) { \
+                _dst[idx] = maxval; \
                 overflow = 1; \
+            } else { \
+                _dst[idx] = (dst_t)val; \
             } \
-            _dst[idx] = (dst_t)val; \
+        } \
+        return overflow; \
+    }
+
+
+/** Special case for conversion between floats, to preserve infinities */
+#define _DEFINE_CLAMP_FLOAT_CONV_FN(src_t, dst_t, name, bswap, minval, maxval) \
+    static int convert_##name(void *dst, const void *src, size_t n, UNUSED(size_t elsize)) { \
+        dst_t *_dst = (dst_t *)dst; \
+        const src_t *_src = (const src_t *)src; \
+        int overflow = 0; \
+        for (size_t idx = 0; idx < n; idx++) { \
+            src_t val = _src[idx]; \
+            _DO_BSWAP_##bswap(src_t, val); \
+            if (isinf(val)) { \
+                _dst[idx] = (dst_t)val; \
+            } else if (val < (src_t)(minval)) { \
+                _dst[idx] = minval; \
+                overflow = 1; \
+            } else if (val > (src_t)(maxval)) { \
+                _dst[idx] = maxval; \
+                overflow = 1; \
+            } else { \
+                _dst[idx] = (dst_t)val; \
+            } \
         } \
         return overflow; \
     }
@@ -118,11 +150,13 @@ static atomic_bool conversion_table_initialized = false;
         int overflow = 0; \
         for (size_t idx = 0; idx < n; idx++) { \
             src_t val = _src[idx]; \
-            _DO_BSWAP_##bswap(src_t, val) if (val > (src_t)(maxval)) { \
-                val = (src_t)(maxval); \
+            _DO_BSWAP_##bswap(src_t, val); \
+            if (val > (src_t)(maxval)) { \
+                _dst[idx] = maxval; \
                 overflow = 1; \
+            } else { \
+                _dst[idx] = (dst_t)val; \
             } \
-            _dst[idx] = (dst_t)val; \
         } \
         return overflow; \
     }
@@ -139,7 +173,8 @@ static atomic_bool conversion_table_initialized = false;
         int overflow = 0; \
         for (size_t idx = 0; idx < n; idx++) { \
             src_t val = _src[idx]; \
-            _DO_BSWAP_##bswap(src_t, val) if (val < (src_t)(0)) { \
+            _DO_BSWAP_##bswap(src_t, val); \
+            if (val < (src_t)(0)) { \
                 val = (src_t)(0); \
                 overflow = 1; \
             } \
@@ -157,6 +192,11 @@ static atomic_bool conversion_table_initialized = false;
 #define DEFINE_CLAMP_CONVERSION(src_name, src_t, dst_name, dst_t, minval, maxval) \
     _DEFINE_CLAMP_CONV_FN(src_t, dst_t, src_name##_to_##dst_name, 0, minval, maxval) \
     _DEFINE_CLAMP_CONV_FN(src_t, dst_t, src_name##_to_##dst_name##_bswap, 1, minval, maxval)
+
+
+#define DEFINE_CLAMP_FLOAT_CONVERSION(src_name, src_t, dst_name, dst_t, minval, maxval) \
+    _DEFINE_CLAMP_FLOAT_CONV_FN(src_t, dst_t, src_name##_to_##dst_name, 0, minval, maxval) \
+    _DEFINE_CLAMP_FLOAT_CONV_FN(src_t, dst_t, src_name##_to_##dst_name##_bswap, 1, minval, maxval)
 
 
 #define DEFINE_CLAMP_MAX_CONVERSION(src_name, src_t, dst_name, dst_t, maxval) \
@@ -296,7 +336,7 @@ DEFINE_CLAMP_CONVERSION(float32, float, uint64, uint64_t, 0, UINT64_MAX)
 
 /** Conversions from float64 */
 DEFINE_IDENTITY_CONVERSION(float64, double)
-DEFINE_CLAMP_CONVERSION(float64, double, float32, float, FLT_MIN, FLT_MAX)
+DEFINE_CLAMP_FLOAT_CONVERSION(float64, double, float32, float, -FLT_MAX, FLT_MAX)
 DEFINE_CLAMP_CONVERSION(float64, double, int8, int8_t, INT8_MIN, INT8_MAX)
 DEFINE_CLAMP_CONVERSION(float64, double, uint8, uint8_t, 0, UINT8_MAX)
 DEFINE_CLAMP_CONVERSION(float64, double, int16, int16_t, INT16_MIN, INT16_MAX)
