@@ -223,6 +223,7 @@ EXTRA_DIST += \
     fixtures/info/structured.info.txt \
     fixtures/info/unicode_bmp.info.txt \
     fixtures/info/unicode_spp.info.txt \
+    fixtures/numeric.asdf \
     fixtures/parse-minimal.asdf \
     fixtures/parse-minimal-extra-comment.asdf \
     fixtures/scalars.asdf \
