@@ -451,9 +451,10 @@ MU_TEST(test_asdf_ndarray_numeric_conversion) {
     const char *path = get_fixture_file_path("numeric.asdf");
     asdf_file_t *file = asdf_open_file(path, "r");
     assert_not_null(file);
-    const char *key = append_char(src_dtype, src_byteorder[0]);
+    char *key = append_char(src_dtype, src_byteorder[0]);
     asdf_ndarray_t *ndarray = NULL;
     asdf_value_err_t err = asdf_get_ndarray(file, key, &ndarray);
+    free(key);
     assert_int(err, ==, ASDF_VALUE_OK);
     void *array = NULL;
     asdf_ndarray_err_t n_err = asdf_ndarray_read_all(ndarray, dst_t, &array);
