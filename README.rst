@@ -7,6 +7,10 @@ libasdf
     :target: https://github.com/asdf-format/libasdf/actions
     :alt: CI Status
 
+.. image:: https://app.readthedocs.org/projects/libasdf/badge/?version=latest
+    :target: https://libasdf.readthedocs.io/en/latest/
+    :alt: Documentation Status
+
 .. _end-badges:
 
 A C library for reading (and eventually writing) `ASDF
