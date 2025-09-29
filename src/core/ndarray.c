@@ -152,7 +152,7 @@ static void asdf_datatype_clean(asdf_datatype_t *datatype) {
 }
 
 
-asdf_value_err_t asdf_ndarray_parse_string_datatype(
+static asdf_value_err_t asdf_ndarray_parse_string_datatype(
     asdf_value_t *value, asdf_byteorder_t byteorder, asdf_datatype_t *datatype) {
     asdf_value_t *type_val = asdf_sequence_get(value, 0);
     const char *type = NULL;
@@ -384,7 +384,7 @@ asdf_value_err_t asdf_ndarray_parse_datatype(
  *   shape: [3, 3]
  *
  */
-asdf_value_err_t asdf_ndarray_parse_field_datatype(
+static asdf_value_err_t asdf_ndarray_parse_field_datatype(
     asdf_value_t *value, asdf_byteorder_t byteorder, asdf_datatype_t *field) {
 
     if (!asdf_value_is_mapping(value))
@@ -441,7 +441,7 @@ asdf_value_err_t asdf_ndarray_parse_field_datatype(
 }
 
 
-asdf_value_err_t asdf_ndarray_parse_record_datatype(
+static asdf_value_err_t asdf_ndarray_parse_record_datatype(
     asdf_value_t *value, asdf_byteorder_t byteorder, asdf_datatype_t *datatype) {
     if (!asdf_value_is_sequence(value))
         return ASDF_VALUE_ERR_PARSE_FAILURE;
@@ -484,7 +484,7 @@ asdf_value_err_t asdf_ndarray_parse_record_datatype(
 }
 
 
-asdf_value_err_t asdf_ndarray_parse_datatype(
+static asdf_value_err_t asdf_ndarray_parse_datatype(
     asdf_value_t *value, asdf_byteorder_t byteorder, asdf_datatype_t *datatype) {
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
     if (UNLIKELY(!value || !datatype))
