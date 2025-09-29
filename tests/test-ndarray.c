@@ -473,13 +473,90 @@ MU_TEST(test_asdf_ndarray_numeric_conversion) {
 }
 
 
+MU_TEST(test_asdf_ndarray_record_datatype) {
+    const char *path = get_fixture_file_path("datatypes.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    asdf_ndarray_t *ndarray = NULL;
+    asdf_value_err_t err = asdf_get_ndarray(file, "record", &ndarray);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_not_null(ndarray);
+    asdf_datatype_t *datatype = &ndarray->datatype;
+    assert_int(datatype->type, ==, ASDF_DATATYPE_RECORD);
+    // sizeof(S4) + sizeof(U4) + sizeof(int16) + 3 * 3 * sizeof(float)
+    assert_int(datatype->size, ==, 58);
+    assert_null(datatype->name);
+    assert_int(datatype->byteorder, ==, ASDF_BYTEORDER_BIG);
+    assert_int(datatype->ndim, ==, 0);
+    assert_null(datatype->shape);
+    assert_int(datatype->nfields, ==, 4);
+    assert_not_null(datatype->fields);
+
+    // Test each field
+    // S4
+    const asdf_datatype_t *field = &datatype->fields[0];
+    assert_int(field->type, ==, ASDF_DATATYPE_ASCII);
+    assert_int(field->size, ==, 4);
+    assert_not_null(field->name);
+    assert_string_equal(field->name, "string");
+    assert_int(field->byteorder, ==, ASDF_BYTEORDER_BIG);
+    assert_int(field->ndim, ==, 0);
+    assert_null(field->shape);
+    assert_int(field->nfields, ==, 0);
+    assert_null(field->fields);
+
+    // U4
+    field = &datatype->fields[1];
+    assert_int(field->type, ==, ASDF_DATATYPE_UCS4);
+    assert_int(field->size, ==, 16);
+    assert_not_null(field->name);
+    assert_string_equal(field->name, "unicode");
+    assert_int(field->byteorder, ==, ASDF_BYTEORDER_LITTLE);
+    assert_int(field->ndim, ==, 0);
+    assert_null(field->shape);
+    assert_int(field->nfields, ==, 0);
+    assert_null(field->fields);
+
+    // int16
+    field = &datatype->fields[2];
+    assert_int(field->type, ==, ASDF_DATATYPE_INT16);
+    assert_int(field->size, ==, 2);
+    assert_not_null(field->name);
+    assert_string_equal(field->name, "int");
+    assert_int(field->byteorder, ==, ASDF_BYTEORDER_BIG);
+    assert_int(field->ndim, ==, 0);
+    assert_null(field->shape);
+    assert_int(field->nfields, ==, 0);
+    assert_null(field->fields);
+
+    // (3x3) float32
+    field = &datatype->fields[3];
+    assert_int(field->type, ==, ASDF_DATATYPE_FLOAT32);
+    assert_int(field->size, ==, 36);
+    assert_not_null(field->name);
+    assert_string_equal(field->name, "matrix");
+    assert_int(field->byteorder, ==, ASDF_BYTEORDER_LITTLE);
+    assert_int(field->ndim, ==, 2);
+    uint64_t expected_shape[] = {3, 3};
+    assert_not_null(field->shape);
+    assert_memory_equal(2 * sizeof(uint64_t), field->shape, expected_shape);
+    assert_int(field->nfields, ==, 0);
+    assert_null(field->fields);
+
+    asdf_ndarray_destroy(ndarray);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_ndarray,
     MU_RUN_TEST(test_asdf_ndarray_read_1d_tile_contiguous),
     MU_RUN_TEST(test_asdf_ndarray_read_2d_tile),
     MU_RUN_TEST(test_asdf_ndarray_read_3d_tile),
     MU_RUN_TEST(test_asdf_ndarray_read_tile_byteswap),
-    MU_RUN_TEST(test_asdf_ndarray_numeric_conversion, test_numeric_conversion_params)
+    MU_RUN_TEST(test_asdf_ndarray_numeric_conversion, test_numeric_conversion_params),
+    MU_RUN_TEST(test_asdf_ndarray_record_datatype)
 );
 
 

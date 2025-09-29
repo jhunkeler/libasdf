@@ -138,7 +138,7 @@ typedef struct asdf_ndarray {
     size_t source;
     uint32_t ndim;
     uint64_t *shape;
-    asdf_datatype_t *datatype;
+    asdf_datatype_t datatype;
     asdf_byteorder_t byteorder;
     uint64_t offset;
     int64_t *strides;
@@ -236,7 +236,7 @@ ASDF_EXPORT const char *asdf_ndarray_datatype_to_string(asdf_scalar_datatype_t d
  *   non-scalar datatypes (for the present purposes strings are not considered
  *   scalars, only numeric datatypes)
  */
-static inline ssize_t asdf_ndarray_scalar_datatype_size(asdf_scalar_datatype_t type) {
+static inline size_t asdf_ndarray_scalar_datatype_size(asdf_scalar_datatype_t type) {
     switch (type) {
     case ASDF_DATATYPE_INT8:
     case ASDF_DATATYPE_UINT8:
@@ -262,9 +262,9 @@ static inline ssize_t asdf_ndarray_scalar_datatype_size(asdf_scalar_datatype_t t
     case ASDF_DATATYPE_UCS4:
     case ASDF_DATATYPE_RECORD:
     case ASDF_DATATYPE_UNKNOWN:
-        return -1;
+        return 0;
     default:
-        return -1;
+        return 0;
     }
 }
 
