@@ -84,14 +84,38 @@ typedef enum {
 #define ASDF_DATATYPE_SOURCE ASDF_DATATYPE_UNKNOWN
 
 
-/** Opaque struct representing an ndarray datatype */
+/**
+ * Struct representing the byte order/endianness of elements in an ndarray
+ * or field in a record datatype
+ */
+typedef enum {
+    /** Litle-endian **/
+    ASDF_BYTEORDER_BIG = '>',
+    /** Big-endian **/
+    ASDF_BYTEORDER_LITTLE = '<'
+} asdf_byteorder_t;
+
+
+// Forward-declaration of asdf_datatype_t;
 typedef struct asdf_datatype asdf_datatype_t;
 
 
-typedef enum {
-    ASDF_BYTEORDER_BIG = '>',
-    ASDF_BYTEORDER_LITTLE = '<'
-} asdf_byteorder_t;
+struct asdf_datatype {
+    asdf_scalar_datatype_t type;
+    uint64_t size;
+    const char *name;
+    asdf_byteorder_t byteorder;
+    uint32_t ndim;
+    const size_t *shape;
+    uint32_t nfields;
+    const asdf_datatype_t *fields;
+};
+
+
+/**
+ * Struct representing an ndarray datatype
+ */
+typedef struct asdf_datatype asdf_datatype_t;
 
 
 /* Error codes for reading ndarray data */
@@ -201,17 +225,6 @@ ASDF_EXPORT asdf_scalar_datatype_t asdf_ndarray_datatype_from_string(const char 
  *   This just provides the string representations for the common scalar datatypes.
  */
 ASDF_EXPORT const char *asdf_ndarray_datatype_to_string(asdf_scalar_datatype_t datatype);
-
-
-/**
- * Get the scalar type underling an `asdf_datatype_t *`
- *
- * :param datatype: An `asdf_datatype_t *` (typically ``ndarray->datatype)
- * :return: A member of `asdf_scalar_datatype_t`, which may also note a
- *   "non-scalar" type like `ASDF_DATATYPE_ASCII`, `ASDF_DATATYPE_UCS4` or
- *   `ASDF_DATATYPE_RECORD`
- */
-ASDF_EXPORT asdf_scalar_datatype_t asdf_ndarray_datatype_type(asdf_datatype_t *datatype);
 
 
 /**
