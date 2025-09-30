@@ -31,7 +31,7 @@ if (BASH_PROGRAM AND ENABLE_TESTING_SHELL)
         string(REGEX REPLACE ${ext_pattern} "" shell_name ${shell_file})
         add_test (${shell_name} ${BASH_PROGRAM} ${shell_file})
         set_property(TEST ${shell_name}
-		PROPERTY ENVIRONMENT_MODIFICATION "${runtime}")
+            PROPERTY ENVIRONMENT_MODIFICATION "${runtime}")
     endforeach()
 endif()
 
@@ -49,18 +49,18 @@ foreach(source_file ${source_files})
     endif()
 
     target_include_directories(${test_executable} PRIVATE
-	    ${FYAML_INCLUDEDIR}
-	    ${ARGP_INCLUDEDIR}
-	    ${STC_DIR}/include
-	    ${CMAKE_SOURCE_DIR}/include
-            ${CMAKE_SOURCE_DIR}/src
-            ${CMAKE_CURRENT_SOURCE_DIR}/include
-	    ${CMAKE_CURRENT_BINARY_DIR}/include
+        ${FYAML_INCLUDEDIR}
+        ${ARGP_INCLUDEDIR}
+        ${STC_DIR}/include
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${CMAKE_CURRENT_BINARY_DIR}/include
     )
     target_link_libraries(${test_executable} PRIVATE
-	    libasdf
-	    munit
-	    util
+        libasdf
+        munit
+        util
     )
     add_test(${test_executable} ${test_executable})
     set_tests_properties(${test_executable}
