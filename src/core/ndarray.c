@@ -371,7 +371,7 @@ invalid : {
 
 
 // Forward-declaration
-asdf_value_err_t asdf_ndarray_parse_datatype(
+static asdf_value_err_t asdf_ndarray_parse_datatype(
     asdf_value_t *value, asdf_byteorder_t byteorder, asdf_datatype_t *datatype);
 
 

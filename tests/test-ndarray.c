@@ -337,11 +337,13 @@ static inline dtype_limits_t get_dtype_limits(asdf_scalar_datatype_t t) {
     case ASDF_DATATYPE_INT8:   return (dtype_limits_t){ INT8_MIN,  INT8_MAX };
     case ASDF_DATATYPE_INT16:  return (dtype_limits_t){ INT16_MIN, INT16_MAX };
     case ASDF_DATATYPE_INT32:  return (dtype_limits_t){ INT32_MIN, INT32_MAX };
-    case ASDF_DATATYPE_INT64:  return (dtype_limits_t){ INT64_MIN, INT64_MAX };
+    // NOTE: Casting (U)INT64_MAX to double loses the exact value, but for this test
+    // it's OK.
+    case ASDF_DATATYPE_INT64:  return (dtype_limits_t){ INT64_MIN, (double)INT64_MAX };
     case ASDF_DATATYPE_UINT8:  return (dtype_limits_t){ 0,         UINT8_MAX };
     case ASDF_DATATYPE_UINT16: return (dtype_limits_t){ 0,         UINT16_MAX };
     case ASDF_DATATYPE_UINT32: return (dtype_limits_t){ 0,         UINT32_MAX };
-    case ASDF_DATATYPE_UINT64: return (dtype_limits_t){ 0,         UINT64_MAX };
+    case ASDF_DATATYPE_UINT64: return (dtype_limits_t){ 0,         (double)UINT64_MAX };
     case ASDF_DATATYPE_FLOAT32:return (dtype_limits_t){ -FLT_MAX,  FLT_MAX };
     case ASDF_DATATYPE_FLOAT64:return (dtype_limits_t){ -DBL_MAX,  DBL_MAX };
     default:

@@ -74,7 +74,7 @@ jobs:
           if [ "${{ matrix.asan }}" = "yes" ]; then
             CONFIGURE_FLAGS="--with-asan"
           fi
-          ./configure CC=${{ matrix.cc }} $CONFIGURE_FLAGS
+          ./configure CC=${{ matrix.cc }} CFLAGS=-Werror $CONFIGURE_FLAGS
 
       - name: Build
         run: make ${{ github.event.inputs.make_flags }}
