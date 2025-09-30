@@ -394,7 +394,7 @@ ASDF_CONSTRUCTOR static void asdf_conversion_table_init() {
 
 
 asdf_ndarray_convert_fn_t asdf_ndarray_get_convert_fn(
-    asdf_datatype_t src_t, asdf_datatype_t dst_t, bool byteswap) {
+    asdf_scalar_datatype_t src_t, asdf_scalar_datatype_t dst_t, bool byteswap) {
     if (src_t < ASDF_DATATYPE_INT8 || src_t > ASDF_DATATYPE_RECORD || dst_t < ASDF_DATATYPE_INT8 ||
         dst_t > ASDF_DATATYPE_RECORD)
         return NULL;

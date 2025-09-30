@@ -199,10 +199,10 @@ static MunitParameterEnum test_numeric_conversion_params[] = {
  * certain cases.
  *
  * For now this is just a big dumb switch statement--in issue #50 we will
- * refactor asdf_datatype_t to contain more information that can be used to
+ * refactor asdf_scalar_datatype_t to contain more information that can be used to
  * determine this.
  */
-static bool should_overflow(asdf_datatype_t src_t, asdf_datatype_t dst_t) {
+static bool should_overflow(asdf_scalar_datatype_t src_t, asdf_scalar_datatype_t dst_t) {
     if (src_t == dst_t)
         return false;
 
@@ -309,7 +309,7 @@ static bool should_overflow(asdf_datatype_t src_t, asdf_datatype_t dst_t) {
 }
 
 
-static double normalize_to_double(const void *src, asdf_datatype_t src_type, size_t idx) {
+static double normalize_to_double(const void *src, asdf_scalar_datatype_t src_type, size_t idx) {
     switch (src_type) {
         case ASDF_DATATYPE_INT8:    return ((const int8_t*)src)[idx];
         case ASDF_DATATYPE_UINT8:   return ((const uint8_t*)src)[idx];
@@ -332,16 +332,18 @@ typedef struct {
 } dtype_limits_t;
 
 
-static inline dtype_limits_t get_dtype_limits(asdf_datatype_t t) {
+static inline dtype_limits_t get_dtype_limits(asdf_scalar_datatype_t t) {
     switch (t) {
     case ASDF_DATATYPE_INT8:   return (dtype_limits_t){ INT8_MIN,  INT8_MAX };
     case ASDF_DATATYPE_INT16:  return (dtype_limits_t){ INT16_MIN, INT16_MAX };
     case ASDF_DATATYPE_INT32:  return (dtype_limits_t){ INT32_MIN, INT32_MAX };
-    case ASDF_DATATYPE_INT64:  return (dtype_limits_t){ INT64_MIN, INT64_MAX };
+    // NOTE: Casting (U)INT64_MAX to double loses the exact value, but for this test
+    // it's OK.
+    case ASDF_DATATYPE_INT64:  return (dtype_limits_t){ INT64_MIN, (double)INT64_MAX };
     case ASDF_DATATYPE_UINT8:  return (dtype_limits_t){ 0,         UINT8_MAX };
     case ASDF_DATATYPE_UINT16: return (dtype_limits_t){ 0,         UINT16_MAX };
     case ASDF_DATATYPE_UINT32: return (dtype_limits_t){ 0,         UINT32_MAX };
-    case ASDF_DATATYPE_UINT64: return (dtype_limits_t){ 0,         UINT64_MAX };
+    case ASDF_DATATYPE_UINT64: return (dtype_limits_t){ 0,         (double)UINT64_MAX };
     case ASDF_DATATYPE_FLOAT32:return (dtype_limits_t){ -FLT_MAX,  FLT_MAX };
     case ASDF_DATATYPE_FLOAT64:return (dtype_limits_t){ -DBL_MAX,  DBL_MAX };
     default:
@@ -361,7 +363,7 @@ static double clamp_value(double val, double min, double max) {
 }
 
 
-static void check_expected_values(void *arr, asdf_datatype_t src_t, asdf_datatype_t dst_t) {
+static void check_expected_values(void *arr, asdf_scalar_datatype_t src_t, asdf_scalar_datatype_t dst_t) {
     dtype_limits_t src_limits = get_dtype_limits(src_t);
     dtype_limits_t dst_limits = get_dtype_limits(dst_t);
     switch (src_t) {
@@ -444,8 +446,8 @@ MU_TEST(test_asdf_ndarray_numeric_conversion) {
     const char *src_dtype = munit_parameters_get(params, "src_dtype");
     const char *dst_dtype = munit_parameters_get(params, "dst_dtype");
     const char *src_byteorder = munit_parameters_get(params, "src_byteorder");
-    asdf_datatype_t src_t = asdf_ndarray_datatype_from_string(src_dtype);
-    asdf_datatype_t dst_t = asdf_ndarray_datatype_from_string(dst_dtype);
+    asdf_scalar_datatype_t src_t = asdf_ndarray_datatype_from_string(src_dtype);
+    asdf_scalar_datatype_t dst_t = asdf_ndarray_datatype_from_string(dst_dtype);
     assert_int(src_t, !=, ASDF_DATATYPE_UNKNOWN);
     assert_int(dst_t, !=, ASDF_DATATYPE_UNKNOWN);
     const char *path = get_fixture_file_path("numeric.asdf");
@@ -473,13 +475,90 @@ MU_TEST(test_asdf_ndarray_numeric_conversion) {
 }
 
 
+MU_TEST(test_asdf_ndarray_record_datatype) {
+    const char *path = get_fixture_file_path("datatypes.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    asdf_ndarray_t *ndarray = NULL;
+    asdf_value_err_t err = asdf_get_ndarray(file, "record", &ndarray);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_not_null(ndarray);
+    asdf_datatype_t *datatype = &ndarray->datatype;
+    assert_int(datatype->type, ==, ASDF_DATATYPE_RECORD);
+    // sizeof(S4) + sizeof(U4) + sizeof(int16) + 3 * 3 * sizeof(float)
+    assert_int(datatype->size, ==, 58);
+    assert_null(datatype->name);
+    assert_int(datatype->byteorder, ==, ASDF_BYTEORDER_BIG);
+    assert_int(datatype->ndim, ==, 0);
+    assert_null(datatype->shape);
+    assert_int(datatype->nfields, ==, 4);
+    assert_not_null(datatype->fields);
+
+    // Test each field
+    // S4
+    const asdf_datatype_t *field = &datatype->fields[0];
+    assert_int(field->type, ==, ASDF_DATATYPE_ASCII);
+    assert_int(field->size, ==, 4);
+    assert_not_null(field->name);
+    assert_string_equal(field->name, "string");
+    assert_int(field->byteorder, ==, ASDF_BYTEORDER_BIG);
+    assert_int(field->ndim, ==, 0);
+    assert_null(field->shape);
+    assert_int(field->nfields, ==, 0);
+    assert_null(field->fields);
+
+    // U4
+    field = &datatype->fields[1];
+    assert_int(field->type, ==, ASDF_DATATYPE_UCS4);
+    assert_int(field->size, ==, 16);
+    assert_not_null(field->name);
+    assert_string_equal(field->name, "unicode");
+    assert_int(field->byteorder, ==, ASDF_BYTEORDER_LITTLE);
+    assert_int(field->ndim, ==, 0);
+    assert_null(field->shape);
+    assert_int(field->nfields, ==, 0);
+    assert_null(field->fields);
+
+    // int16
+    field = &datatype->fields[2];
+    assert_int(field->type, ==, ASDF_DATATYPE_INT16);
+    assert_int(field->size, ==, 2);
+    assert_not_null(field->name);
+    assert_string_equal(field->name, "int");
+    assert_int(field->byteorder, ==, ASDF_BYTEORDER_BIG);
+    assert_int(field->ndim, ==, 0);
+    assert_null(field->shape);
+    assert_int(field->nfields, ==, 0);
+    assert_null(field->fields);
+
+    // (3x3) float32
+    field = &datatype->fields[3];
+    assert_int(field->type, ==, ASDF_DATATYPE_FLOAT32);
+    assert_int(field->size, ==, 36);
+    assert_not_null(field->name);
+    assert_string_equal(field->name, "matrix");
+    assert_int(field->byteorder, ==, ASDF_BYTEORDER_LITTLE);
+    assert_int(field->ndim, ==, 2);
+    uint64_t expected_shape[] = {3, 3};
+    assert_not_null(field->shape);
+    assert_memory_equal(2 * sizeof(uint64_t), field->shape, expected_shape);
+    assert_int(field->nfields, ==, 0);
+    assert_null(field->fields);
+
+    asdf_ndarray_destroy(ndarray);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_ndarray,
     MU_RUN_TEST(test_asdf_ndarray_read_1d_tile_contiguous),
     MU_RUN_TEST(test_asdf_ndarray_read_2d_tile),
     MU_RUN_TEST(test_asdf_ndarray_read_3d_tile),
     MU_RUN_TEST(test_asdf_ndarray_read_tile_byteswap),
-    MU_RUN_TEST(test_asdf_ndarray_numeric_conversion, test_numeric_conversion_params)
+    MU_RUN_TEST(test_asdf_ndarray_numeric_conversion, test_numeric_conversion_params),
+    MU_RUN_TEST(test_asdf_ndarray_record_datatype)
 );
 
 

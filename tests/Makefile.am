@@ -203,6 +203,7 @@ EXTRA_DIST += \
     fixtures/255.asdf \
     fixtures/byteorder.asdf \
     fixtures/cube.asdf \
+    fixtures/datatypes.asdf \
     fixtures/events/basic.events.txt \
     fixtures/events/complex.events.txt \
     fixtures/events/compressed.events.txt \

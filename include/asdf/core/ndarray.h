@@ -47,6 +47,8 @@ ASDF_BEGIN_DECLS
  * The special datatype `ASDF_DATATYPE_RECORD` is reserved for the case where the datatype is a
  * structured record (not yet supported beyond setting this datatype).
  *
+ * See `asdf_datatype_t` which represents a full datatype (including compound/record datatypes).
+ *
  * This should not be confused with `asdf_value_t` which are the scalar value types supported for
  * YAML tree values.
  */
@@ -69,7 +71,7 @@ typedef enum {
     ASDF_DATATYPE_ASCII,
     ASDF_DATATYPE_UCS4,
     ASDF_DATATYPE_RECORD
-} asdf_datatype_t;
+} asdf_scalar_datatype_t;
 
 
 /**
@@ -82,10 +84,38 @@ typedef enum {
 #define ASDF_DATATYPE_SOURCE ASDF_DATATYPE_UNKNOWN
 
 
+/**
+ * Struct representing the byte order/endianness of elements in an ndarray
+ * or field in a record datatype
+ */
 typedef enum {
+    /** Litle-endian **/
     ASDF_BYTEORDER_BIG = '>',
+    /** Big-endian **/
     ASDF_BYTEORDER_LITTLE = '<'
 } asdf_byteorder_t;
+
+
+// Forward-declaration of asdf_datatype_t;
+typedef struct asdf_datatype asdf_datatype_t;
+
+
+struct asdf_datatype {
+    asdf_scalar_datatype_t type;
+    uint64_t size;
+    const char *name;
+    asdf_byteorder_t byteorder;
+    uint32_t ndim;
+    const size_t *shape;
+    uint32_t nfields;
+    const asdf_datatype_t *fields;
+};
+
+
+/**
+ * Struct representing an ndarray datatype
+ */
+typedef struct asdf_datatype asdf_datatype_t;
 
 
 /* Error codes for reading ndarray data */
@@ -144,30 +174,30 @@ ASDF_EXPORT size_t asdf_ndarray_size(asdf_ndarray_t *ndarray);
  * different numeric type than the source array.
  *
  * :param ndarray: The `asdf_ndarray_t *` handle to the ndarray
- * :param dst_t: An `asdf_datatype_t` to convert to, or `ASDF_DATATYPE_SOURCE`
- *   to keep the original source datatype
+ * :param dst_t: An `asdf_scalar_datatype_t` to convert to, or
+ *   `ASDF_DATATYPE_SOURCE` to keep the original source datatype
  * :param dst: Pointer to a destination `void *` already allocated to receive
  *   the exact number of bytes in the source ndarray, or `NULL` to indicate
  *   that a buffer should be allocated.  In the latter case the caller is
  *   responsible for freeing the allocated buffer.
  */
 ASDF_EXPORT asdf_ndarray_err_t asdf_ndarray_read_all(
-    asdf_ndarray_t *ndarray, asdf_datatype_t dst_t, void **dst);
+    asdf_ndarray_t *ndarray, asdf_scalar_datatype_t dst_t, void **dst);
 
 ASDF_EXPORT asdf_ndarray_err_t asdf_ndarray_read_tile_ndim(
-    asdf_ndarray_t *ndarray, const uint64_t *origin, const uint64_t *shape, asdf_datatype_t dst_t,
-    void **dst);
+    asdf_ndarray_t *ndarray, const uint64_t *origin, const uint64_t *shape,
+    asdf_scalar_datatype_t dst_t, void **dst);
 
 ASDF_EXPORT asdf_ndarray_err_t asdf_ndarray_read_tile_2d(
     asdf_ndarray_t *ndarray, uint64_t x, uint64_t y, uint64_t width, uint64_t height,
-    const uint64_t *plane_origin, asdf_datatype_t dst_t, void **dst);
+    const uint64_t *plane_origin, asdf_scalar_datatype_t dst_t, void **dst);
 
 
 /**
- * Parse an ASDF ndarray scalar datatype and return the corresponding `asdf_datatype_t`
+ * Parse an ASDF ndarray scalar datatype and return the corresponding `asdf_scalar_datatype_t`
  *
  * :param s: Null-terminated string
- * :return: The corresponding `asdf_datatype_t` or `ASDF_DATATYPE_UNKNOWN`
+ * :return: The corresponding `asdf_scalar_datatype_t` or `ASDF_DATATYPE_UNKNOWN`
  *
  * .. note::
  *
@@ -177,11 +207,11 @@ ASDF_EXPORT asdf_ndarray_err_t asdf_ndarray_read_tile_2d(
  *
  *   This just provides the string representations for the common scalar datatypes.
  */
-ASDF_EXPORT asdf_datatype_t asdf_ndarray_datatype_from_string(const char *s);
+ASDF_EXPORT asdf_scalar_datatype_t asdf_ndarray_datatype_from_string(const char *s);
 
 
 /**
- * Convert an `asdf_datatype_t` to its string representation
+ * Convert an `asdf_scalar_datatype_t` to its string representation
  *
  * :param datatype: A member of `ASDF_NDARRAY_DATATYPE`
  * :return: The string representation of the scalar datatype
@@ -194,18 +224,19 @@ ASDF_EXPORT asdf_datatype_t asdf_ndarray_datatype_from_string(const char *s);
  *
  *   This just provides the string representations for the common scalar datatypes.
  */
-ASDF_EXPORT const char *asdf_ndarray_datatype_to_string(asdf_datatype_t datatype);
+ASDF_EXPORT const char *asdf_ndarray_datatype_to_string(asdf_scalar_datatype_t datatype);
 
 
 /**
  * Get the size in bytes of a scalar (numeric) ndarray element for a given
- * `asdf_datatype_t`
+ * `asdf_scalar_datatype_t`
  *
  * :param type: A member of `asdf_datatype_t`
  * :return: Size in bytes of a single element of that datatype, or ``-1`` for
- *   unsupported datatypes
+ *   non-scalar datatypes (for the present purposes strings are not considered
+ *   scalars, only numeric datatypes)
  */
-static inline ssize_t asdf_ndarray_datatype_size(asdf_datatype_t type) {
+static inline size_t asdf_ndarray_scalar_datatype_size(asdf_scalar_datatype_t type) {
     switch (type) {
     case ASDF_DATATYPE_INT8:
     case ASDF_DATATYPE_UINT8:
@@ -227,14 +258,13 @@ static inline ssize_t asdf_ndarray_datatype_size(asdf_datatype_t type) {
     case ASDF_DATATYPE_COMPLEX128:
         return 16;
 
-    // These need additional context to determine size, not implemented yet
     case ASDF_DATATYPE_ASCII:
     case ASDF_DATATYPE_UCS4:
     case ASDF_DATATYPE_RECORD:
     case ASDF_DATATYPE_UNKNOWN:
-        return -1;
+        return 0;
     default:
-        return -1;
+        return 0;
     }
 }
 

@@ -45,6 +45,35 @@ def make_cube_asdf():
     return f
 
 
+def make_datatypes_asdf():
+    """
+    Make an ASDF file contaning an array with a complicated multi-field datatype
+
+    Interestingly, although the ASDF format supports "tuple" datatypes like
+    ``[int32, int32]`` there is no obvious way in the `asdf` Python library to
+    write such a datatype as NumPy structured dtypes always have named fields
+    (even if the name is an empty string).
+
+    We don't even have any reference files for this format.
+
+    Nevertheless, the libasdf datatype parsing treats these two cases
+    equivalently, the difference is just that anonymous fields don't have
+    a name.
+
+    For now the array itself in this test file is empty; this is only for
+    testing the datatype parsing.  Maybe later we change that.
+    """
+
+    f = asdf.AsdfFile()
+    dt = np.dtype({
+        'names': ['string', 'unicode', 'int', 'matrix'],
+        'formats': ['S4', 'U4', '>i2', '(3,3)f4']
+    })
+    arr = np.array([], dtype=dt)
+    f['record'] = arr
+    return f
+
+
 def make_numeric():
     f = asdf.AsdfFile()
 
@@ -126,6 +155,7 @@ TEST_FILES = {
     '255.asdf': make_255_asdf,
     'byteorder.asdf': make_byteorder_asdf,
     'cube.asdf': make_cube_asdf,
+    'datatypes.asdf': make_datatypes_asdf,
     'numeric.asdf': make_numeric,
     'tiles.asdf': make_tiles_asdf,
 }

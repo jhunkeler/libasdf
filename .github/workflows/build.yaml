@@ -10,7 +10,7 @@ on:
       make_flags:
         description: Extra flags to pass to make
         required: false
-        default: ''
+        default: 'CFLAGS=-Werror'
 
 jobs:
   build-and-test:
