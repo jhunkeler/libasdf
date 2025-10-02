@@ -6,6 +6,7 @@ target_sources(libasdf PUBLIC
     core/extension_metadata.c
     core/history_entry.c
     core/ndarray.c
+    core/ndarray_convert.c
     core/software.c
     block.c
     context.c
