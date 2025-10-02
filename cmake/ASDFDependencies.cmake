@@ -1,4 +1,6 @@
 option(BZIP2_NO_PKGCONFIG NO)
+# Ubuntu decided not to provide a bzip2 pkg-config file
+# Uses the find_package function instead.
 if(BZIP2_NO_PKGCONFIG)
     set(BZIP2_LIBRARIES "bz2")
     set(BZIP2_LIBDIR "" CACHE STRING "Directory containing libbz2 library")
@@ -10,11 +12,7 @@ if(BZIP2_NO_PKGCONFIG)
     add_link_options(${BZIP2_LDFLAGS})
     add_compile_options(${BZIP2_CFLAGS})
 else()
-    if(PKG_CONFIG_FOUND)
-        pkg_check_modules(BZIP2 bzip2 REQUIRED)
-    else()
-        message("pkg-config not found. Install pkg-config, or use BZIP2_NO_PKGCONFIG=YES.")
-    endif()
+    find_package(BZip2)
 endif()
 
 option(LZ4_NO_PKGCONFIG NO)
