@@ -741,6 +741,22 @@ void *asdf_ndarray_data_raw(asdf_ndarray_t *ndarray, size_t *size) {
     return asdf_block_data(ndarray->block, size);
 }
 
+/* ndarray methods */
+void *asdf_ndarray_data_raw_ex(asdf_ndarray_t *ndarray, void **block, size_t *size) {
+    if (!ndarray)
+        return NULL;
+
+    if (!ndarray->block) {
+        *block = asdf_block_open(ndarray->file, ndarray->source);
+
+        if (!*block)
+            return NULL;
+
+        ndarray->block = *block;
+    }
+
+    return asdf_block_data(ndarray->block, size);
+}
 
 size_t asdf_ndarray_size(asdf_ndarray_t *ndarray) {
     if (UNLIKELY(!ndarray || ndarray->ndim == 0))
