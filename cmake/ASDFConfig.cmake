@@ -50,14 +50,17 @@ check_function_exists(strptime HAVE_STRPTIME)
 
 if(BZIP2_FOUND)
     set(HAVE_BZIP2 1)
+    add_compile_definitions(HAVE_BZIP2)
 endif()
 
 if(LZ4_FOUND)
     set(HAVE_LZ4 1)
+    add_compile_definitions(HAVE_LZ4)
 endif()
 
 if(ZLIB_FOUND)
     set(HAVE_ZLIB 1)
+    add_compile_definitions(HAVE_ZLIB)
 endif()
 
 # Write out the header

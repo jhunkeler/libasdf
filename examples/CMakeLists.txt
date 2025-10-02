@@ -7,7 +7,6 @@ target_include_directories(asdf_dump_key PRIVATE
 )
 target_link_libraries(asdf_dump_key
     libasdf
-    m
     ${BZIP2_LIBRARIES}
     ${LZ4_LIBRARIES}
     ${ZLIB_LIBRARIES}
