@@ -76,8 +76,7 @@ jobs:
         cmake .. \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
-          -DENABLE_TESTING=YES \
-          -DENABLE_TESTING_SHELL=YES \
+          -DENABLE_TESTING_ALL=YES \
           ${{ matrix.cmake_options }} \
           ${{ github.event.inputs.cmake_flags }}
         make ${{ github.event.inputs.make_flags }}
@@ -98,8 +97,7 @@ jobs:
         cmake .. \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_INSTALL_PREFIX=${{ env.INSTALL_PREFIX }} \
-          -DENABLE_TESTING=YES \
-          -DENABLE_TESTING_SHELL=YES \
+          -DENABLE_TESTING_ALL=YES \
           -DARGP_NO_PKGCONFIG=YES \
           -DARGP_LIBDIR=${hbroot}/lib \
           -DARGP_INCLUDEDIR=${hbroot}/include \
