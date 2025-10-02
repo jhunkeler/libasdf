@@ -85,22 +85,15 @@ static char *get_formatter(const asdf_scalar_datatype_t datatype) {
 #define REPR(TYPE) \
     do { \
         const TYPE *value = data; \
-        printf(repr, row, col, *value); \
+        printf(repr, *value); \
     } while (0)
-
-#define REPR_CH(TYPE) \
-    do { \
-        const TYPE *value = data; \
-        printf(repr, value[0]); \
-    } while (0)
-
 
 static void print_value(const asdf_scalar_datatype_t datatype, const void *data, const size_t row, const size_t col, const int method) {
     char repr[BUFSIZ] = {0};
     static int x = 0;
 
     if (method == PRINT_VALUE_INDEX) {
-        snprintf(repr, sizeof(repr), "[%%4zu][%%4zu] = %s\n", get_formatter(datatype));
+        snprintf(repr, sizeof(repr), "[%4zu][%4zu] = %s\n", row, col, get_formatter(datatype));
     } else if (method == PRINT_VALUE_ROW) {
         if (col == 0) {
             snprintf(repr, sizeof(repr), "\nRow %zu\n", row);
@@ -147,10 +140,10 @@ static void print_value(const asdf_scalar_datatype_t datatype, const void *data,
             REPR(bool);
             break;
         case ASDF_DATATYPE_UCS4:
-            REPR_CH(uint32_t);
+            REPR(uint32_t);
             break;
         case ASDF_DATATYPE_ASCII:
-            REPR_CH(uint8_t);
+            REPR(uint8_t);
             break;
         default:
             break;
