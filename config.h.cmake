@@ -41,5 +41,21 @@
 #cmakedefine HAVE_MACHINE_ENDIAN_H
 #cmakedefine HAVE_SYS_ENDIAN_H
 #cmakedefine HAVE_STRPTIME
+
+#cmakedefine HAVE_BZIP2
+#ifdef HAVE_BZIP2
+    #include <bzlib.h>
+#endif
+
+#cmakedefine HAVE_LZ4
+#ifdef HAVE_LZ4
+    #include <lz4.h>
+#endif
+
+#cmakedefine HAVE_ZLIB
+#ifdef HAVE_ZLIB
+    #include <zlib.h>
+#endif
+
 #cmakedefine01 HAVE_DECL_BE64TOH
 #endif
