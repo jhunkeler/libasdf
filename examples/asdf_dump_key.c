@@ -396,8 +396,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    printf("dimensions: %d\n", ndarray->ndim);
-    printf("shape: [");
+    printf("# DATA\n");
+    printf("# Dimensions: %d\n", ndarray->ndim);
+    printf("# Shape: [");
     for (size_t i = 0; i < ndarray->ndim; i++ ) {
         printf("%zu", ndarray->shape[i]);
         if (i < ndarray->ndim - 1) {
@@ -421,18 +422,19 @@ int main(int argc, char *argv[]) {
     void *data = xdata;
     const char *compressed = block->info.header.compression;
     if (compressed && strlen(compressed)) {
-        printf("data is compressed with %s\n", compressed);
+        printf("# Data is compressed with %s\n", compressed);
         data = decompress_data(compressed, xdata, compressed_size, src_size);
         if (!data) {
             fprintf(stderr, "error decompressing ndarray data from '%s': %d\n", datakey, err);
             return 1;
         }
-        printf("compressed size = %zu\n", size);
+        printf("# Compressed size: %zu bytes\n", size);
     } else {
-        printf("data is not compressed\n");
+        printf("# Data is not compressed\n");
     }
-    printf("size = %zu\n", src_size);
-    printf("----\n");
+
+    printf("# Size: %zu bytes\n", src_size);
+    printf("# ----\n");
 
     // Dump the data
     show_ndarray(ndarray, data, method);
