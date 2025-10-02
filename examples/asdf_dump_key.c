@@ -24,43 +24,8 @@
 
 #define CHUNK_SIZE 1024 * 64
 
-// Yanked out of ndarray code, and modified to partially handle ASCII and UCS4
-// This handy function really should be exported...
-static ssize_t asdf_ndarray_datatype_size(const asdf_datatype_t type) {
-    switch (type) {
-    case ASDF_DATATYPE_INT8:
-    case ASDF_DATATYPE_UINT8:
-    case ASDF_DATATYPE_BOOL8:
-    case ASDF_DATATYPE_ASCII:
-        return 1;
-    case ASDF_DATATYPE_INT16:
-    case ASDF_DATATYPE_UINT16:
-    case ASDF_DATATYPE_FLOAT16:
-        return 2;
-    case ASDF_DATATYPE_INT32:
-    case ASDF_DATATYPE_UINT32:
-    case ASDF_DATATYPE_FLOAT32:
-    case ASDF_DATATYPE_UCS4:
-        return 4;
-    case ASDF_DATATYPE_INT64:
-    case ASDF_DATATYPE_UINT64:
-    case ASDF_DATATYPE_FLOAT64:
-    case ASDF_DATATYPE_COMPLEX64:
-        return 8;
-    case ASDF_DATATYPE_COMPLEX128:
-        return 16;
-
-    // These need additional context to determine size, not implemented yet
-    case ASDF_DATATYPE_RECORD:
-    case ASDF_DATATYPE_UNKNOWN:
-        return -1;
-    default:
-        UNREACHABLE();
-    }
-}
-
 // Generate a printf formatter for a ndarray datatype
-static char *get_formatter(const int datatype) {
+static char *get_formatter(const asdf_scalar_datatype_t datatype) {
     static char fmt_s[255] = {0};
     switch (datatype) {
         case ASDF_DATATYPE_BOOL8:
@@ -122,7 +87,7 @@ static char *get_formatter(const int datatype) {
     } while (0)
 
 
-static void print_value(const int datatype, const void *data, const size_t row, const size_t col, const int method) {
+static void print_value(const asdf_scalar_datatype_t datatype, const void *data, const size_t row, const size_t col, const int method) {
     char repr[BUFSIZ] = {0};
     static int x = 0;
 
@@ -199,14 +164,14 @@ static void show_ndarray(const struct asdf_ndarray *ndarray, const void *data, c
 
         for (size_t row = 0; row < rows; row++) {
             for (size_t col = 0; col < cols; col++) {
-                p = data + (row * cols + col) * asdf_ndarray_datatype_size(ndarray->datatype);
-                print_value(ndarray->datatype, p, row, col, method);
+                p = data + (row * cols + col) * asdf_ndarray_scalar_datatype_size(ndarray->datatype.type);
+                print_value(ndarray->datatype.type, p, row, col, method);
             }
         }
     } else {
         for (size_t i = 0; i < ndarray->shape[0]; i++) {
-            p = data + i * asdf_ndarray_datatype_size(ndarray->datatype);
-            print_value(ndarray->datatype, p, 0, i, method);
+            p = data + i * asdf_ndarray_scalar_datatype_size(ndarray->datatype.type);
+            print_value(ndarray->datatype.type, p, 0, i, method);
         }
     }
 }
