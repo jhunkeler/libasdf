@@ -159,20 +159,32 @@ static void print_value(const asdf_scalar_datatype_t datatype, const void *data,
 // Dump the contents of a ndarray
 static void show_ndarray(const struct asdf_ndarray *ndarray, const void *data, const int method) {
     const void *p = NULL;
+    asdf_scalar_datatype_t datatype = ndarray->datatype.type;
+    int datatype_size = asdf_ndarray_scalar_datatype_size(datatype);
+
+    // Patch in minimal support for ASCII/UCS4
+    if (datatype_size == ASDF_DATATYPE_UNKNOWN) {
+        if (datatype == ASDF_DATATYPE_ASCII) {
+            datatype_size = sizeof(int8_t);
+        } else if (datatype == ASDF_DATATYPE_UCS4) {
+            datatype_size = sizeof(int32_t);
+        }
+    }
+
     if (ndarray->ndim > 1) {
         const size_t rows = ndarray->shape[0];
         const size_t cols = ndarray->shape[1];
 
         for (size_t row = 0; row < rows; row++) {
             for (size_t col = 0; col < cols; col++) {
-                p = data + (row * cols + col) * asdf_ndarray_scalar_datatype_size(ndarray->datatype.type);
-                print_value(ndarray->datatype.type, p, row, col, method);
+                p = data + (row * cols + col) * datatype_size;
+                print_value(datatype, p, row, col, method);
             }
         }
     } else {
         for (size_t i = 0; i < ndarray->shape[0]; i++) {
-            p = data + i * asdf_ndarray_scalar_datatype_size(ndarray->datatype.type);
-            print_value(ndarray->datatype.type, p, 0, i, method);
+            p = data + i * datatype_size;
+            print_value(datatype, p, 0, i, method);
         }
     }
 }
