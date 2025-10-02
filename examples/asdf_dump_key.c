@@ -1,12 +1,9 @@
-#include "config.h"
-
 // Most of the common "high-level" user APIs are included directly from `asdf.h` though
 // more should be added there later.
 #include <asdf.h>
 
 // E.g. this isn't included in asdf.h yet
 #include "src/util.h"
-
 
 #include <asdf/core/asdf.h>
 #include <asdf/core/ndarray.h>
@@ -15,7 +12,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <tgmath.h>
+
+#ifdef HAVE_BZIP2
+#include <bzlib.h>
+#endif
+
+#ifdef HAVE_LZ4
+#include <lz4.h>
+#endif
+
+#ifdef HAVE_ZLIB
+#include <zlib.h>
+#endif
 
 #include "src/block.h"
 #include "src/file.h"
