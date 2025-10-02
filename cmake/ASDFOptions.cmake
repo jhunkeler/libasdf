@@ -15,8 +15,14 @@ if (ENABLE_DOCS)
 endif ()
 
 # Testing
-option(ENABLE_TESTING OFF)
-option(ENABLE_TESTING_SHELL OFF)
+option(ENABLE_TESTING "Enable unit tests" OFF)
+option(ENABLE_TESTING_SHELL "Enable additional shell command tests" OFF)
+option(ENABLE_TESTING_ALL "Enable all tests (unit, shell, etc.)" OFF)
+
+if(ENABLE_TESTING_ALL)
+    set(ENABLE_TESTING YES CACHE BOOL "" FORCE)
+    set(ENABLE_TESTING_SHELL YES CACHE BOOL "" FORCE)
+endif()
 
 # Distribution
 set(CPACK_PACKAGE_VENDOR "STScI")
