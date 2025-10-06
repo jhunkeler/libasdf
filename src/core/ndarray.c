@@ -503,8 +503,8 @@ static asdf_value_err_t asdf_ndarray_parse_datatype(
             asdf_value_t *stringlen = asdf_sequence_get(value, 1);
             if (stringlen && asdf_value_is_uint64(stringlen)) {
                 is_string_datatype = true;
-                asdf_value_destroy(stringlen);
             }
+            asdf_value_destroy(stringlen);
         }
 
         if (is_string_datatype)
