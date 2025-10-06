@@ -82,13 +82,13 @@ static char *get_formatter(const asdf_scalar_datatype_t datatype) {
 #define PRINT_VALUE_ROW 1     // Row n
                               // VALUE (8x)
 
-#define REPR(TYPE) \
+#define PRINT_AS(TYPE) \
     do { \
         const TYPE *value = data; \
-        printf(repr, *value); \
+        fprintf(fp, repr, *value); \
     } while (0)
 
-static void print_value(const asdf_scalar_datatype_t datatype, const void *data, const size_t row, const size_t col, const int method) {
+static void print_value(FILE *fp, const asdf_scalar_datatype_t datatype, const void *data, const size_t row, const size_t col, const int method) {
     char repr[BUFSIZ] = {0};
     static int x = 0;
 
@@ -107,43 +107,43 @@ static void print_value(const asdf_scalar_datatype_t datatype, const void *data,
     switch (datatype) {
         case ASDF_DATATYPE_FLOAT16:
         case ASDF_DATATYPE_FLOAT32:
-            REPR(float);
+            PRINT_AS(float);
             break;
         case ASDF_DATATYPE_FLOAT64:
-            REPR(double);
+            PRINT_AS(double);
             break;
         case ASDF_DATATYPE_INT8:
-            REPR(int8_t);
+            PRINT_AS(int8_t);
             break;
         case ASDF_DATATYPE_INT16:
-            REPR(int16_t);
+            PRINT_AS(int16_t);
             break;
         case ASDF_DATATYPE_INT32:
-            REPR(int32_t);
+            PRINT_AS(int32_t);
             break;
         case ASDF_DATATYPE_INT64:
-            REPR(int64_t);
+            PRINT_AS(int64_t);
             break;
         case ASDF_DATATYPE_UINT8:
-            REPR(uint8_t);
+            PRINT_AS(uint8_t);
             break;
         case ASDF_DATATYPE_UINT16:
-            REPR(uint16_t);
+            PRINT_AS(uint16_t);
             break;
         case ASDF_DATATYPE_UINT32:
-            REPR(uint32_t);
+            PRINT_AS(uint32_t);
             break;
         case ASDF_DATATYPE_UINT64:
-            REPR(uint64_t);
+            PRINT_AS(uint64_t);
             break;
         case ASDF_DATATYPE_BOOL8:
-            REPR(bool);
+            PRINT_AS(bool);
             break;
         case ASDF_DATATYPE_UCS4:
-            REPR(uint32_t);
+            PRINT_AS(uint32_t);
             break;
         case ASDF_DATATYPE_ASCII:
-            REPR(uint8_t);
+            PRINT_AS(uint8_t);
             break;
         default:
             break;
@@ -156,11 +156,27 @@ static void print_value(const asdf_scalar_datatype_t datatype, const void *data,
     }
 }
 
+// Returns a string representing the shape of a ndarray: "[n1[, n2 ...]]"
+static char *repr_ndarray_shape(const asdf_ndarray_t *ndarray) {
+    static char result[255] = {0};
+
+    snprintf(result, sizeof(result), "[");
+    for (size_t i = 0; i < ndarray->ndim; i++ ) {
+        snprintf(result + strlen(result), sizeof(result), "%zu", ndarray->shape[i]);
+        if (i < ndarray->ndim - 1) {
+            snprintf(result + strlen(result), sizeof(result), ", ");
+        }
+    }
+    snprintf(result + strlen(result), sizeof(result), "]");
+
+    return result;
+}
+
 // Dump the contents of a ndarray
 static void show_ndarray(const struct asdf_ndarray *ndarray, const void *data, const int method) {
     const void *p = NULL;
-    asdf_scalar_datatype_t datatype = ndarray->datatype.type;
-    int datatype_size = asdf_ndarray_scalar_datatype_size(datatype);
+    const asdf_scalar_datatype_t datatype = ndarray->datatype.type;
+    size_t datatype_size = asdf_ndarray_scalar_datatype_size(datatype);
 
     // Patch in minimal support for ASCII/UCS4
     if (datatype_size == ASDF_DATATYPE_UNKNOWN) {
@@ -178,13 +194,13 @@ static void show_ndarray(const struct asdf_ndarray *ndarray, const void *data, c
         for (size_t row = 0; row < rows; row++) {
             for (size_t col = 0; col < cols; col++) {
                 p = data + (row * cols + col) * datatype_size;
-                print_value(datatype, p, row, col, method);
+                print_value(stdout, datatype, p, row, col, method);
             }
         }
     } else {
         for (size_t i = 0; i < ndarray->shape[0]; i++) {
             p = data + i * datatype_size;
-            print_value(datatype, p, 0, i, method);
+            print_value(stdout, datatype, p, 0, i, method);
         }
     }
 }
@@ -357,6 +373,14 @@ static void usage(const char *program_name) {
     fprintf(stderr, "    dump_method    optional    index, row [default: index]\n");
 }
 
+struct raw_data_ex_t {
+    // Storage for return values from asdf_ndarray_data_raw_ex
+    size_t uncompressed_size;
+    size_t compressed_size;
+    const char *compression;
+    void *data;
+};
+
 int main(int argc, char *argv[]) {
     const char *filename = argv[1];
     const char *datakey = argv[2];
@@ -411,51 +435,45 @@ int main(int argc, char *argv[]) {
 
     printf("# DATA\n");
     printf("# Dimensions: %d\n", ndarray->ndim);
-    printf("# Shape: [");
-    for (size_t i = 0; i < ndarray->ndim; i++ ) {
-        printf("%zu", ndarray->shape[i]);
-        if (i < ndarray->ndim - 1) {
-            printf(", ");
-        }
-    }
-    printf("]\n");
+    printf("# Shape: %s\n", repr_ndarray_shape(ndarray));
 
     // Get just a raw pointer to the ndarray data block (if uncompressed), uses mmap if possible
     // Optionally returns the size in bytes as well
-    size_t size = 0;
-    asdf_block_t *block = NULL;
-    void *xdata = asdf_ndarray_data_raw_ex(ndarray, (void *) &block, &size);
-    if (!xdata) {
+    struct raw_data_ex_t raw;
+    void *buffer = asdf_ndarray_data_raw_ex(ndarray, &raw.compression,
+                                            &raw.compressed_size, &raw.uncompressed_size);
+    if (!buffer) {
         fprintf(stderr, "error reading ndarray data from '%s': %d\n", datakey, err);
+        return 1;
     }
 
-    const size_t compressed_size = block->info.header.used_size;
-    const size_t src_size = block->info.header.data_size;
+    // Assume data is uncompressed
+    raw.data = buffer;
 
-    void *data = xdata;
-    const char *compressed = block->info.header.compression;
-    if (compressed && strlen(compressed)) {
-        printf("# Data is compressed with %s\n", compressed);
-        data = decompress_data(compressed, xdata, compressed_size, src_size);
-        if (!data) {
+    // Otherwise, decompress the data and point to it
+    if (raw.compression && strlen(raw.compression)) {
+        printf("# Data is compressed with %s\n", raw.compression);
+        raw.data = decompress_data(raw.compression, buffer, raw.compressed_size, raw.uncompressed_size);
+        if (!raw.data) {
             fprintf(stderr, "error decompressing ndarray data from '%s': %d\n", datakey, err);
             return 1;
         }
-        printf("# Compressed size: %zu bytes\n", size);
+        printf("# Compressed size: %zu bytes\n", raw.compressed_size);
     } else {
         printf("# Data is not compressed\n");
     }
 
-    printf("# Size: %zu bytes\n", src_size);
+    printf("# Size: %zu bytes\n", raw.uncompressed_size);
     printf("# ----\n");
 
     // Dump the data
-    show_ndarray(ndarray, data, method);
+    show_ndarray(ndarray, raw.data, method);
 
     // If we're not using the original data (i.e. decompression took place), free the data
-    if (data != xdata) {
-        free(data);
+    if (raw.data != buffer) {
+        free(raw.data);
     }
+
     asdf_ndarray_destroy(ndarray);
     asdf_close(file);
 

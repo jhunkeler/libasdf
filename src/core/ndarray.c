@@ -741,21 +741,30 @@ void *asdf_ndarray_data_raw(asdf_ndarray_t *ndarray, size_t *size) {
     return asdf_block_data(ndarray->block, size);
 }
 
-/* ndarray methods */
-void *asdf_ndarray_data_raw_ex(asdf_ndarray_t *ndarray, void **block, size_t *size) {
+/*
+ * Same as asdf_ndarray_data_raw except it optionally returns information required to decompress the data buffer
+ */
+void *asdf_ndarray_data_raw_ex(asdf_ndarray_t *ndarray, const char **compression, size_t *compressed_size,
+                               size_t *uncompressed_size) {
     if (!ndarray)
         return NULL;
 
     if (!ndarray->block) {
-        *block = asdf_block_open(ndarray->file, ndarray->source);
+        asdf_block_t *block = asdf_block_open(ndarray->file, ndarray->source);
 
-        if (!*block)
+        if (!block)
             return NULL;
 
-        ndarray->block = *block;
+        ndarray->block = block;
+        if (compression) {
+            *compression = block->info.header.compression;
+        }
+        if (uncompressed_size) {
+            *uncompressed_size = block->info.header.data_size;
+        }
     }
 
-    return asdf_block_data(ndarray->block, size);
+    return asdf_block_data(ndarray->block, compressed_size);
 }
 
 size_t asdf_ndarray_size(asdf_ndarray_t *ndarray) {
