@@ -206,6 +206,7 @@ static void show_ndarray(const struct asdf_ndarray *ndarray, const void *data, c
 }
 
 static int decompress_bzip2(void **dest, const size_t dest_size, const void *src, const size_t src_size) {
+    #ifdef HAVE_BZIP2
     int ret = 0;
     BZFILE *bzf = NULL;
     FILE *src_fp = NULL;
@@ -272,9 +273,13 @@ static int decompress_bzip2(void **dest, const size_t dest_size, const void *src
 
     decompression_success:
     return ret;
+    #else
+    return -1;
+    #endif
 }
 
 static int decompress_zlib(void **dest, const size_t dest_size, const void *src, const size_t src_size) {
+    #ifdef HAVE_ZLIB
     uLong size_src = src_size;
     uLong size_dest = dest_size;
 
@@ -299,11 +304,18 @@ static int decompress_zlib(void **dest, const size_t dest_size, const void *src,
         }
     }
     return ret;
+    #else
+    return -1;
+    #endif
 }
 
 static int decompress_lz4(void **dest, const size_t dest_size, const void *src, const size_t src_size) {
+    #ifdef HAVE_LZ4
     const int start = 8;
     return LZ4_decompress_safe((char *) src + start, (void *) *dest, src_size - start, dest_size);
+    #else
+    return -1;
+    #endif
 }
 
 static unsigned char *decompress_data(const char *compression_type, const unsigned char *data,
