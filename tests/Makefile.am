@@ -36,7 +36,7 @@ check_PROGRAMS = \
     test-value-util.unit
 
 TESTS_ENVIRONMENT = top_builddir=$(top_builddir) top_srcdir=$(top_srcdir)
-TESTS = $(check_PROGRAMS) test-cpp-headers
+TESTS = $(check_PROGRAMS)
 
 unit_test_cppflags = \
     $(AM_CPPFLAGS) \
@@ -146,7 +146,7 @@ test_value_util_unit_CFLAGS = $(unit_test_cflags)
 test_value_util_unit_LDFLAGS = $(unit_test_ldflags)
 test_value_util_unit_LDADD = libmunit.a
 
-if HAVE_GWCS
+if WITH_GWCS
     check_PROGRAMS += \
         test-gwcs.unit
 
@@ -156,6 +156,10 @@ if HAVE_GWCS
     test_gwcs_unit_CFLAGS = $(unit_test_cflags)
     test_gwcs_unit_LDFLAGS = $(unit_test_ldflags)
     test_gwcs_unit_LDADD = $(unit_test_ldadd)
+
+    # The cpp header test will currently only work if compiled with the GWCS
+    # feature as well; should fix it to work without that
+    check_PROGRAMS += test-cpp-headers
 endif
 
 
@@ -169,7 +173,11 @@ $(warning Skipping running asdf command-line tests; make sure to run ./configure
 endif
 
 # Test headers on C++
-asdf_public_headers = $(wildcard $(top_srcdir)/include/asdf/*.h)
+asdf_public_headers = \
+    $(wildcard $(top_srcdir)/include/asdf/*.h) \
+    $(wildcard $(top_srcdir)/include/asdf/core/*.h) \
+    $(wildcard $(top_srcdir)/include/asdf/gwcs/*.h)
+
 cpp_header_test = $(builddir)/test-cpp-headers.cpp
 
 QUIET_OUT = $(if $(filter 1,$(V)),, > /dev/null)

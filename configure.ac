@@ -209,7 +209,7 @@ AS_IF([test "x$with_gwcs" = "xyes"], [
   AC_DEFINE([WITH_GWCS], [1], [Defined if building with gwcs enabled])
   ASDF_OPTIONAL="${ASDF_OPTIONAL}gwcs "
 ])
-AM_CONDITIONAL([HAVE_GWCS], [test "x$with_gwcs" = "xyes"])
+AM_CONDITIONAL([WITH_GWCS], [test "x$with_gwcs" = "xyes"])
 
 AS_IF([test "x$with_fits_wcs" = "xyes"], [
   # Check for wcslib now

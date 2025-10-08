@@ -44,7 +44,7 @@ src_headers = \
     src/value_util.h \
     src/yaml.h
 
-if HAVE_GWCS
+if WITH_GWCS
     src_files += \
         src/gwcs/frame.c \
         src/gwcs/frame2d.c \

@@ -15,7 +15,7 @@ nobase_include_HEADERS = \
     asdf/yaml.h
 
 
-if HAVE_GWCS
+if WITH_GWCS
     nobase_include_HEADERS += \
         asdf/gwcs/frame.h \
         asdf/gwcs/frame2d.h \
