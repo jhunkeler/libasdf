@@ -1,14 +1,18 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <assert.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <libfyaml.h>
 
 #include "error.h"
-#include "extension_registry.h"
 #include "log.h"
 #include "util.h"
 #include "value.h"
@@ -125,7 +129,9 @@ static asdf_value_t *asdf_value_clone_impl(asdf_value_t *value, bool preserve_ty
     if (value->path)
         new_value->path = strdup(value->path);
     else
-        new_value->path = NULL;
+        // We must look up the full path of the node to store on the clone or
+        // else it will be lost; see issue #69
+        new_value->path = fy_node_get_path(value->node);
 
     if (preserve_type_inference) {
         // If the cloned value is an extension, copy the asdf_extension_value_t, but not the
@@ -225,7 +231,12 @@ asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key) {
     if (!value)
         return NULL;
 
-    return asdf_value_create(mapping->file, value);
+    asdf_value_t *child = asdf_value_create(mapping->file, value);
+
+    if (child && mapping->path)
+        asprintf(&child->path, "%s/%s", mapping->path, key);
+
+    return child;
 }
 
 
@@ -342,7 +353,12 @@ asdf_value_t *asdf_sequence_get(asdf_value_t *sequence, int index) {
     if (!value)
         return NULL;
 
-    return asdf_value_create(sequence->file, value);
+    asdf_value_t *child = asdf_value_create(sequence->file, value);
+
+    if (child && sequence->path)
+        asprintf(&child->path, "%s/%d", sequence->path, index);
+
+    return child;
 }
 
 

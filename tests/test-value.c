@@ -646,6 +646,37 @@ MU_TEST(test_asdf_sequence_get) {
 }
 
 
+/** Regression test for :issue:`69` */
+MU_TEST(test_value_copy_with_parent_path) {
+    const char *filename = get_reference_file_path("1.6.0/basic.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    asdf_value_t *value = asdf_get_value(file, "/history/extensions/0");
+    assert_not_null(value);
+    assert_true(asdf_value_is_mapping(value));
+
+    asdf_value_t *ext_uri = asdf_mapping_get(value, "extension_uri");
+    assert_not_null(ext_uri);
+
+    // The test: Cloned values should still retain their original path, as should any
+    // child values retrieved from them.
+    asdf_value_t *value_clone = asdf_value_clone(value);
+    assert_string_equal(asdf_value_path(value_clone), "/history/extensions/0");
+    asdf_value_t *ext_uri_clone = asdf_mapping_get(value_clone, "extension_uri");
+    assert_string_equal(asdf_value_path(ext_uri_clone), "/history/extensions/0/extension_uri");
+
+    // Crucially, it has the full path; this is just the control case
+    assert_string_equal(asdf_value_path(ext_uri), "/history/extensions/0/extension_uri");
+
+    asdf_value_destroy(ext_uri_clone);
+    asdf_value_destroy(value_clone);
+    asdf_value_destroy(ext_uri);
+    asdf_value_destroy(value);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_value,
     MU_RUN_TEST(test_asdf_value_get_type),
@@ -670,7 +701,8 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_mapping_iter),
     MU_RUN_TEST(test_asdf_mapping_get),
     MU_RUN_TEST(test_asdf_sequence_iter),
-    MU_RUN_TEST(test_asdf_sequence_get)
+    MU_RUN_TEST(test_asdf_sequence_get),
+    MU_RUN_TEST(test_value_copy_with_parent_path)
 );
 
 

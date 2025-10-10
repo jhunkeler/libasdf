@@ -9,8 +9,6 @@
 #include <asdf/value.h>
 
 #include "file.h"
-#include "util.h"
-#include "value.h"
 
 
 typedef struct {

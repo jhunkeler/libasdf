@@ -174,7 +174,7 @@ ASDF_EXPORT const char *asdf_value_tag(asdf_value_t *value);
 
 /* Mapping-related definitions */
 ASDF_EXPORT bool asdf_value_is_mapping(asdf_value_t *value);
-ASDF_EXPORT int asdf_mapping_size(asdf_value_t *value);
+ASDF_EXPORT int asdf_mapping_size(asdf_value_t *mapping);
 ASDF_EXPORT asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key);
 
 typedef struct _asdf_mapping_iter_impl _asdf_mapping_iter_impl_t;
