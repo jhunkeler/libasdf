@@ -25,7 +25,6 @@ typedef enum {
 typedef struct {
     asdf_gwcs_frame_type_t type;
     const char *name;
-    // TODO
 } asdf_gwcs_base_frame_t;
 
 typedef asdf_gwcs_base_frame_t asdf_gwcs_frame_t;
@@ -34,9 +33,6 @@ ASDF_DECLARE_EXTENSION(gwcs_base_frame, asdf_gwcs_base_frame_t);
 
 ASDF_EXPORT asdf_value_err_t asdf_value_as_gwcs_frame(asdf_value_t *value, asdf_gwcs_frame_t **out);
 ASDF_EXPORT void asdf_gwcs_frame_destroy(asdf_gwcs_frame_t *frame);
-
-// TODO
-ASDF_DECLARE_EXTENSION(gwcs_frame_celestial, asdf_gwcs_base_frame_t);
 
 ASDF_END_DECLS
 

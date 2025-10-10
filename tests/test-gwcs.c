@@ -1,6 +1,8 @@
 #include <asdf.h>
 #include <asdf/gwcs/gwcs.h>
 
+#include "asdf/gwcs/frame.h"
+#include "asdf/gwcs/frame2d.h"
 #include "munit.h"
 #include "util.h"
 
@@ -23,11 +25,22 @@ MU_TEST(test_asdf_get_gwcs) {
     assert_not_null(step->frame);
     assert_int(step->frame->type, ==, ASDF_GWCS_FRAME_2D);
     assert_string_equal(step->frame->name, "detector");
+    asdf_gwcs_frame2d_t *frame2d = (asdf_gwcs_frame2d_t *)step->frame;
+    assert_string_equal(frame2d->axes_names[0], "x");
+    assert_string_equal(frame2d->axes_names[1], "y");
+    assert_int(frame2d->axes_order[0], ==, 0);
+    assert_int(frame2d->axes_order[1], ==, 1);
 
     step = &gwcs->steps[1];
     assert_not_null(step->frame);
-    // TODO: frame->type == ASDF_GWCS_FRAME_CELESTIAL
+    assert_int(step->frame->type, ==, ASDF_GWCS_FRAME_CELESTIAL);
     assert_string_equal(step->frame->name, "icrs");
+    asdf_gwcs_frame_celestial_t *frame_celestial = (asdf_gwcs_frame_celestial_t *)step->frame;
+    assert_string_equal(frame_celestial->axes_names[0], "lon");
+    assert_string_equal(frame_celestial->axes_names[1], "lat");
+    assert_null(frame_celestial->axes_names[2]);
+    assert_int(frame_celestial->axes_order[0], ==, 0);
+    assert_int(frame_celestial->axes_order[1], ==, 1);
 
     asdf_gwcs_destroy(gwcs);
     asdf_close(file);

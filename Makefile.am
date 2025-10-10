@@ -47,6 +47,7 @@ src_headers = \
 if WITH_GWCS
     src_files += \
         src/gwcs/frame.c \
+        src/gwcs/frame_celestial.c \
         src/gwcs/frame2d.c \
         src/gwcs/step.c \
         src/gwcs/wcs.c

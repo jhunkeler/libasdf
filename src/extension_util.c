@@ -101,13 +101,18 @@ static bool is_equivalent_type(asdf_value_type_t type, asdf_value_type_t expecte
 }
 
 
-asdf_value_t *asdf_get_required_property(
-    asdf_value_t *mapping, const char *name, asdf_value_type_t type, const char *tag) {
-    asdf_value_t *prop = asdf_get_optional_property(mapping, name, type, tag);
-    if (!prop) {
+asdf_value_err_t asdf_get_required_property(
+    asdf_value_t *mapping,
+    const char *name,
+    asdf_value_type_t type,
+    const char *tag,
+    asdf_value_t **out) {
+    asdf_value_err_t err = asdf_get_optional_property(mapping, name, type, tag, out);
+
 #ifdef ASDF_LOG_ENABLED
+    if (ASDF_VALUE_ERR_NOT_FOUND == err) {
         const char *mapping_tag = asdf_value_tag(mapping);
-        const char *path = asdf_value_path(prop);
+        const char *path = asdf_value_path(mapping);
         ASDF_LOG(
             mapping->file,
             ASDF_LOG_WARN,
@@ -116,18 +121,22 @@ asdf_value_t *asdf_get_required_property(
             mapping_tag ? mapping_tag : "mapping",
             path);
 #endif
-        return NULL;
     }
-    return prop;
+    return err;
 }
 
 
-asdf_value_t *asdf_get_optional_property(
-    asdf_value_t *mapping, const char *name, asdf_value_type_t type, const char *tag) {
+asdf_value_err_t asdf_get_optional_property(
+    asdf_value_t *mapping,
+    const char *name,
+    asdf_value_type_t type,
+    const char *tag,
+    asdf_value_t **out) {
+
     asdf_value_t *prop = asdf_mapping_get(mapping, name);
 
     if (!prop)
-        return NULL;
+        return ASDF_VALUE_ERR_NOT_FOUND;
 
     asdf_value_type_t prop_type = asdf_value_get_type(prop);
 
@@ -147,7 +156,7 @@ asdf_value_t *asdf_get_optional_property(
             typestr);
 #endif
         asdf_value_destroy(prop);
-        return NULL;
+        return ASDF_VALUE_ERR_TYPE_MISMATCH;
     }
 
     if (type == ASDF_VALUE_EXTENSION && tag) {
@@ -167,9 +176,10 @@ asdf_value_t *asdf_get_optional_property(
                 tag);
 #endif
             asdf_value_destroy(prop);
-            return NULL;
+            return ASDF_VALUE_ERR_TYPE_MISMATCH;
         }
     }
 
-    return prop;
+    *out = prop;
+    return ASDF_VALUE_OK;
 }

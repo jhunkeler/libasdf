@@ -19,13 +19,21 @@
  *   but we don't currently export extension constants--will probably want to
  *   for external plugin support though.
  */
-ASDF_LOCAL asdf_value_t *asdf_get_required_property(
-    asdf_value_t *mapping, const char *name, asdf_value_type_t type, const char *tag);
+ASDF_LOCAL asdf_value_err_t asdf_get_required_property(
+    asdf_value_t *mapping,
+    const char *name,
+    asdf_value_type_t type,
+    const char *tag,
+    asdf_value_t **out);
 
 /**
  * Like `asdf_get_required_property` but allows the property to be missing
  *
  * However, if the property is present, still performs type checking.
  */
-ASDF_LOCAL asdf_value_t *asdf_get_optional_property(
-    asdf_value_t *mapping, const char *name, asdf_value_type_t type, const char *tag);
+ASDF_LOCAL asdf_value_err_t asdf_get_optional_property(
+    asdf_value_t *mapping,
+    const char *name,
+    asdf_value_type_t type,
+    const char *tag,
+    asdf_value_t **out);

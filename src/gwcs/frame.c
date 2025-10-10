@@ -1,4 +1,5 @@
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdlib.h>
 
 #include <asdf/core/asdf.h>
@@ -6,6 +7,7 @@
 #include <asdf/gwcs/frame.h>
 #include <asdf/gwcs/frame2d.h>
 #include <asdf/gwcs/gwcs.h>
+#include <asdf/log.h>
 #include <asdf/value.h>
 
 #include "../extension_util.h"
@@ -14,20 +16,163 @@
 
 #include "frame.h"
 
+#ifdef ASDF_LOGGING_ENABLED
+static inline void warn_invalid_frame_axes_param(
+    asdf_value_t *value,
+    const char *propname,
+    asdf_value_type_t expected_type,
+    uint32_t min_axes,
+    uint32_t max_axes) {
+    const char *path = asdf_value_path(value);
 
-asdf_value_err_t asdf_gwcs_frame_parse(asdf_value_t *value, asdf_gwcs_frame_t *frame) {
+    if (min_axes == max_axes)
+        ASDF_LOG(
+            value->file,
+            ASDF_LOG_WARN,
+            "property %s in %s must be a %d element sequence of %s",
+            propname,
+            path,
+            max_axes,
+            asdf_value_type_string(expected_type));
+    else
+        ASDF_LOG(
+            value->file,
+            ASDF_LOG_WARN,
+            "property %s in %s must be a %d to %d element sequence of %s",
+            propname,
+            path,
+            min_axes max_axes,
+            asdf_value_type_string(expected_type));
+}
+#else
+static inline void warn_invalid_frame_axes_param(
+    UNUSED(asdf_value_t *value),
+    UNUSED(const char *propname),
+    UNUSED(asdf_value_type_t expected_type),
+    UNUSED(uint32_t min_axes),
+    UNUSED(uint32_t max_axes)) {
+}
+#endif
+
+
+static asdf_value_err_t get_frame_axes_string_param(
+    asdf_value_t *value,
+    const char *propname,
+    char **strings,
+    uint32_t min_axes,
+    uint32_t max_axes) {
+    asdf_value_err_t prop_err = ASDF_VALUE_OK;
+    asdf_value_t *prop = NULL;
+    asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
+
+    prop_err = asdf_get_optional_property(value, propname, ASDF_VALUE_SEQUENCE, NULL, &prop);
+
+    if (prop_err != ASDF_VALUE_OK && prop_err != ASDF_VALUE_ERR_NOT_FOUND)
+        goto failure;
+
+    uint32_t size = (uint32_t)asdf_sequence_size(prop);
+
+    if (size < min_axes || size > max_axes) {
+        warn_invalid_frame_axes_param(value, propname, ASDF_VALUE_STRING, min_axes, max_axes);
+        goto failure;
+    }
+
+    asdf_sequence_iter_t iter = asdf_sequence_iter_init();
+    asdf_value_t *item = NULL;
+    char **str_tmp = strings;
+    while ((item = asdf_sequence_iter(prop, &iter)) != NULL) {
+        if (ASDF_VALUE_OK != asdf_value_as_string0(item, (const char **)str_tmp)) {
+            warn_invalid_frame_axes_param(value, propname, ASDF_VALUE_STRING, min_axes, max_axes);
+            goto failure;
+        }
+        str_tmp++;
+    }
+
+    asdf_value_destroy(prop);
+    return ASDF_VALUE_OK;
+failure:
+    asdf_value_destroy(prop);
+    return err;
+}
+
+
+static asdf_value_err_t get_frame_axes_order_param(
+    asdf_value_t *value, uint32_t *ints, uint32_t min_axes, uint32_t max_axes) {
+    asdf_value_err_t prop_err = ASDF_VALUE_OK;
+    asdf_value_t *prop = NULL;
+    asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
+    prop_err = asdf_get_optional_property(value, "axes_order", ASDF_VALUE_SEQUENCE, NULL, &prop);
+
+    if (prop_err != ASDF_VALUE_OK && prop_err != ASDF_VALUE_ERR_NOT_FOUND)
+        return err;
+
+    uint32_t size = (uint32_t)asdf_sequence_size(prop);
+
+    if (size < min_axes || size > max_axes) {
+        warn_invalid_frame_axes_param(value, "axes_order", ASDF_VALUE_UINT32, min_axes, max_axes);
+        goto failure;
+    }
+
+    asdf_sequence_iter_t iter = asdf_sequence_iter_init();
+    asdf_value_t *item = NULL;
+    uint32_t *int_tmp = ints;
+    while ((item = asdf_sequence_iter(prop, &iter)) != NULL) {
+        if (ASDF_VALUE_OK != asdf_value_as_uint32(item, int_tmp)) {
+            warn_invalid_frame_axes_param(
+                value, "axes_order", ASDF_VALUE_UINT32, min_axes, max_axes);
+            goto failure;
+        }
+
+        if (*int_tmp >= max_axes) {
+            warn_invalid_frame_axes_param(
+                value, "axes_order", ASDF_VALUE_UINT32, min_axes, max_axes);
+            goto failure;
+        }
+
+        int_tmp++;
+    }
+
+    asdf_value_destroy(prop);
+    return ASDF_VALUE_OK;
+failure:
+    asdf_value_destroy(prop);
+    return err;
+}
+
+
+asdf_value_err_t asdf_gwcs_frame_parse(
+    asdf_value_t *value, asdf_gwcs_frame_t *frame, asdf_gwcs_frame_common_params_t *params) {
     assert(value);
     assert(frame);
+    assert(params);
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
+    asdf_value_err_t prop_err = ASDF_VALUE_OK;
     asdf_value_t *prop = NULL;
 
     if (!asdf_value_is_mapping(value))
         goto failure;
 
-    if (!(prop = asdf_get_required_property(value, "name", ASDF_VALUE_STRING, NULL)))
+    prop_err = asdf_get_required_property(value, "name", ASDF_VALUE_STRING, NULL, &prop);
+
+    if (prop_err != ASDF_VALUE_OK)
         goto failure;
 
     if (ASDF_VALUE_OK != asdf_value_as_string0(prop, &frame->name))
+        goto failure;
+
+
+    if (ASDF_VALUE_OK !=
+        get_frame_axes_string_param(
+            value, "axes_names", params->axes_names, params->min_axes, params->max_axes))
+        goto failure;
+
+    if (ASDF_VALUE_OK != get_frame_axes_string_param(
+                             value, "unit", params->unit, params->min_axes, params->max_axes))
+        goto failure;
+
+
+    if (ASDF_VALUE_OK !=
+        get_frame_axes_order_param(value, params->axes_order, params->min_axes, params->max_axes))
         goto failure;
 
     asdf_value_destroy(prop);
@@ -51,7 +196,9 @@ static asdf_value_err_t asdf_gwcs_base_frame_deserialize(
         goto failure;
     }
 
-    if (ASDF_VALUE_OK != asdf_gwcs_frame_parse(value, frame))
+    asdf_gwcs_frame_common_params_t params = {0};
+
+    if (ASDF_VALUE_OK != asdf_gwcs_frame_parse(value, frame, &params))
         goto failure;
 
     *out = frame;
@@ -79,11 +226,13 @@ asdf_value_err_t asdf_value_as_gwcs_frame(asdf_value_t *value, asdf_gwcs_frame_t
     // but this is a bit ugly...
     asdf_gwcs_frame_t *frame = NULL;
     asdf_gwcs_frame2d_t *frame2d = NULL;
+    asdf_gwcs_frame_celestial_t *frame_celestial = NULL;
 
     if (ASDF_VALUE_OK == asdf_value_as_gwcs_frame2d(value, &frame2d)) {
         frame = (asdf_gwcs_frame_t *)frame2d;
         assert(frame);
-    } else if (ASDF_VALUE_OK == asdf_value_as_gwcs_frame_celestial(value, &frame)) {
+    } else if (ASDF_VALUE_OK == asdf_value_as_gwcs_frame_celestial(value, &frame_celestial)) {
+        frame = (asdf_gwcs_frame_t *)frame_celestial;
         assert(frame);
     } else if (ASDF_VALUE_OK != asdf_value_as_gwcs_base_frame(value, &frame)) {
         frame = NULL;
@@ -108,7 +257,7 @@ void asdf_gwcs_frame_destroy(asdf_gwcs_frame_t *frame) {
         asdf_gwcs_frame2d_destroy((asdf_gwcs_frame2d_t *)frame);
         break;
     case ASDF_GWCS_FRAME_CELESTIAL:
-        asdf_gwcs_frame_celestial_destroy(frame);
+        asdf_gwcs_frame_celestial_destroy((asdf_gwcs_frame_celestial_t *)frame);
         break;
     case ASDF_GWCS_FRAME_GENERIC:
         asdf_gwcs_base_frame_destroy(frame);
@@ -121,17 +270,6 @@ ASDF_REGISTER_EXTENSION(
     gwcs_base_frame,
     ASDF_GWCS_TAG_PREFIX "frame-1.2.0",
     asdf_gwcs_base_frame_t,
-    &libasdf_software,
-    asdf_gwcs_base_frame_deserialize,
-    asdf_gwcs_base_frame_dealloc,
-    NULL);
-
-
-// TODO: Create proper extension for this frame type
-ASDF_REGISTER_EXTENSION(
-    gwcs_frame_celestial,
-    ASDF_GWCS_TAG_PREFIX "celestial_frame-1.2.0",
-    asdf_gwcs_frame_t,
     &libasdf_software,
     asdf_gwcs_base_frame_deserialize,
     asdf_gwcs_base_frame_dealloc,

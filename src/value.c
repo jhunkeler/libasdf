@@ -82,8 +82,8 @@ void asdf_value_destroy(asdf_value_t *value) {
     if (!(fy_node_is_attached(value->node) || is_root_node(value->node)))
         fy_node_free(value->node);
 
-    free(value->path);
-    free(value->tag);
+    free((char *)value->path);
+    free((char *)value->tag);
 
     // Free the extension data
     // The extension object itself must be freed by the user for now, which is less than ideal.
@@ -126,7 +126,6 @@ static asdf_value_t *asdf_value_clone_impl(asdf_value_t *value, bool preserve_ty
         new_value->tag = NULL;
 
     new_value->explicit_tag_checked = value->explicit_tag_checked;
-
     if (value->path)
         new_value->path = strdup(value->path);
     else
@@ -234,8 +233,15 @@ asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key) {
 
     asdf_value_t *child = asdf_value_create(mapping->file, value);
 
-    if (child && mapping->path)
-        asprintf(&child->path, "%s/%s", mapping->path, key);
+    if (child && mapping->path) {
+        char *child_path = NULL;
+        if (asprintf(&child_path, "%s/%s", mapping->path, key) == -1) {
+            ASDF_LOG(
+                mapping->file, ASDF_LOG_WARN, "failure to build value path for %s (OOM?)", key);
+        } else {
+            child->path = child_path;
+        }
+    }
 
     return child;
 }
@@ -356,8 +362,15 @@ asdf_value_t *asdf_sequence_get(asdf_value_t *sequence, int index) {
 
     asdf_value_t *child = asdf_value_create(sequence->file, value);
 
-    if (child && sequence->path)
-        asprintf(&child->path, "%s/%d", sequence->path, index);
+    if (child && sequence->path) {
+        char *child_path = NULL;
+        if (asprintf(&child_path, "%s/%d", sequence->path, index) == -1) {
+            ASDF_LOG(
+                sequence->file, ASDF_LOG_WARN, "failure to build value path for %d (OOM?)", index);
+        } else {
+            child->path = child_path;
+        }
+    }
 
     return child;
 }

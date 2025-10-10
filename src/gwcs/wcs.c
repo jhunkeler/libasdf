@@ -16,6 +16,7 @@ static asdf_value_err_t asdf_gwcs_deserialize(
     asdf_value_t *value, UNUSED(const void *userdata), void **out) {
     asdf_gwcs_t *gwcs = NULL;
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
+    asdf_value_err_t prop_err = ASDF_VALUE_OK;
     asdf_value_t *prop = NULL;
 
     if (!asdf_value_is_mapping(value))
@@ -29,7 +30,9 @@ static asdf_value_err_t asdf_gwcs_deserialize(
     }
 
     // The name property is required
-    if (!(prop = asdf_get_required_property(value, "name", ASDF_VALUE_STRING, NULL)))
+    prop_err = asdf_get_required_property(value, "name", ASDF_VALUE_STRING, NULL, &prop);
+
+    if (prop_err != ASDF_VALUE_OK)
         goto failure;
 
     if (ASDF_VALUE_OK != asdf_value_as_string0(prop, &gwcs->name))
@@ -40,7 +43,9 @@ static asdf_value_err_t asdf_gwcs_deserialize(
     // TODO: Implement pixel_shape parsing
 
     // Parse steps
-    if (!(prop = asdf_get_required_property(value, "steps", ASDF_VALUE_SEQUENCE, NULL)))
+    prop_err = asdf_get_required_property(value, "steps", ASDF_VALUE_SEQUENCE, NULL, &prop);
+
+    if (prop_err != ASDF_VALUE_OK)
         goto failure;
 
     int n_steps = asdf_sequence_size(prop);
