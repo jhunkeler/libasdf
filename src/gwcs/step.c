@@ -1,4 +1,3 @@
-#include "asdf/log.h"
 #include <stdbool.h>
 #include <stdlib.h>
 

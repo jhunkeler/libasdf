@@ -159,6 +159,8 @@ asdf_value_err_t asdf_get_optional_property(
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
     }
 
+    // TODO: This doesn't work yet because asdf_value_t don't have type == ASDF_VALUE_EXTENSION
+    // unless it's already been inferred as an extension type.  Oops!
     if (type == ASDF_VALUE_EXTENSION && tag) {
         const char *prop_tag = asdf_value_tag(prop);
         if (0 != strcmp(prop_tag, tag)) {

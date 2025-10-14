@@ -698,7 +698,7 @@ static void asdf_ndarray_dealloc(void *value) {
  */
 ASDF_REGISTER_EXTENSION(
     ndarray,
-    ASDF_CORE_TAG_PREFIX "ndarray-1.1.0",
+    ASDF_CORE_NDARRAY_TAG,
     asdf_ndarray_t,
     &libasdf_software,
     asdf_ndarray_deserialize,

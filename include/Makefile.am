@@ -22,5 +22,7 @@ if WITH_GWCS
         asdf/gwcs/frame2d.h \
         asdf/gwcs/gwcs.h \
         asdf/gwcs/step.h \
+        asdf/gwcs/transform.h \
+        asdf/gwcs/transforms/property/bounding_box.h \
         asdf/gwcs/wcs.h
 endif

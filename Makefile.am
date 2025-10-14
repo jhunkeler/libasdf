@@ -46,11 +46,20 @@ src_headers = \
 
 if WITH_GWCS
     src_files += \
+        src/gwcs/fitswcs_imaging.c \
         src/gwcs/frame.c \
         src/gwcs/frame_celestial.c \
         src/gwcs/frame2d.c \
         src/gwcs/step.c \
+        src/gwcs/transform.c \
+        src/gwcs/transforms/property/bounding_box.c \
         src/gwcs/wcs.c
+
+    src_headers += \
+        src/gwcs/frame.h \
+        src/gwcs/step.h \
+        src/gwcs/transform.h \
+        src/gwcs/types/asdf_gwcs_transform_map.h
 endif
 
 include_dir = $(top_srcdir)/include

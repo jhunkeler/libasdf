@@ -15,7 +15,7 @@ ASDF_BEGIN_DECLS
 /**
  * Prefix for all GWCS schema tags
  */
-#define ASDF_GWCS_TAG_PREFIX "stsci.edu:gwcs/"
+#define ASDF_GWCS_TAG_PREFIX "tag:stsci.edu:gwcs/"
 
 /* Error codes for reading gwcs data */
 typedef enum {
