@@ -85,12 +85,23 @@ asdf_value_err_t asdf_gwcs_transform_parse(asdf_value_t *value, asdf_gwcs_transf
         goto failure;
     }
 
+    asdf_value_destroy(prop);
+
     // TODO: Mostly not implemented yet.
     return ASDF_VALUE_OK;
 
 failure:
     asdf_value_destroy(prop);
     return err;
+}
+
+
+ASDF_LOCAL void asdf_gwcs_transform_clean(asdf_gwcs_transform_t *transform) {
+    if (!transform)
+        return;
+
+    asdf_gwcs_bounding_box_destroy((asdf_gwcs_bounding_box_t *)transform->bounding_box);
+    ZERO_MEMORY(transform, sizeof(asdf_gwcs_transform_t));
 }
 
 

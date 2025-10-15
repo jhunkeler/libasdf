@@ -71,10 +71,13 @@ static asdf_value_err_t asdf_gwcs_bounding_box_deserialize(
             if (asdf_value_as_double(boundval, &bound))
                 goto failure;
 
+            asdf_value_destroy(boundval);
             interval_tmp->bounds[idx] = bound;
         }
         interval_tmp++;
     }
+
+    asdf_value_destroy(prop);
 
     bounding_box->n_intervals = n_intervals;
     bounding_box->intervals = intervals;

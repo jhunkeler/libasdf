@@ -60,7 +60,7 @@ static asdf_value_err_t get_coordinates_prop(asdf_value_t *value, const char *na
     }
 
     memcpy(out, data, size);
-    return ASDF_VALUE_OK;
+    err = ASDF_VALUE_OK;
 failure:
     asdf_ndarray_destroy(ndarray);
     asdf_value_destroy(prop);
@@ -190,6 +190,8 @@ static asdf_value_err_t asdf_gwcs_fits_deserialize(
     if (ASDF_VALUE_OK != err)
         goto failure;
 
+    asdf_value_destroy(prop);
+
     *out = fits;
     return ASDF_VALUE_OK;
 failure:
@@ -206,6 +208,8 @@ static void asdf_gwcs_fits_dealloc(void *value) {
         return;
 
     asdf_gwcs_fits_t *fits = (asdf_gwcs_fits_t *)value;
+    asdf_gwcs_transform_clean(&fits->base);
+    asdf_gwcs_transform_clean(&fits->projection);
     free(fits);
 }
 
