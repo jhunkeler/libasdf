@@ -218,4 +218,3 @@ ASDF_REGISTER_EXTENSION(
     asdf_gwcs_fits_deserialize,
     asdf_gwcs_fits_dealloc,
     NULL);
-

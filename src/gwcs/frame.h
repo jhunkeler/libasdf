@@ -23,9 +23,8 @@ typedef struct {
 } asdf_gwcs_frame_common_params_t;
 
 
-
 /**
  * Internal helper for parsing different frame types
  */
-ASDF_LOCAL asdf_value_err_t asdf_gwcs_frame_parse(asdf_value_t *value, asdf_gwcs_frame_t *frame,
-                                                  asdf_gwcs_frame_common_params_t *params);
+ASDF_LOCAL asdf_value_err_t asdf_gwcs_frame_parse(
+    asdf_value_t *value, asdf_gwcs_frame_t *frame, asdf_gwcs_frame_common_params_t *params);

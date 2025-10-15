@@ -7,9 +7,9 @@
 #include <asdf/util.h>
 #include <asdf/value.h>
 
+#include "../extension_util.h"
 #include "transform.h"
 #include "types/asdf_gwcs_transform_map.h"
-#include "../extension_util.h"
 
 
 static asdf_gwcs_transform_map_t transform_map = {0};
@@ -26,8 +26,7 @@ static asdf_gwcs_transform_type_t asdf_gwcs_transform_type_get(const char *tagst
 }
 
 
-asdf_value_err_t asdf_gwcs_transform_parse(
-    asdf_value_t *value, asdf_gwcs_transform_t *transform) {
+asdf_value_err_t asdf_gwcs_transform_parse(asdf_value_t *value, asdf_gwcs_transform_t *transform) {
 
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
     asdf_value_t *prop = NULL;
@@ -110,35 +109,50 @@ ASDF_CONSTRUCTOR static void asdf_gwcs_transform_map_create() {
         return;
 
     transform_map = c_make(
-        asdf_gwcs_transform_map, {
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "transform-1.4.0",               ASDF_GWCS_TRANSFORM_GENERIC},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "airy-1.4.0",                    ASDF_GWCS_TRANSFORM_AIRY},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "bonne_equal_area-1.5.0",        ASDF_GWCS_TRANSFORM_BONNE_EQUAL_AREA},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "cobe_quad_spherical_cube-1.4.0",ASDF_GWCS_TRANSFORM_COBE_QUAD_SPHERICAL_CUBE},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "conic_equal_area-1.4.0",        ASDF_GWCS_TRANSFORM_CONIC_EQUAL_AREA},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "conic_equidistant-1.4.0",       ASDF_GWCS_TRANSFORM_CONIC_EQUIDISTANT},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "conic_orthomorphic-1.5.0",      ASDF_GWCS_TRANSFORM_CONIC_ORTHOMORPHIC},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "conic_perspective-1.5.0",       ASDF_GWCS_TRANSFORM_CONIC_PERSPECTIVE},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "cylindrical_equal_area-1.5.0",  ASDF_GWCS_TRANSFORM_CYLINDRICAL_EQUAL_AREA},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "cylindrical_perspective-1.5.0", ASDF_GWCS_TRANSFORM_CYLINDRICAL_PERSPECTIVE},
-        {ASDF_GWCS_TAG_PREFIX "fitswcs_imaging-1.0.0",         ASDF_GWCS_TRANSFORM_FITSWCS_IMAGING},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "gnomonic-1.3.0",                ASDF_GWCS_TRANSFORM_GNOMONIC},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "hammer_aitoff-1.4.0",           ASDF_GWCS_TRANSFORM_HAMMER_AITOFF},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "healpix_polar-1.4.0",           ASDF_GWCS_TRANSFORM_HEALPIX_POLAR},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "molleweide-1.4.0",              ASDF_GWCS_TRANSFORM_MOLLEWEIDE},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "parabolic-1.4.0",               ASDF_GWCS_TRANSFORM_PARABOLIC},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "plate_carree-1.4.0",            ASDF_GWCS_TRANSFORM_PLATE_CARREE},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "polyconic-1.4.0",               ASDF_GWCS_TRANSFORM_POLYCONIC},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "sanson_flamsteed-1.4.0",        ASDF_GWCS_TRANSFORM_SANSON_FLAMSTEED},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "slant_orthographic-1.4.0",      ASDF_GWCS_TRANSFORM_SLANT_ORTHOGRAPHIC},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "stereographic-1.4.0",           ASDF_GWCS_TRANSFORM_STEREOGRAPHIC},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "quad_spherical_cube-1.4.0",     ASDF_GWCS_TRANSFORM_QUAD_SPHERICAL_CUBE},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "slant_zenithal_perspective-1.4.0", ASDF_GWCS_TRANSFORM_SLANT_ZENITHAL_PERSPECTIVE},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "tangential_spherical_cube-1.4.0",  ASDF_GWCS_TRANSFORM_TANGENTIAL_SPHERICAL_CUBE},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "zenithal_equal_area-1.4.0",     ASDF_GWCS_TRANSFORM_ZENITHAL_EQUAL_AREA},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "zenithal_equidistant-1.4.0",    ASDF_GWCS_TRANSFORM_ZENITHAL_EQUIDISTANT},
-        {ASDF_GWCS_TRANSFORM_TAG_PREFIX "zenithal_perspective-1.5.0",    ASDF_GWCS_TRANSFORM_ZENITHAL_PERSPECTIVE}
-    });
+        asdf_gwcs_transform_map,
+        {{ASDF_GWCS_TRANSFORM_TAG_PREFIX "transform-1.4.0", ASDF_GWCS_TRANSFORM_GENERIC},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "airy-1.4.0", ASDF_GWCS_TRANSFORM_AIRY},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "bonne_equal_area-1.5.0",
+          ASDF_GWCS_TRANSFORM_BONNE_EQUAL_AREA},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "cobe_quad_spherical_cube-1.4.0",
+          ASDF_GWCS_TRANSFORM_COBE_QUAD_SPHERICAL_CUBE},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "conic_equal_area-1.4.0",
+          ASDF_GWCS_TRANSFORM_CONIC_EQUAL_AREA},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "conic_equidistant-1.4.0",
+          ASDF_GWCS_TRANSFORM_CONIC_EQUIDISTANT},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "conic_orthomorphic-1.5.0",
+          ASDF_GWCS_TRANSFORM_CONIC_ORTHOMORPHIC},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "conic_perspective-1.5.0",
+          ASDF_GWCS_TRANSFORM_CONIC_PERSPECTIVE},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "cylindrical_equal_area-1.5.0",
+          ASDF_GWCS_TRANSFORM_CYLINDRICAL_EQUAL_AREA},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "cylindrical_perspective-1.5.0",
+          ASDF_GWCS_TRANSFORM_CYLINDRICAL_PERSPECTIVE},
+         {ASDF_GWCS_TAG_PREFIX "fitswcs_imaging-1.0.0", ASDF_GWCS_TRANSFORM_FITSWCS_IMAGING},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "gnomonic-1.3.0", ASDF_GWCS_TRANSFORM_GNOMONIC},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "hammer_aitoff-1.4.0", ASDF_GWCS_TRANSFORM_HAMMER_AITOFF},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "healpix_polar-1.4.0", ASDF_GWCS_TRANSFORM_HEALPIX_POLAR},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "molleweide-1.4.0", ASDF_GWCS_TRANSFORM_MOLLEWEIDE},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "parabolic-1.4.0", ASDF_GWCS_TRANSFORM_PARABOLIC},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "plate_carree-1.4.0", ASDF_GWCS_TRANSFORM_PLATE_CARREE},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "polyconic-1.4.0", ASDF_GWCS_TRANSFORM_POLYCONIC},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "sanson_flamsteed-1.4.0",
+          ASDF_GWCS_TRANSFORM_SANSON_FLAMSTEED},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "slant_orthographic-1.4.0",
+          ASDF_GWCS_TRANSFORM_SLANT_ORTHOGRAPHIC},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "stereographic-1.4.0", ASDF_GWCS_TRANSFORM_STEREOGRAPHIC},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "quad_spherical_cube-1.4.0",
+          ASDF_GWCS_TRANSFORM_QUAD_SPHERICAL_CUBE},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "slant_zenithal_perspective-1.4.0",
+          ASDF_GWCS_TRANSFORM_SLANT_ZENITHAL_PERSPECTIVE},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "tangential_spherical_cube-1.4.0",
+          ASDF_GWCS_TRANSFORM_TANGENTIAL_SPHERICAL_CUBE},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "zenithal_equal_area-1.4.0",
+          ASDF_GWCS_TRANSFORM_ZENITHAL_EQUAL_AREA},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "zenithal_equidistant-1.4.0",
+          ASDF_GWCS_TRANSFORM_ZENITHAL_EQUIDISTANT},
+         {ASDF_GWCS_TRANSFORM_TAG_PREFIX "zenithal_perspective-1.5.0",
+          ASDF_GWCS_TRANSFORM_ZENITHAL_PERSPECTIVE}});
 
     atomic_store_explicit(&transform_map_initialized, true, memory_order_release);
 }
