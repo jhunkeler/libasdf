@@ -26,11 +26,8 @@ static asdf_value_err_t get_coordinates_prop(asdf_value_t *value, const char *na
 
     assert(value);
 
-    // TODO: Fix this, but asdf_get_optional_property doesn't work correctly yet with
-    // extension types....
-    // err = asdf_get_required_property(
-    //     value, name, ASDF_VALUE_EXTENSION, ASDF_CORE_NDARRAY_TAG, &prop);
-    err = asdf_get_required_property(value, name, ASDF_VALUE_UNKNOWN, NULL, &prop);
+    err =
+        asdf_get_required_property(value, name, ASDF_VALUE_EXTENSION, ASDF_CORE_NDARRAY_TAG, &prop);
 
     if (ASDF_VALUE_OK != err)
         goto failure;
@@ -78,11 +75,8 @@ static asdf_value_err_t get_matrix_prop(asdf_value_t *value, const char *name, d
 
     assert(value);
 
-    // TODO: Fix this, but asdf_get_optional_property doesn't work correctly yet with
-    // extension types....
-    // err = asdf_get_required_property(
-    //     value, name, ASDF_VALUE_EXTENSION, ASDF_CORE_NDARRAY_TAG, &prop);
-    err = asdf_get_required_property(value, name, ASDF_VALUE_UNKNOWN, NULL, &prop);
+    err =
+        asdf_get_required_property(value, name, ASDF_VALUE_EXTENSION, ASDF_CORE_NDARRAY_TAG, &prop);
 
     if (ASDF_VALUE_OK != err)
         goto failure;

@@ -66,11 +66,8 @@ asdf_value_err_t asdf_gwcs_transform_parse(asdf_value_t *value, asdf_gwcs_transf
 
     asdf_value_destroy(prop);
 
-    // TODO: Fix this, but asdf_get_optional_property doesn't work correctly yet with
-    // extension types....
-    // err = asdf_get_optional_property(value, "bounding_box", ASDF_VALUE_EXTENSION,
-    //                                  ASDF_GWCS_BOUNDING_BOX_TAG, &prop);
-    err = asdf_get_optional_property(value, "bounding_box", ASDF_VALUE_UNKNOWN, NULL, &prop);
+    err = asdf_get_optional_property(
+        value, "bounding_box", ASDF_VALUE_EXTENSION, ASDF_GWCS_BOUNDING_BOX_TAG, &prop);
 
     if (err != ASDF_VALUE_OK && err != ASDF_VALUE_ERR_NOT_FOUND)
         goto failure;

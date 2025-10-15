@@ -1,9 +1,9 @@
 #include <stdbool.h>
 
-#include "asdf/value.h"
+#include <asdf/value.h>
+
 #include "extension_util.h"
 #include "log.h"
-#include "value.h"
 
 
 /**
@@ -120,8 +120,8 @@ asdf_value_err_t asdf_get_required_property(
             name,
             mapping_tag ? mapping_tag : "mapping",
             path);
-#endif
     }
+#endif
     return err;
 }
 
@@ -140,7 +140,8 @@ asdf_value_err_t asdf_get_optional_property(
 
     asdf_value_type_t prop_type = asdf_value_get_type(prop);
 
-    if (type != ASDF_VALUE_UNKNOWN && !is_equivalent_type(prop_type, type)) {
+    if (type != ASDF_VALUE_UNKNOWN && type != ASDF_VALUE_EXTENSION &&
+        !is_equivalent_type(prop_type, type)) {
 #ifdef ASDF_LOG_ENABLED
         const char *mapping_tag = asdf_value_tag(mapping);
         const char *path = asdf_value_path(prop);
@@ -159,11 +160,13 @@ asdf_value_err_t asdf_get_optional_property(
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
     }
 
-    // TODO: This doesn't work yet because asdf_value_t don't have type == ASDF_VALUE_EXTENSION
-    // unless it's already been inferred as an extension type.  Oops!
     if (type == ASDF_VALUE_EXTENSION && tag) {
-        const char *prop_tag = asdf_value_tag(prop);
-        if (0 != strcmp(prop_tag, tag)) {
+        const asdf_extension_t *ext = asdf_extension_get(mapping->file, tag);
+
+        if (!ext)
+            return ASDF_VALUE_ERR_TYPE_MISMATCH;
+
+        if (!asdf_value_is_extension_type(prop, ext)) {
 #ifdef ASDF_LOG_ENABLED
             const char *mapping_tag = asdf_value_tag(mapping);
             const char *path = asdf_value_path(prop);
