@@ -92,11 +92,11 @@ endif # ASDF_BUILD_TOOL
 
 # Misc make targets
 format:
-	clang-format -i $(src_files) $(src_headers)
+	clang-format -i $(addprefix $(srcdir)/,$(src_files)) $(addprefix $(srcdir)/,$(src_headers))
 
 
 tidy:
-	clang-tidy $(src_files) -- \
+	clang-tidy $(addprefix $(srcdir)/,$(src_files)) -- \
 	    $(DEFS) $(DEFAULT_INCLUDES) $(AM_CPPLFAGS) $(CPPFLAGS) $(asdf_CFLAGS)
 
 if BUILD_DOCS
