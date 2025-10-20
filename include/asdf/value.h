@@ -194,7 +194,7 @@ ASDF_EXPORT asdf_mapping_item_t *asdf_mapping_iter(
     asdf_value_t *mapping, asdf_mapping_iter_t *iter);
 
 
-/* Sequence-related definitions */
+/** Sequence-related functions */
 ASDF_EXPORT bool asdf_value_is_sequence(asdf_value_t *value);
 ASDF_EXPORT int asdf_sequence_size(asdf_value_t *sequence);
 ASDF_EXPORT asdf_value_t *asdf_sequence_get(asdf_value_t *sequence, int index);
@@ -206,11 +206,45 @@ ASDF_EXPORT asdf_sequence_iter_t asdf_sequence_iter_init(void);
 ASDF_EXPORT asdf_value_t *asdf_sequence_iter(asdf_value_t *sequence, asdf_sequence_iter_t *iter);
 
 
-/* Extension-related definitions */
+/** Extension-related functions */
+
 // Forward declaration for asdf_extension_t
 typedef struct _asdf_extension asdf_extension_t;
 
+/**
+ * Check if an `asdf_value_t *` has the specified extension type
+ *
+ * .. note::
+ *
+ *   This is usually wrapped by some helper utility named like ``asdf_value_is_<extention>``,
+ *   such as ``asdf_value_is_ndarray``.
+ *
+ *   But that is equivalent to running:
+ *
+ *   .. code:: c
+ *
+ *     const asdf_extension_t *ext = asdf_extension_get(file, "tag:...");
+ *     asdf_value_is_extension_type(value, ext);
+ */
 ASDF_EXPORT bool asdf_value_is_extension_type(asdf_value_t *value, const asdf_extension_t *ext);
+
+
+/**
+ * Cast an `asdf_value_t *` to the specified extension type
+ *
+ * .. note::
+ *
+ *   This is usually wrapped by some helper utility named like ``asdf_value_as_<extention>``,
+ *   such as ``asdf_value_as_ndarray``.
+ *
+ *   But that is equivalent to running:
+ *
+ *   .. code:: c
+ *
+ *     asdf_ndarray_t *ndarray = NULL;
+ *     const asdf_extension_t *ext = asdf_extension_get(file, "tag:...");
+ *     asdf_value_as_extension_type(value, ext, &ndarray);
+ */
 ASDF_EXPORT asdf_value_err_t
 asdf_value_as_extension_type(asdf_value_t *value, const asdf_extension_t *ext, void **out);
 
