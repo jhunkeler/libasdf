@@ -146,6 +146,12 @@ test_value_util_unit_CFLAGS = $(unit_test_cflags)
 test_value_util_unit_LDFLAGS = $(unit_test_ldflags)
 test_value_util_unit_LDADD = libmunit.a
 
+
+asdf_public_headers = \
+    $(wildcard $(top_srcdir)/include/asdf/*.h) \
+    $(wildcard $(top_srcdir)/include/asdf/core/*.h)
+
+
 if WITH_GWCS
     check_PROGRAMS += \
         test-gwcs.unit
@@ -157,9 +163,7 @@ if WITH_GWCS
     test_gwcs_unit_LDFLAGS = $(unit_test_ldflags)
     test_gwcs_unit_LDADD = $(unit_test_ldadd)
 
-    # The cpp header test will currently only work if compiled with the GWCS
-    # feature as well; should fix it to work without that
-    check_PROGRAMS += test-cpp-headers
+    asdf_public_headers += $(wildcard $(top_srcdir)/include/asdf/gwcs/*.h)
 endif
 
 
@@ -176,25 +180,19 @@ QUIET_OUT = $(if $(filter 1,$(V)),, > /dev/null)
 
 
 # Test headers on C++
-asdf_public_headers = \
-    $(wildcard $(top_srcdir)/include/asdf/*.h) \
-    $(wildcard $(top_srcdir)/include/asdf/core/*.h) \
-    $(wildcard $(top_srcdir)/include/asdf/gwcs/*.h)
-
-
 cpp_header_test = $(builddir)/test-cpp-headers.cpp
 # Generate the C++ header test file
 $(cpp_header_test): $(asdf_public_headers) $(srcdir)/scripts/generate_test_cpp_headers.sh
-	$(AM_V_at)$(srcdir)/scripts/generate_test_cpp_headers.sh $(top_srcdir)/include $@ \
+	$(AM_V_at)$(srcdir)/scripts/generate_test_cpp_headers.sh \
+	    $(top_srcdir)/include $@ $(asdf_public_headers) \
 	    $(QUIET_OUT)
-
-test_cpp_headers_SOURCES =
 
 test-cpp-headers$(EXEEXT): $(cpp_header_test) $(top_builddir)/libasdf.la
 	$(AM_V_at)$(LIBTOOL) --mode=link $(CXX) -std=c++17 -I$(top_srcdir)/include \
 	    $(ASDF_LDFLAGS) $(cpp_header_test) $(top_builddir)/libasdf.la \
 	    -o $@ $(QUIET_OUT)
 
+TESTS += test-cpp-headers
 CLEANFILES = test-cpp-headers.cpp test-cpp-headers$(EXEEXT)
 
 
