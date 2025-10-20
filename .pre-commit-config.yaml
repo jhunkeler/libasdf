@@ -6,3 +6,4 @@ repos:
         entry: clang-format -i
         language: system
         files: ^(src/|include/)
+        types_or: [c]

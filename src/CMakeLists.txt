@@ -13,6 +13,7 @@ target_sources(libasdf PUBLIC
     error.c
     event.c
     extension_registry.c
+    extension_util.c
     file.c
     info.c
     log.c

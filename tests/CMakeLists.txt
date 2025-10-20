@@ -9,6 +9,9 @@ file(GLOB source_files "test-*.c")
 file(GLOB shell_files "test-*.sh")
 set(ext_pattern "(^.*/|\\.[^.]*$)")
 
+# TODO: Add this back in optionally when compiling with GWCS support
+list(REMOVE_ITEM source_files "${CMAKE_CURRENT_SOURCE_DIR}/test-gwcs.c")
+
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/fixtures
         DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
@@ -87,11 +90,14 @@ if (ENABLE_TESTING_CPP)
 
     set(GENERATE_CPP_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_test_cpp_headers.sh)
     set(CPP_HEADER_TEST ${CTEST_BINARY_DIRECTORY}/test-cpp-headers.cpp)
-    file(GLOB ASDF_PUBLIC_HEADERS ${CMAKE_SOURCE_DIR}/include/asdf/*.h)
+    file(GLOB ASDF_PUBLIC_HEADERS
+        ${CMAKE_SOURCE_DIR}/include/asdf/*.h
+        ${CMAKE_SOURCE_DIR}/include/asdf/core/*.h
+    )
 
     add_custom_command(
         OUTPUT ${CPP_HEADER_TEST}
-        COMMAND ${GENERATE_CPP_HEADERS} ${CMAKE_SOURCE_DIR}/include ${CPP_HEADER_TEST}
+        COMMAND ${GENERATE_CPP_HEADERS} ${CMAKE_SOURCE_DIR}/include ${CPP_HEADER_TEST} ${ASDF_PUBLIC_HEADERS}
         DEPENDS ${ASDF_PUBLIC_HEADERS} ${GENERATE_CPP_HEADERS}
         COMMENT "Generating C++ header test file"
         VERBATIM
