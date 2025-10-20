@@ -27,7 +27,8 @@ static asdf_value_err_t asdf_gwcs_frame_celestial_deserialize(
         .max_axes = 3,
         .axes_names = (char **)frame_celestial->axes_names,
         .axes_order = frame_celestial->axes_order,
-        .unit = (char **)frame_celestial->unit};
+        .unit = (char **)frame_celestial->unit,
+        .axis_physical_types = (char **)frame_celestial->axis_physical_types};
 
     if (ASDF_VALUE_OK !=
         asdf_gwcs_frame_parse(value, (asdf_gwcs_frame_t *)frame_celestial, &params))

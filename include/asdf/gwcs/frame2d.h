@@ -19,6 +19,7 @@ typedef struct {
     uint32_t axes_order[2];
     // TODO: Should be an asdf_unit_t but right now that is just a string
     const char *unit[2];
+    const char *axis_physical_types[2];
 } asdf_gwcs_frame2d_t;
 
 ASDF_DECLARE_EXTENSION(gwcs_frame2d, asdf_gwcs_frame2d_t);
@@ -26,4 +27,3 @@ ASDF_DECLARE_EXTENSION(gwcs_frame2d, asdf_gwcs_frame2d_t);
 ASDF_END_DECLS
 
 #endif /* ASDF_GWCS_FRAME2D_H */
-

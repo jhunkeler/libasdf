@@ -18,6 +18,7 @@ typedef struct {
     const char *axes_names[3];
     uint32_t axes_order[3];
     const char *unit[3];
+    const char *axis_physical_types[3];
 } asdf_gwcs_frame_celestial_t;
 
 ASDF_DECLARE_EXTENSION(gwcs_frame_celestial, asdf_gwcs_frame_celestial_t);
@@ -25,4 +26,3 @@ ASDF_DECLARE_EXTENSION(gwcs_frame_celestial, asdf_gwcs_frame_celestial_t);
 ASDF_END_DECLS
 
 #endif /* ASDF_GWCS_FRAME_CELESTIAL_H */
-

@@ -27,7 +27,8 @@ static asdf_value_err_t asdf_gwcs_frame2d_deserialize(
         .max_axes = 2,
         .axes_names = (char **)frame2d->axes_names,
         .axes_order = frame2d->axes_order,
-        .unit = (char **)frame2d->unit};
+        .unit = (char **)frame2d->unit,
+        .axis_physical_types = (char **)frame2d->axis_physical_types};
 
     if (ASDF_VALUE_OK != asdf_gwcs_frame_parse(value, (asdf_gwcs_frame_t *)frame2d, &params))
         goto failure;
