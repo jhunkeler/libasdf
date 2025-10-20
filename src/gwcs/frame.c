@@ -61,13 +61,12 @@ static asdf_value_err_t get_frame_axes_string_param(
     char **strings,
     uint32_t min_axes,
     uint32_t max_axes) {
-    asdf_value_err_t prop_err = ASDF_VALUE_OK;
     asdf_value_t *prop = NULL;
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
 
-    prop_err = asdf_get_optional_property(value, propname, ASDF_VALUE_SEQUENCE, NULL, &prop);
+    err = asdf_get_optional_property(value, propname, ASDF_VALUE_SEQUENCE, NULL, (void *)&prop);
 
-    if (prop_err != ASDF_VALUE_OK && prop_err != ASDF_VALUE_ERR_NOT_FOUND)
+    if (!ASDF_IS_OPTIONAL_OK(err))
         goto failure;
 
     uint32_t size = (uint32_t)asdf_sequence_size(prop);
@@ -81,7 +80,7 @@ static asdf_value_err_t get_frame_axes_string_param(
     asdf_value_t *item = NULL;
     char **str_tmp = strings;
     while ((item = asdf_sequence_iter(prop, &iter)) != NULL) {
-        if (ASDF_VALUE_OK != asdf_value_as_string0(item, (const char **)str_tmp)) {
+        if (!ASDF_IS_OK(asdf_value_as_string0(item, (const char **)str_tmp))) {
             warn_invalid_frame_axes_param(value, propname, ASDF_VALUE_STRING, min_axes, max_axes);
             goto failure;
         }
@@ -98,13 +97,12 @@ failure:
 
 static asdf_value_err_t get_frame_axes_order_param(
     asdf_value_t *value, uint32_t *ints, uint32_t min_axes, uint32_t max_axes) {
-    asdf_value_err_t prop_err = ASDF_VALUE_OK;
     asdf_value_t *prop = NULL;
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
-    prop_err = asdf_get_optional_property(value, "axes_order", ASDF_VALUE_SEQUENCE, NULL, &prop);
+    err = asdf_get_optional_property(value, "axes_order", ASDF_VALUE_SEQUENCE, NULL, (void *)&prop);
 
-    if (prop_err != ASDF_VALUE_OK && prop_err != ASDF_VALUE_ERR_NOT_FOUND)
-        return err;
+    if (!ASDF_IS_OPTIONAL_OK(err))
+        goto failure;
 
     uint32_t size = (uint32_t)asdf_sequence_size(prop);
 
@@ -146,39 +144,30 @@ asdf_value_err_t asdf_gwcs_frame_parse(
     assert(frame);
     assert(params);
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
-    asdf_value_err_t prop_err = ASDF_VALUE_OK;
-    asdf_value_t *prop = NULL;
 
     if (!asdf_value_is_mapping(value))
         goto failure;
 
-    prop_err = asdf_get_required_property(value, "name", ASDF_VALUE_STRING, NULL, &prop);
+    err = asdf_get_required_property(value, "name", ASDF_VALUE_STRING, NULL, (void *)&frame->name);
 
-    if (prop_err != ASDF_VALUE_OK)
+    if (ASDF_IS_ERR(err))
         goto failure;
 
-    if (ASDF_VALUE_OK != asdf_value_as_string0(prop, &frame->name))
+    if (!ASDF_IS_OPTIONAL_OK(get_frame_axes_string_param(
+            value, "axes_names", params->axes_names, params->min_axes, params->max_axes)))
         goto failure;
 
-
-    if (ASDF_VALUE_OK !=
-        get_frame_axes_string_param(
-            value, "axes_names", params->axes_names, params->min_axes, params->max_axes))
-        goto failure;
-
-    if (ASDF_VALUE_OK != get_frame_axes_string_param(
-                             value, "unit", params->unit, params->min_axes, params->max_axes))
+    if (!ASDF_IS_OPTIONAL_OK(get_frame_axes_string_param(
+            value, "unit", params->unit, params->min_axes, params->max_axes)))
         goto failure;
 
 
-    if (ASDF_VALUE_OK !=
-        get_frame_axes_order_param(value, params->axes_order, params->min_axes, params->max_axes))
+    if (!(ASDF_IS_OPTIONAL_OK(get_frame_axes_order_param(
+            value, params->axes_order, params->min_axes, params->max_axes))))
         goto failure;
 
-    asdf_value_destroy(prop);
     return ASDF_VALUE_OK;
 failure:
-    asdf_value_destroy(prop);
     return err;
 }
 

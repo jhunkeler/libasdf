@@ -43,9 +43,9 @@ static asdf_value_err_t asdf_gwcs_step_deserialize(
         goto failure;
     }
 
-    err = asdf_get_required_property(value, "frame", ASDF_VALUE_UNKNOWN, NULL, &prop);
+    err = asdf_get_required_property(value, "frame", ASDF_VALUE_UNKNOWN, NULL, (void *)&prop);
 
-    if (ASDF_VALUE_OK == err) {
+    if (ASDF_IS_OK(err)) {
         asdf_value_as_gwcs_frame(prop, &frame);
         asdf_value_destroy(prop);
     }

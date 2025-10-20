@@ -12,6 +12,7 @@
 
 #include "../extension_util.h"
 #include "../log.h"
+#include "../util.h"
 
 #include "transform.h"
 
@@ -19,23 +20,19 @@
 /** Helper to read crpix, crval, etc. */
 static asdf_value_err_t get_coordinates_prop(asdf_value_t *value, const char *name, double *out) {
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
-    asdf_value_t *prop = NULL;
     asdf_ndarray_t *ndarray = NULL;
     void *data = NULL;
     size_t size = 0;
 
     assert(value);
 
-    err =
-        asdf_get_required_property(value, name, ASDF_VALUE_EXTENSION, ASDF_CORE_NDARRAY_TAG, &prop);
+    err = asdf_get_required_property(
+        value, name, ASDF_VALUE_EXTENSION, ASDF_CORE_NDARRAY_TAG, (void *)&ndarray);
 
-    if (ASDF_VALUE_OK != err)
+    if (ASDF_IS_ERR(err))
         goto failure;
 
-    err = asdf_value_as_ndarray(prop, &ndarray);
-
-    if (ASDF_VALUE_OK != err || UNLIKELY(!ndarray))
-        goto failure;
+    assert(ndarray);
 
     if (ndarray->ndim != 1 || ndarray->shape[0] != 2 ||
         ndarray->datatype.type != ASDF_DATATYPE_FLOAT64) {
@@ -60,7 +57,6 @@ static asdf_value_err_t get_coordinates_prop(asdf_value_t *value, const char *na
     err = ASDF_VALUE_OK;
 failure:
     asdf_ndarray_destroy(ndarray);
-    asdf_value_destroy(prop);
     return err;
 }
 
@@ -68,22 +64,16 @@ failure:
 /** Helper to read the pc matrix */
 static asdf_value_err_t get_matrix_prop(asdf_value_t *value, const char *name, double *out) {
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
-    asdf_value_t *prop = NULL;
     asdf_ndarray_t *ndarray = NULL;
     void *data = NULL;
     size_t size = 0;
 
     assert(value);
 
-    err =
-        asdf_get_required_property(value, name, ASDF_VALUE_EXTENSION, ASDF_CORE_NDARRAY_TAG, &prop);
+    err = asdf_get_required_property(
+        value, name, ASDF_VALUE_EXTENSION, ASDF_CORE_NDARRAY_TAG, (void *)&ndarray);
 
-    if (ASDF_VALUE_OK != err)
-        goto failure;
-
-    err = asdf_value_as_ndarray(prop, &ndarray);
-
-    if (ASDF_VALUE_OK != err || UNLIKELY(!ndarray))
+    if (ASDF_IS_ERR(err))
         goto failure;
 
     if (ndarray->ndim != 2 || ndarray->shape[0] != 2 || ndarray->shape[1] != 2 ||
@@ -109,7 +99,6 @@ static asdf_value_err_t get_matrix_prop(asdf_value_t *value, const char *name, d
     err = ASDF_VALUE_OK;
 failure:
     asdf_ndarray_destroy(ndarray);
-    asdf_value_destroy(prop);
     return err;
 }
 

@@ -29,7 +29,6 @@ static asdf_gwcs_transform_type_t asdf_gwcs_transform_type_get(const char *tagst
 asdf_value_err_t asdf_gwcs_transform_parse(asdf_value_t *value, asdf_gwcs_transform_t *transform) {
 
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
-    asdf_value_t *prop = NULL;
 
     if (!asdf_value_is_mapping(value))
         goto failure;
@@ -51,44 +50,26 @@ asdf_value_err_t asdf_gwcs_transform_parse(asdf_value_t *value, asdf_gwcs_transf
 
     transform->type = type;
 
-    // TODO: Still need a better way to handle optional properties, specifically the
-    // case of if not found, do nothing, if any other err: failure
-    err = asdf_get_optional_property(value, "name", ASDF_VALUE_STRING, NULL, &prop);
+    err = asdf_get_optional_property(
+        value, "name", ASDF_VALUE_STRING, NULL, (void *)&transform->name);
 
-    if (ASDF_VALUE_OK == err) {
-        err = asdf_value_as_string0(prop, &transform->name);
-
-        if (ASDF_VALUE_OK != err)
-            goto failure;
-    } else if (ASDF_VALUE_ERR_NOT_FOUND != err) {
+    if (!ASDF_IS_OPTIONAL_OK(err))
         goto failure;
-    }
-
-    asdf_value_destroy(prop);
 
     err = asdf_get_optional_property(
-        value, "bounding_box", ASDF_VALUE_EXTENSION, ASDF_GWCS_BOUNDING_BOX_TAG, &prop);
+        value,
+        "bounding_box",
+        ASDF_VALUE_EXTENSION,
+        ASDF_GWCS_BOUNDING_BOX_TAG,
+        (void *)&transform->bounding_box);
 
-    if (err != ASDF_VALUE_OK && err != ASDF_VALUE_ERR_NOT_FOUND)
+    if (!ASDF_IS_OPTIONAL_OK(err))
         goto failure;
-
-    if (ASDF_VALUE_OK == err) {
-        err = asdf_value_as_gwcs_bounding_box(
-            prop, (asdf_gwcs_bounding_box_t **)&transform->bounding_box);
-
-        if (ASDF_VALUE_OK != err)
-            goto failure;
-    } else if (ASDF_VALUE_ERR_NOT_FOUND != err) {
-        goto failure;
-    }
-
-    asdf_value_destroy(prop);
 
     // TODO: Mostly not implemented yet.
     return ASDF_VALUE_OK;
 
 failure:
-    asdf_value_destroy(prop);
     return err;
 }
 

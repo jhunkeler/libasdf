@@ -101,37 +101,8 @@ static bool is_equivalent_type(asdf_value_type_t type, asdf_value_type_t expecte
 }
 
 
-asdf_value_err_t asdf_get_required_property(
-    asdf_value_t *mapping,
-    const char *name,
-    asdf_value_type_t type,
-    const char *tag,
-    asdf_value_t **out) {
-    asdf_value_err_t err = asdf_get_optional_property(mapping, name, type, tag, out);
-
-#ifdef ASDF_LOG_ENABLED
-    if (ASDF_VALUE_ERR_NOT_FOUND == err) {
-        const char *mapping_tag = asdf_value_tag(mapping);
-        const char *path = asdf_value_path(mapping);
-        ASDF_LOG(
-            mapping->file,
-            ASDF_LOG_WARN,
-            "required property %s missing from %s at %s",
-            name,
-            mapping_tag ? mapping_tag : "mapping",
-            path);
-    }
-#endif
-    return err;
-}
-
-
-asdf_value_err_t asdf_get_optional_property(
-    asdf_value_t *mapping,
-    const char *name,
-    asdf_value_type_t type,
-    const char *tag,
-    asdf_value_t **out) {
+static asdf_value_err_t asdf_get_property_impl(
+    asdf_value_t *mapping, const char *name, asdf_value_type_t type, const char *tag, void *out) {
 
     asdf_value_t *prop = asdf_mapping_get(mapping, name);
 
@@ -140,24 +111,28 @@ asdf_value_err_t asdf_get_optional_property(
 
     asdf_value_type_t prop_type = asdf_value_get_type(prop);
 
-    if (type != ASDF_VALUE_UNKNOWN && type != ASDF_VALUE_EXTENSION &&
-        !is_equivalent_type(prop_type, type)) {
+    if (type != ASDF_VALUE_UNKNOWN && type != ASDF_VALUE_EXTENSION) {
+        if (!is_equivalent_type(prop_type, type)) {
 #ifdef ASDF_LOG_ENABLED
-        const char *mapping_tag = asdf_value_tag(mapping);
-        const char *path = asdf_value_path(prop);
-        const char *typestr = asdf_value_type_string(type);
-        ASDF_LOG(
-            mapping->file,
-            ASDF_LOG_WARN,
-            "property %s from %s at %s does not have the type required by "
-            "schema: %s",
-            name,
-            mapping_tag ? mapping_tag : "mapping",
-            path,
-            typestr);
+            const char *mapping_tag = asdf_value_tag(mapping);
+            const char *path = asdf_value_path(prop);
+            const char *typestr = asdf_value_type_string(type);
+            ASDF_LOG(
+                mapping->file,
+                ASDF_LOG_WARN,
+                "property %s from %s at %s does not have the type required by "
+                "schema: %s",
+                name,
+                mapping_tag ? mapping_tag : "mapping",
+                path,
+                typestr);
 #endif
+            asdf_value_destroy(prop);
+            return ASDF_VALUE_ERR_TYPE_MISMATCH;
+        }
+        asdf_value_err_t err = asdf_value_as_type(prop, type, out);
         asdf_value_destroy(prop);
-        return ASDF_VALUE_ERR_TYPE_MISMATCH;
+        return err;
     }
 
     if (type == ASDF_VALUE_EXTENSION && tag) {
@@ -183,8 +158,55 @@ asdf_value_err_t asdf_get_optional_property(
             asdf_value_destroy(prop);
             return ASDF_VALUE_ERR_TYPE_MISMATCH;
         }
+
+        asdf_value_err_t err = asdf_value_as_extension_type(prop, ext, (void **)out);
+        asdf_value_destroy(prop);
+        return err;
     }
 
-    *out = prop;
-    return ASDF_VALUE_OK;
+    asdf_value_err_t err = asdf_value_as_type(prop, type, out);
+    asdf_value_destroy(prop);
+    return err;
+}
+
+
+asdf_value_err_t asdf_get_required_property(
+    asdf_value_t *mapping, const char *name, asdf_value_type_t type, const char *tag, void *out) {
+    asdf_value_err_t err = asdf_get_property_impl(mapping, name, type, tag, out);
+
+#ifdef ASDF_LOG_ENABLED
+    if (ASDF_VALUE_ERR_NOT_FOUND == err) {
+        const char *mapping_tag = asdf_value_tag(mapping);
+        const char *path = asdf_value_path(mapping);
+        ASDF_LOG(
+            mapping->file,
+            ASDF_LOG_WARN,
+            "required property %s missing from %s at %s",
+            name,
+            mapping_tag ? mapping_tag : "mapping",
+            path);
+    }
+#endif
+    return err;
+}
+
+
+asdf_value_err_t asdf_get_optional_property(
+    asdf_value_t *mapping, const char *name, asdf_value_type_t type, const char *tag, void *out) {
+    asdf_value_err_t err = asdf_get_property_impl(mapping, name, type, tag, out);
+
+#ifdef ASDF_LOG_ENABLED
+    if (ASDF_VALUE_ERR_NOT_FOUND == err) {
+        const char *mapping_tag = asdf_value_tag(mapping);
+        const char *path = asdf_value_path(mapping);
+        ASDF_LOG(
+            mapping->file,
+            ASDF_LOG_DEBUG,
+            "optional property %s not found in %s at %s",
+            name,
+            mapping_tag ? mapping_tag : "mapping",
+            path);
+    }
+#endif
+    return err;
 }

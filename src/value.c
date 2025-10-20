@@ -1577,3 +1577,102 @@ asdf_value_err_t asdf_value_as_double(asdf_value_t *value, double *out) {
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
     }
 }
+
+
+bool asdf_value_is_type(asdf_value_t *value, asdf_value_type_t type) {
+    switch (type) {
+    case ASDF_VALUE_UNKNOWN:
+        return false;
+    case ASDF_VALUE_SEQUENCE:
+        return asdf_value_is_sequence(value);
+    case ASDF_VALUE_MAPPING:
+        return asdf_value_is_mapping(value);
+    case ASDF_VALUE_SCALAR:
+        return asdf_value_is_scalar(value);
+    case ASDF_VALUE_STRING:
+        return asdf_value_is_string(value);
+    case ASDF_VALUE_BOOL:
+        return asdf_value_is_bool(value);
+    case ASDF_VALUE_NULL:
+        return asdf_value_is_null(value);
+    case ASDF_VALUE_INT8:
+        return asdf_value_is_int8(value);
+    case ASDF_VALUE_INT16:
+        return asdf_value_is_int16(value);
+    case ASDF_VALUE_INT32:
+        return asdf_value_is_int32(value);
+    case ASDF_VALUE_INT64:
+        return asdf_value_is_int64(value);
+    case ASDF_VALUE_UINT8:
+        return asdf_value_is_uint8(value);
+    case ASDF_VALUE_UINT16:
+        return asdf_value_is_uint16(value);
+    case ASDF_VALUE_UINT32:
+        return asdf_value_is_uint32(value);
+    case ASDF_VALUE_UINT64:
+        return asdf_value_is_uint64(value);
+    case ASDF_VALUE_FLOAT:
+        return asdf_value_is_float(value);
+    case ASDF_VALUE_DOUBLE:
+        return asdf_value_is_double(value);
+    case ASDF_VALUE_EXTENSION:
+        return (ASDF_VALUE_OK == asdf_value_infer_extension_type(value));
+    }
+    return false;
+}
+
+
+asdf_value_err_t asdf_value_as_type(asdf_value_t *value, asdf_value_type_t type, void *out) {
+    switch (type) {
+    case ASDF_VALUE_UNKNOWN:
+        (*(asdf_value_t **)out) = asdf_value_clone(value);
+        return ASDF_VALUE_OK;
+    case ASDF_VALUE_SEQUENCE:
+        if (!asdf_value_is_sequence(value))
+            return ASDF_VALUE_ERR_TYPE_MISMATCH;
+
+        (*(asdf_value_t **)out) = asdf_value_clone(value);
+        return ASDF_VALUE_OK;
+    case ASDF_VALUE_MAPPING:
+        if (!asdf_value_is_mapping(value))
+            return ASDF_VALUE_ERR_TYPE_MISMATCH;
+
+        (*(asdf_value_t **)out) = asdf_value_clone(value);
+        return ASDF_VALUE_OK;
+    case ASDF_VALUE_SCALAR:
+        return asdf_value_as_scalar0(value, (const char **)out);
+    case ASDF_VALUE_STRING:
+        return asdf_value_as_string0(value, (const char **)out);
+    case ASDF_VALUE_BOOL:
+        return asdf_value_as_bool(value, (bool *)out);
+    case ASDF_VALUE_NULL:
+        if (!asdf_value_is_null(value))
+            return ASDF_VALUE_ERR_TYPE_MISMATCH;
+
+        return ASDF_VALUE_OK;
+    case ASDF_VALUE_INT8:
+        return asdf_value_as_int8(value, (int8_t *)out);
+    case ASDF_VALUE_INT16:
+        return asdf_value_as_int16(value, (int16_t *)out);
+    case ASDF_VALUE_INT32:
+        return asdf_value_as_int32(value, (int32_t *)out);
+    case ASDF_VALUE_INT64:
+        return asdf_value_as_int64(value, (int64_t *)out);
+    case ASDF_VALUE_UINT8:
+        return asdf_value_as_uint8(value, (uint8_t *)out);
+    case ASDF_VALUE_UINT16:
+        return asdf_value_as_uint16(value, (uint16_t *)out);
+    case ASDF_VALUE_UINT32:
+        return asdf_value_as_uint32(value, (uint32_t *)out);
+    case ASDF_VALUE_UINT64:
+        return asdf_value_as_uint64(value, (uint64_t *)out);
+    case ASDF_VALUE_FLOAT:
+        return asdf_value_as_float(value, (float *)out);
+    case ASDF_VALUE_DOUBLE:
+        return asdf_value_as_double(value, (double *)out);
+    case ASDF_VALUE_EXTENSION:
+        // Not supported through this function so we return ERR_TYPE_MISMATCH
+        return ASDF_VALUE_ERR_TYPE_MISMATCH;
+    }
+    return ASDF_VALUE_ERR_TYPE_MISMATCH;
+}
