@@ -188,6 +188,7 @@ $(cpp_header_test): $(asdf_public_headers) $(srcdir)/scripts/generate_test_cpp_h
 	$(AM_V_at)$(srcdir)/scripts/generate_test_cpp_headers.sh $(top_srcdir)/include $@ \
 	    $(QUIET_OUT)
 
+test_cpp_headers_SOURCES =
 
 test-cpp-headers$(EXEEXT): $(cpp_header_test) $(top_builddir)/libasdf.la
 	$(AM_V_at)$(LIBTOOL) --mode=link $(CXX) -std=c++17 -I$(top_srcdir)/include \
