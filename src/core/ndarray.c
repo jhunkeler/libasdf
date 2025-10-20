@@ -1,3 +1,4 @@
+#include "asdf/value.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -9,6 +10,7 @@
 #undef ASDF_CORE_NDARRAY_INTERNAL
 #include <asdf/extension.h>
 
+#include "../extension_util.h"
 #include "../file.h"
 #include "../log.h"
 #include "../util.h"
@@ -30,24 +32,6 @@ typedef struct asdf_ndarray {
     asdf_block_t *block;
     asdf_file_t *file;
 } asdf_ndarray_t;
-
-
-/* Helper to look up required properties and log a warning if missing */
-static asdf_value_t *get_required_property(asdf_value_t *mapping, const char *name) {
-    asdf_value_t *prop = asdf_mapping_get(mapping, name);
-#ifdef ASDF_LOG_ENABLED
-    if (!prop) {
-        const char *path = asdf_value_path(prop);
-        ASDF_LOG(
-            mapping->file,
-            ASDF_LOG_WARN,
-            "required property %s missing from ndarray at %s",
-            name,
-            path);
-    }
-#endif
-    return prop;
-}
 
 
 #ifdef ASDF_LOG_ENABLED
@@ -195,7 +179,7 @@ static asdf_value_err_t asdf_ndarray_parse_string_datatype(
 /**
  * Internal structure for representing a shape and number of dimensions
  *
- * Returned by `asdf_ndarray_deserialize_shape`
+ * Returned by `asdf_ndarray_parse_shape`
  */
 typedef struct {
     uint32_t ndim;
@@ -219,7 +203,7 @@ static void warn_invalid_shape(asdf_value_t *value) {
 #endif
 
 
-static asdf_value_err_t asdf_ndarray_deserialize_shape(asdf_value_t *value, asdf_shape_t *out) {
+static asdf_value_err_t asdf_ndarray_parse_shape(asdf_value_t *value, asdf_shape_t *out) {
     asdf_value_err_t err = ASDF_VALUE_OK;
     uint64_t *shape = NULL;
 
@@ -278,11 +262,11 @@ static void warn_invalid_strides(asdf_value_t *value) {
 
 
 /**
- * Almost the same as asdf_ndarray_deserialize_shape, but it depends on
+ * Almost the same as asdf_ndarray_parse_shape, but it depends on
  * already knowing the *shape* of the ndarray, and the validation is slightly
  * different
  */
-static asdf_value_err_t asdf_ndarray_deserialize_strides(
+static asdf_value_err_t asdf_ndarray_parse_strides(
     asdf_value_t *value, uint32_t ndim, int64_t **out) {
     asdf_value_err_t err = ASDF_VALUE_OK;
     int64_t *strides = NULL;
@@ -330,43 +314,37 @@ failure:
 }
 
 
-asdf_byteorder_t asdf_ndarray_deserialize_byteorder(asdf_value_t *value) {
-    if (!value) {
-#ifdef ASDF_LOG_ENABLED
-        const char *path = asdf_value_path(value);
-        ASDF_LOG(
-            value->file,
-            ASDF_LOG_WARN,
-            "byteorder not specified for ndarray at %s; "
-            "defaulting to \"little\"",
-            path);
-#endif
-        return ASDF_BYTEORDER_LITTLE;
+static asdf_value_err_t asdf_ndarray_parse_byteorder(
+    asdf_value_t *parent, const char *path, asdf_byteorder_t *out) {
+    const char *byteorder_str = NULL;
+    asdf_value_err_t err =
+        asdf_get_optional_property(parent, path, ASDF_VALUE_STRING, NULL, (void *)&byteorder_str);
+
+    if (!ASDF_IS_OK(err))
+        return err;
+
+    if (byteorder_str && (strcmp(byteorder_str, "little") == 0)) {
+        *out = ASDF_BYTEORDER_LITTLE;
+        return ASDF_VALUE_OK;
     }
 
-    const char *s = NULL;
-
-    if (ASDF_VALUE_OK != asdf_value_as_string0(value, &s)) {
-        goto invalid;
+    if (byteorder_str && (strcmp(byteorder_str, "big") == 0)) {
+        *out = ASDF_BYTEORDER_BIG;
+        return ASDF_VALUE_OK;
     }
 
-    if (s && (strcmp(s, "little") == 0))
-        return ASDF_BYTEORDER_LITTLE;
-    else if (s && (strcmp(s, "big") == 0))
-        return ASDF_BYTEORDER_BIG;
-
-invalid : {
 #ifdef ASDF_LOG_ENABLED
-    const char *path = asdf_value_path(value);
+    const char *parent_path = asdf_value_path(parent);
     ASDF_LOG(
-        value->file,
+        parent->file,
         ASDF_LOG_WARN,
-        "invalid byteorder for ndarray at %s; "
+        "invalid byteorder at %s/%s; "
         "defaulting to \"little\"",
+        parent_path,
         path);
 #endif
-}
-    return ASDF_BYTEORDER_LITTLE;
+    *out = ASDF_BYTEORDER_LITTLE;
+    return ASDF_VALUE_ERR_PARSE_FAILURE;
 }
 
 
@@ -386,6 +364,7 @@ static asdf_value_err_t asdf_ndarray_parse_datatype(
  */
 static asdf_value_err_t asdf_ndarray_parse_field_datatype(
     asdf_value_t *value, asdf_byteorder_t byteorder, asdf_datatype_t *field) {
+    asdf_value_t *shape_val = NULL;
 
     if (!asdf_value_is_mapping(value))
         return ASDF_VALUE_ERR_PARSE_FAILURE;
@@ -398,45 +377,45 @@ static asdf_value_err_t asdf_ndarray_parse_field_datatype(
     err = asdf_ndarray_parse_datatype(datatype_val, byteorder, field);
     asdf_value_destroy(datatype_val);
 
-    if (UNLIKELY(err != ASDF_VALUE_OK))
+    if (ASDF_IS_ERR(err))
         return err;
 
-    // Get the name property, if present / valid
-    asdf_value_t *prop = asdf_mapping_get(value, "name");
+    err = asdf_get_optional_property(value, "name", ASDF_VALUE_STRING, NULL, (void *)&field->name);
 
-    if (prop) {
-        if (ASDF_VALUE_OK != asdf_value_as_string0(prop, &field->name)) {
 #ifdef ASDF_LOG_ENABLED
-            const char *path = asdf_value_path(value);
-            ASDF_LOG(value->file, ASDF_LOG_WARN, "invalid name field in datatype at %s", path);
-        }
+    if (!ASDF_IS_OPTIONAL_OK(err)) {
+        const char *path = asdf_value_path(value);
+        ASDF_LOG(value->file, ASDF_LOG_WARN, "invalid name field in datatype at %s", path);
+    }
 #endif
-        asdf_value_destroy(prop);
-    }
 
-    // Get the byteorder property, if present (otherwise keep the ndarray's byteorder
-    // already passed through)
-    if ((prop = asdf_mapping_get(value, "byteorder"))) {
-        byteorder = asdf_ndarray_deserialize_byteorder(prop);
-        asdf_value_destroy(prop);
-    }
+    err = asdf_ndarray_parse_byteorder(value, "byteorder", &field->byteorder);
 
-    field->byteorder = byteorder;
+    if (!ASDF_IS_OPTIONAL_OK(err))
+        goto failure;
 
     // A datatype field can also be dimensionful in its own right (otherwise .ndim = 0,
     // .shape = NULL)
-    if ((prop = asdf_mapping_get(value, "shape"))) {
+    err = asdf_get_optional_property(value, "shape", ASDF_VALUE_SEQUENCE, NULL, (void *)&shape_val);
+
+    if (ASDF_IS_OK(err)) {
         asdf_shape_t shape = {0};
-        if (asdf_ndarray_deserialize_shape(prop, &shape) == ASDF_VALUE_OK) {
+        err = asdf_ndarray_parse_shape(shape_val, &shape);
+        if (ASDF_IS_OK(err)) {
             field->ndim = shape.ndim;
             field->shape = shape.shape;
             // Multiply the size
             for (uint32_t dim = 0; dim < shape.ndim; dim++)
                 field->size *= shape.shape[dim];
         }
-        asdf_value_destroy(prop);
+        asdf_value_destroy(shape_val);
     }
 
+    // Last thing we checked for was shape; if it was not found that's OK
+    if (ASDF_IS_OPTIONAL_OK(err))
+        err = ASDF_VALUE_OK;
+
+failure:
     return err;
 }
 
@@ -596,82 +575,71 @@ static asdf_value_err_t asdf_ndarray_deserialize(
     asdf_byteorder_t byteorder = ASDF_BYTEORDER_LITTLE;
     uint64_t offset = 0;
     int64_t *strides = NULL;
+    asdf_ndarray_t *ndarray = NULL;
 
     if (!asdf_value_is_mapping(value))
         goto failure;
 
     /* The source field is required; currently only integer sources are allowed */
-    if (!(prop = get_required_property(value, "source")))
-        goto failure;
+    err = asdf_get_required_property(value, "source", ASDF_VALUE_UINT64, NULL, &source);
 
-    if (ASDF_VALUE_OK != asdf_value_as_uint64(prop, &source)) {
-#ifdef ASDF_LOG_ENABLED
-        const char *path = asdf_value_path(prop);
-        const char *raw = NULL;
-        asdf_value_as_scalar0(prop, &raw);
-        ASDF_LOG(
-            value->file,
-            ASDF_LOG_WARN,
-            "invalid or unsupported source for ndarray at %s: "
-            "\"%s\"; only positive integers are supported",
-            path,
-            raw);
-#endif
+    if (!ASDF_IS_OK(err))
         goto failure;
-    }
-
-    asdf_value_destroy(prop);
 
     /* Parse shape */
-    if (!(prop = get_required_property(value, "shape")))
+    err = asdf_get_required_property(value, "shape", ASDF_VALUE_SEQUENCE, NULL, (void *)&prop);
+
+    if (!ASDF_IS_OK(err))
         goto failure;
 
-    if ((err = asdf_ndarray_deserialize_shape(prop, &shape)) != ASDF_VALUE_OK)
+    err = asdf_ndarray_parse_shape(prop, &shape);
+
+    if (!ASDF_IS_OK(err))
         goto failure;
 
     asdf_value_destroy(prop);
+    prop = NULL;
 
     /* Parse byteorder */
-    if (!(prop = get_required_property(value, "byteorder"))) {
+    if (!ASDF_IS_OK(asdf_ndarray_parse_byteorder(value, "byteorder", &byteorder)))
+        goto failure;
+
+    ndarray = calloc(1, sizeof(asdf_ndarray_t));
+
+    if (UNLIKELY(!ndarray)) {
+        err = ASDF_VALUE_ERR_OOM;
         goto failure;
     }
-    byteorder = asdf_ndarray_deserialize_byteorder(prop);
-    asdf_value_destroy(prop);
-
-    asdf_ndarray_t *ndarray = calloc(1, sizeof(asdf_ndarray_t));
-
-    if (!ndarray)
-        return ASDF_VALUE_ERR_OOM;
 
     /* Parse datatype */
-    if (!(prop = get_required_property(value, "datatype")))
+    err = asdf_get_required_property(value, "datatype", ASDF_VALUE_UNKNOWN, NULL, (void *)&prop);
+
+    if (!ASDF_IS_OK(err))
         goto failure;
 
     err = asdf_ndarray_parse_datatype(prop, byteorder, &ndarray->datatype);
 
-    if (UNLIKELY(err != ASDF_VALUE_OK))
+    if (ASDF_IS_ERR(err))
         goto failure;
 
     asdf_value_destroy(prop);
+    prop = NULL;
 
     /* Parse offset */
-    if ((prop = asdf_mapping_get(value, "offset"))) {
-        if (ASDF_VALUE_OK != asdf_value_as_uint64(prop, &offset)) {
-            offset = 0;
-#ifdef ASDF_LOG_ENABLED
-            const char *path = asdf_value_path(prop);
-            ASDF_LOG(value->file, ASDF_LOG_WARN, "ignoring invalid offset in ndarray at %s", path);
-#endif
-        }
-        asdf_value_destroy(prop);
-    }
+    err = asdf_get_optional_property(value, "offset", ASDF_VALUE_UINT64, NULL, &offset);
 
-    /* Parse strides */
-    if ((prop = asdf_mapping_get(value, "strides"))) {
-        if ((err = asdf_ndarray_deserialize_strides(prop, shape.ndim, &strides)) != ASDF_VALUE_OK) {
-            goto failure;
-        }
-    }
+    if (!ASDF_IS_OPTIONAL_OK(err))
+        goto failure;
+
+    err = asdf_get_optional_property(value, "strides", ASDF_VALUE_SEQUENCE, NULL, (void *)&prop);
+
+    if (ASDF_IS_OK(err))
+        err = asdf_ndarray_parse_strides(prop, shape.ndim, &strides);
+
+    if (!ASDF_IS_OPTIONAL_OK(err))
+        goto failure;
+
+    asdf_value_destroy(prop);
 
     ndarray->source = source;
     ndarray->ndim = shape.ndim;
@@ -685,6 +653,7 @@ static asdf_value_err_t asdf_ndarray_deserialize(
 failure:
     asdf_value_destroy(prop);
     free(strides);
+    free(ndarray);
     return err;
 }
 
@@ -710,7 +679,7 @@ static void asdf_ndarray_dealloc(void *value) {
  */
 ASDF_REGISTER_EXTENSION(
     ndarray,
-    ASDF_CORE_TAG_PREFIX "ndarray-1.1.0",
+    ASDF_CORE_NDARRAY_TAG,
     asdf_ndarray_t,
     &libasdf_software,
     asdf_ndarray_deserialize,

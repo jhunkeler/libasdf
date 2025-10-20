@@ -1,8 +1,9 @@
 repos:
   - repo: local
     hooks:
-      - id: make-format
-        name: Run make format
-        entry: make format
+      - id: clang-format
+        name: Run clang-format
+        entry: clang-format -i
         language: system
-        pass_filenames: false
+        files: ^(src/|include/)
+        types_or: [c]

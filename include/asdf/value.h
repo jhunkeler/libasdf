@@ -118,7 +118,7 @@ typedef enum {
  */
 typedef enum {
     ASDF_VALUE_ERR_UNKNOWN = -2,
-    
+
     /**
      * Error when the given JSON Path does not correspond to a path in the
      * ASDF tree
@@ -169,6 +169,12 @@ ASDF_EXPORT asdf_value_type_t asdf_value_get_type(asdf_value_t *value);
 
 ASDF_EXPORT const char *asdf_value_path(asdf_value_t *value);
 
+/**
+ * Returns a human-readable string representation of an `asdf_value_type_t`;
+ * useful for error-reporting
+ */
+ASDF_EXPORT const char *asdf_value_type_string(asdf_value_type_t type);
+
 /* Return the value's tag if it has an *explicit* tag (implict tags are not returned) */
 ASDF_EXPORT const char *asdf_value_tag(asdf_value_t *value);
 
@@ -178,42 +184,109 @@ ASDF_EXPORT int asdf_mapping_size(asdf_value_t *mapping);
 ASDF_EXPORT asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key);
 
 typedef struct _asdf_mapping_iter_impl _asdf_mapping_iter_impl_t;
-typedef _asdf_mapping_iter_impl_t* asdf_mapping_iter_t;
+typedef _asdf_mapping_iter_impl_t *asdf_mapping_iter_t;
 typedef struct _asdf_mapping_iter_impl asdf_mapping_item_t;
 
 ASDF_EXPORT asdf_mapping_iter_t asdf_mapping_iter_init(void);
 ASDF_EXPORT const char *asdf_mapping_item_key(asdf_mapping_item_t *item);
 ASDF_EXPORT asdf_value_t *asdf_mapping_item_value(asdf_mapping_item_t *item);
-ASDF_EXPORT asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_mapping_iter_t *iter);
+ASDF_EXPORT asdf_mapping_item_t *asdf_mapping_iter(
+    asdf_value_t *mapping, asdf_mapping_iter_t *iter);
 
 
-/* Sequence-related definitions */
+/** Sequence-related functions */
 ASDF_EXPORT bool asdf_value_is_sequence(asdf_value_t *value);
 ASDF_EXPORT int asdf_sequence_size(asdf_value_t *sequence);
 ASDF_EXPORT asdf_value_t *asdf_sequence_get(asdf_value_t *sequence, int index);
 
 typedef struct _asdf_sequence_iter_impl _asdf_sequence_iter_impl_t;
-typedef _asdf_sequence_iter_impl_t* asdf_sequence_iter_t;
+typedef _asdf_sequence_iter_impl_t *asdf_sequence_iter_t;
 
 ASDF_EXPORT asdf_sequence_iter_t asdf_sequence_iter_init(void);
 ASDF_EXPORT asdf_value_t *asdf_sequence_iter(asdf_value_t *sequence, asdf_sequence_iter_t *iter);
 
 
-/* Extension-related definitions */
+/** Extension-related functions */
+
 // Forward declaration for asdf_extension_t
 typedef struct _asdf_extension asdf_extension_t;
 
+/**
+ * Check if an `asdf_value_t *` has the specified extension type
+ *
+ * .. note::
+ *
+ *   This is usually wrapped by some helper utility named like ``asdf_value_is_<extention>``,
+ *   such as ``asdf_value_is_ndarray``.
+ *
+ *   But that is equivalent to running:
+ *
+ *   .. code:: c
+ *
+ *     const asdf_extension_t *ext = asdf_extension_get(file, "tag:...");
+ *     asdf_value_is_extension_type(value, ext);
+ */
 ASDF_EXPORT bool asdf_value_is_extension_type(asdf_value_t *value, const asdf_extension_t *ext);
-ASDF_EXPORT asdf_value_err_t asdf_value_as_extension_type(asdf_value_t *value, const asdf_extension_t *ext, void **out);
+
+
+/**
+ * Cast an `asdf_value_t *` to the specified extension type
+ *
+ * .. note::
+ *
+ *   This is usually wrapped by some helper utility named like ``asdf_value_as_<extention>``,
+ *   such as ``asdf_value_as_ndarray``.
+ *
+ *   But that is equivalent to running:
+ *
+ *   .. code:: c
+ *
+ *     asdf_ndarray_t *ndarray = NULL;
+ *     const asdf_extension_t *ext = asdf_extension_get(file, "tag:...");
+ *     asdf_value_as_extension_type(value, ext, &ndarray);
+ */
+ASDF_EXPORT asdf_value_err_t
+asdf_value_as_extension_type(asdf_value_t *value, const asdf_extension_t *ext, void **out);
+
+/** Generic value functions */
+
+/**
+ * Given an arbitrary `asdf_value_type_t` enum member, check if the value has
+ * that type.
+ *
+ * .. note::
+ *
+ *   For checking against a specific extension type it's still necessary to use
+ *   `asdf_value_is_extension_type`
+ */
+ASDF_EXPORT bool asdf_value_is_type(asdf_value_t *value, asdf_value_type_t type);
+
+
+/**
+ * Retrieve the underlying value of an arbitrary `asdf_value_t` as the type
+ * associated with an `asdf_value_type_t`
+ *
+ * The output address is passed in as a `void *`.  In the case of
+ * `ASDF_VALUE_STRING` the value is always returned as a 0-terminated string.
+ *
+ * .. note::
+ *
+ *   For getting the value of a specific extension type it's still necessary to use
+ *   `asdf_value_as_extension_type`
+ */
+ASDF_EXPORT asdf_value_err_t
+asdf_value_as_type(asdf_value_t *value, asdf_value_type_t type, void *out);
 
 
 /* Scalar-related definitions */
 ASDF_EXPORT bool asdf_value_is_string(asdf_value_t *value);
-ASDF_EXPORT asdf_value_err_t asdf_value_as_string(asdf_value_t *value, const char **out, size_t *out_len);
+ASDF_EXPORT asdf_value_err_t
+asdf_value_as_string(asdf_value_t *value, const char **out, size_t *out_len);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_string0(asdf_value_t *value, const char **out);
 
 ASDF_EXPORT bool asdf_value_is_scalar(asdf_value_t *value);
-ASDF_EXPORT asdf_value_err_t asdf_value_as_scalar(asdf_value_t *value, const char **out, size_t* out_len);
+ASDF_EXPORT asdf_value_err_t
+asdf_value_as_scalar(asdf_value_t *value, const char **out, size_t *out_len);
 ASDF_EXPORT asdf_value_err_t asdf_value_as_scalar0(asdf_value_t *value, const char **out);
 
 ASDF_EXPORT bool asdf_value_is_bool(asdf_value_t *value);
