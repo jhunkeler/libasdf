@@ -206,6 +206,31 @@ ASDF_EXPORT asdf_sequence_iter_t asdf_sequence_iter_init(void);
 ASDF_EXPORT asdf_value_t *asdf_sequence_iter(asdf_value_t *sequence, asdf_sequence_iter_t *iter);
 
 
+/**
+ * Any container-related functions
+ *
+ * Here "container" means either sequence or mapping though maybe could extend
+ * this interface in the future for custom container types
+ *
+ * These routines provide a convience for iterating over a container regardless
+ * if it is a sequence or mapping using a common interface.
+ *
+ * .. todo::
+ *
+ *   Document these better.
+ */
+typedef struct _asdf_container_iter_impl _asdf_container_iter_impl_t;
+typedef _asdf_container_iter_impl_t *asdf_container_iter_t;
+typedef struct _asdf_container_iter_impl asdf_container_item_t;
+
+ASDF_EXPORT asdf_container_iter_t asdf_container_iter_init(void);
+ASDF_EXPORT const char *asdf_container_item_key(asdf_container_item_t *item);
+ASDF_EXPORT int asdf_container_item_index(asdf_container_item_t *item);
+ASDF_EXPORT asdf_value_t *asdf_container_item_value(asdf_container_item_t *item);
+ASDF_EXPORT asdf_container_item_t *asdf_container_iter(
+    asdf_value_t *container, asdf_container_iter_t *iter);
+
+
 /** Extension-related functions */
 
 // Forward declaration for asdf_extension_t

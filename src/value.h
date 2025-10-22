@@ -59,4 +59,24 @@ typedef struct _asdf_sequence_iter_impl {
 typedef _asdf_sequence_iter_impl_t *asdf_sequence_iter_t;
 
 
+typedef struct _asdf_container_iter_impl {
+    union {
+        const char *key;
+        int index;
+    } path;
+    asdf_value_t *value;
+    bool is_mapping;
+    union {
+        asdf_mapping_iter_t mapping;
+        asdf_sequence_iter_t sequence;
+    } iter;
+} _asdf_container_iter_impl_t;
+
+
+typedef _asdf_container_iter_impl_t *asdf_container_iter_t;
+
+
+typedef struct _asdf_container_iter_impl asdf_container_item_t;
+
+
 ASDF_LOCAL asdf_value_t *asdf_value_create(asdf_file_t *file, struct fy_node *node);

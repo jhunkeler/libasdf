@@ -646,6 +646,51 @@ MU_TEST(test_asdf_sequence_get) {
 }
 
 
+MU_TEST(test_asdf_container_iter) {
+    const char *path = get_fixture_file_path("value-types.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    asdf_value_t *container = NULL;
+    asdf_value_err_t err = asdf_get_sequence(file, "sequence", &container);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_not_null(container);
+
+    asdf_container_iter_t iter = asdf_container_iter_init();
+    asdf_container_item_t *item = NULL;
+    int8_t i8 = -1;
+
+    for (int idx = 0; idx < 2; idx++) {
+        item = asdf_container_iter(container, &iter);
+        assert_not_null(item);
+        assert_int(asdf_container_item_index(item), ==, idx);
+        assert_int(asdf_value_as_int8(asdf_container_item_value(item), &i8), ==, ASDF_VALUE_OK);
+        assert_int(i8, ==, idx);
+    }
+
+    assert_null(asdf_container_iter(container, &iter));
+    asdf_value_destroy(container);
+
+    // Test on a mapping now
+    err = asdf_get_mapping(file, "mapping", &container);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_not_null(container);
+    const char *s = NULL;
+    const char *expected[] = {"foo", "bar"};
+    for (int idx = 0; idx < 2; idx++) {
+        item = asdf_container_iter(container, &iter);
+        assert_not_null(item);
+        assert_string_equal(asdf_container_item_key(item), expected[idx]);
+        assert_int(asdf_value_as_string0(asdf_container_item_value(item), &s), ==, ASDF_VALUE_OK);
+        assert_string_equal(s, expected[idx]);
+    }
+    assert_null(asdf_container_iter(container, &iter));
+
+    asdf_value_destroy(container);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 /** Regression test for :issue:`69` */
 MU_TEST(test_value_copy_with_parent_path) {
     const char *filename = get_reference_file_path("1.6.0/basic.asdf");
@@ -702,6 +747,7 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_mapping_get),
     MU_RUN_TEST(test_asdf_sequence_iter),
     MU_RUN_TEST(test_asdf_sequence_get),
+    MU_RUN_TEST(test_asdf_container_iter),
     MU_RUN_TEST(test_value_copy_with_parent_path)
 );
 

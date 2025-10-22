@@ -429,6 +429,93 @@ cleanup:
 }
 
 
+/** Generic container functions */
+asdf_container_iter_t asdf_container_iter_init() {
+    return NULL;
+}
+
+
+const char *asdf_container_item_key(asdf_container_item_t *item) {
+    return item->is_mapping ? item->path.key : NULL;
+}
+
+
+int asdf_container_item_index(asdf_container_item_t *item) {
+    return item->is_mapping ? -1 : item->path.index;
+}
+
+
+asdf_value_t *asdf_container_item_value(asdf_container_item_t *item) {
+    return item->value;
+}
+
+
+asdf_container_item_t *asdf_container_iter(asdf_value_t *container, asdf_container_iter_t *iter) {
+    if (container->type != ASDF_VALUE_MAPPING && container->type != ASDF_VALUE_SEQUENCE) {
+#ifdef ASDF_LOG_ENABLED
+        const char *path = asdf_value_path(container);
+        ASDF_LOG(container->file, ASDF_LOG_WARN, "%s is not a container", path);
+#endif
+        return NULL;
+    }
+
+    _asdf_container_iter_impl_t *impl = *iter;
+
+    if (NULL == impl) {
+        impl = calloc(1, sizeof(_asdf_container_iter_impl_t));
+
+        if (!impl) {
+            ASDF_ERROR_OOM(container->file);
+            return false;
+        }
+
+        if (ASDF_VALUE_MAPPING == container->type) {
+            impl->is_mapping = true;
+            impl->iter.mapping = NULL;
+            impl->path.key = NULL;
+        } else {
+            impl->is_mapping = false;
+            impl->iter.sequence = NULL;
+            impl->path.index = -1;
+        }
+
+        *iter = impl;
+    }
+
+    if (impl->is_mapping) {
+        asdf_mapping_item_t *item = asdf_mapping_iter(container, &impl->iter.mapping);
+
+        if (!item)
+            goto cleanup;
+
+        impl->path.key = item->key;
+        impl->value = item->value;
+        return impl;
+    }
+
+    // Sequence case
+    asdf_value_t *value = asdf_sequence_iter(container, &impl->iter.sequence);
+
+    if (!value)
+        goto cleanup;
+
+    impl->path.index++;
+    impl->value = value;
+    return impl;
+
+cleanup:
+    if (impl->is_mapping)
+        impl->path.key = NULL;
+    else
+        impl->path.index = -1;
+
+    impl->value = NULL;
+    free(impl);
+    *iter = NULL;
+    return NULL;
+}
+
+
 /* Extension value functions */
 
 /**
