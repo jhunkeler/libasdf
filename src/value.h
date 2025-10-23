@@ -52,6 +52,7 @@ typedef struct _asdf_mapping_iter_impl asdf_mapping_item_t;
 
 typedef struct _asdf_sequence_iter_impl {
     asdf_value_t *value;
+    int index;
     void *iter;
 } _asdf_sequence_iter_impl_t;
 
@@ -97,7 +98,6 @@ typedef struct {
 
 
 typedef struct _asdf_find_iter_impl {
-    const char *path;
     asdf_value_t *value;
     bool depth_first;
     asdf_value_pred_t descend_pred;

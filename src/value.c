@@ -36,8 +36,15 @@ static asdf_value_type_t asdf_value_type_from_node(struct fy_node *node) {
 }
 
 
-/* TODO: Create or return from a freelist that lives on the file */
-asdf_value_t *asdf_value_create(asdf_file_t *file, struct fy_node *node) {
+/**
+ * Internal asdf_value_create that also takes the value's parent value
+ *
+ * This is needed to work around issues with value path resolution discussed
+ * in #69.  This workaround is hopefully not permanent; I need to think of a
+ * better solution to the problem.
+ */
+static asdf_value_t *asdf_value_create_ex(
+    asdf_file_t *file, struct fy_node *node, asdf_value_t *parent, const char *key, int index) {
     asdf_value_t *value = calloc(1, sizeof(asdf_value_t));
 
     if (!value) {
@@ -53,7 +60,31 @@ asdf_value_t *asdf_value_create(asdf_file_t *file, struct fy_node *node) {
     value->explicit_tag_checked = false;
     value->extension_checked = false;
     value->path = NULL;
+
+    if (parent && parent->path) {
+        char *path = NULL;
+        if (key) {
+            if (asprintf(&path, "%s/%s", parent->path, key) == -1) {
+                ASDF_LOG(file, ASDF_LOG_WARN, "failure to build value path for %s (OOM?)", key);
+            } else {
+                value->path = path;
+            }
+        } else if (index >= 0) {
+            if (asprintf(&path, "%s/%d", parent->path, index) == -1) {
+                ASDF_LOG(file, ASDF_LOG_WARN, "failure to build value path for %d (OOM?)", index);
+            } else {
+                value->path = path;
+            }
+        }
+    }
+
     return value;
+}
+
+
+/* TODO: Create or return from a freelist that lives on the file */
+asdf_value_t *asdf_value_create(asdf_file_t *file, struct fy_node *node) {
+    return asdf_value_create_ex(file, node, NULL, NULL, -1);
 }
 
 
@@ -231,19 +262,7 @@ asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key) {
     if (!value)
         return NULL;
 
-    asdf_value_t *child = asdf_value_create(mapping->file, value);
-
-    if (child && mapping->path) {
-        char *child_path = NULL;
-        if (asprintf(&child_path, "%s/%s", mapping->path, key) == -1) {
-            ASDF_LOG(
-                mapping->file, ASDF_LOG_WARN, "failure to build value path for %s (OOM?)", key);
-        } else {
-            child->path = child_path;
-        }
-    }
-
-    return child;
+    return asdf_value_create_ex(mapping->file, value, mapping, key, -1);
 }
 
 
@@ -308,7 +327,7 @@ asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_mapping_iter_
     }
 
     struct fy_node *value_node = fy_node_pair_value(pair);
-    asdf_value_t *value = asdf_value_create(mapping->file, value_node);
+    asdf_value_t *value = asdf_value_create_ex(mapping->file, value_node, mapping, impl->key, -1);
 
     if (!value) {
         goto cleanup;
@@ -360,19 +379,7 @@ asdf_value_t *asdf_sequence_get(asdf_value_t *sequence, int index) {
     if (!value)
         return NULL;
 
-    asdf_value_t *child = asdf_value_create(sequence->file, value);
-
-    if (child && sequence->path) {
-        char *child_path = NULL;
-        if (asprintf(&child_path, "%s/%d", sequence->path, index) == -1) {
-            ASDF_LOG(
-                sequence->file, ASDF_LOG_WARN, "failure to build value path for %d (OOM?)", index);
-        } else {
-            child->path = child_path;
-        }
-    }
-
-    return child;
+    return asdf_value_create_ex(sequence->file, value, sequence, NULL, index);
 }
 
 
@@ -399,6 +406,7 @@ asdf_value_t *asdf_sequence_iter(asdf_value_t *sequence, asdf_sequence_iter_t *i
             return false;
         }
 
+        impl->index = -1;
         *iter = impl;
     }
 
@@ -409,7 +417,8 @@ asdf_value_t *asdf_sequence_iter(asdf_value_t *sequence, asdf_sequence_iter_t *i
         goto cleanup;
     }
 
-    asdf_value_t *value = asdf_value_create(sequence->file, value_node);
+    int index = ++impl->index;
+    asdf_value_t *value = asdf_value_create_ex(sequence->file, value_node, sequence, NULL, index);
 
     if (!value) {
         goto cleanup;
@@ -2050,7 +2059,10 @@ asdf_find_item_t *asdf_value_find(asdf_value_t *root, asdf_value_pred_t pred) {
 
 
 const char *asdf_find_item_path(asdf_find_item_t *item) {
-    return item->path;
+    if (!item->value)
+        return NULL;
+
+    return asdf_value_path(item->value);
 }
 
 
