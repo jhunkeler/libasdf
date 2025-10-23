@@ -1963,8 +1963,15 @@ static asdf_value_t *asdf_find_iter_next(_asdf_find_iter_impl_t *it) {
 }
 
 
+asdf_find_iter_t asdf_find_iter_init_ex(
+    bool depth_first, asdf_value_pred_t descend_pred, ssize_t max_depth) {
+    _asdf_find_iter_impl_t *it = asdf_value_find_iter_create(depth_first, descend_pred, max_depth);
+    return it;
+}
+
+
 asdf_find_iter_t asdf_find_iter_init(void) {
-    return NULL;
+    return asdf_find_iter_init_ex(false, NULL, -1);
 }
 
 
@@ -1985,25 +1992,17 @@ void asdf_find_item_destroy(asdf_find_item_t *item) {
 }
 
 
-asdf_find_item_t *asdf_value_find_iter_ex(
-    asdf_value_t *root,
-    asdf_value_pred_t pred,
-    bool depth_first,
-    asdf_value_pred_t descend_pred,
-    ssize_t max_depth,
-    asdf_find_iter_t *iter) {
+asdf_find_item_t *asdf_value_find_iter(
+    asdf_value_t *root, asdf_value_pred_t pred, asdf_find_iter_t *iter) {
 
-    _asdf_find_iter_impl_t *it = NULL;
+    _asdf_find_iter_impl_t *it = *iter;
 
-    if (!*iter) {
-        it = asdf_value_find_iter_create(depth_first, descend_pred, max_depth);
+    if (!it) {
+        ASDF_ERROR_OOM(root->file);
+        return NULL;
+    }
 
-        if (!it) {
-            ASDF_ERROR_OOM(root->file);
-            return NULL;
-        }
-
-        // Should only get here on the first call to the iter routine;
+    if (it->frame_count == 0) {
         // Subsequent calls with the same iterator but a different root result
         // in undefined behavior.  Push the root node onto the stack to begin
         if (root->type == ASDF_VALUE_MAPPING || root->type == ASDF_VALUE_SEQUENCE)
@@ -2011,13 +2010,9 @@ asdf_find_item_t *asdf_value_find_iter_ex(
         else
             // Special case when we are given a scalar "root" value
             it->value = root;
-
-        *iter = it;
     } else {
-        it = *iter;
         it->value = NULL;
     }
-    assert(it);
 
     asdf_value_t *current = NULL;
 
@@ -2036,20 +2031,14 @@ asdf_find_item_t *asdf_value_find_iter_ex(
 }
 
 
-asdf_find_item_t *asdf_value_find_iter(
-    asdf_value_t *root, asdf_value_pred_t pred, asdf_find_iter_t *iter) {
-    return asdf_value_find_iter_ex(root, pred, false, NULL, -1, iter);
-}
-
-
 asdf_find_item_t *asdf_value_find_ex(
     asdf_value_t *root,
     asdf_value_pred_t pred,
     bool depth_first,
     asdf_value_pred_t descend_pred,
     ssize_t max_depth) {
-    asdf_find_iter_t iter = asdf_find_iter_init();
-    return asdf_value_find_iter_ex(root, pred, depth_first, descend_pred, max_depth, &iter);
+    asdf_find_iter_t iter = asdf_find_iter_init_ex(depth_first, descend_pred, max_depth);
+    return asdf_value_find_iter(root, pred, &iter);
 }
 
 

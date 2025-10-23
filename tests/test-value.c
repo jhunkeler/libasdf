@@ -752,11 +752,10 @@ MU_TEST(test_value_find_iter_ex_descend_mapping_only) {
     assert_not_null(root);
     assert_true(asdf_value_is_mapping(root));
 
-    asdf_find_iter_t iter = asdf_find_iter_init();
+    asdf_find_iter_t iter = asdf_find_iter_init_ex(true, asdf_find_descend_mapping_only, 1);
     asdf_find_item_t *item = NULL;
     
-    item = asdf_value_find_iter_ex(
-        root, value_find_pred_a, true, asdf_find_descend_mapping_only, 1, &iter);
+    item = asdf_value_find_iter(root, value_find_pred_a, &iter);
     assert_not_null(item);
     const char *str = NULL;
     const char *path = asdf_find_item_path(item);
@@ -766,8 +765,7 @@ MU_TEST(test_value_find_iter_ex_descend_mapping_only) {
     assert_int(err, ==, ASDF_VALUE_OK);
     assert_string_equal(str, "a");
 
-    item = asdf_value_find_iter_ex(
-        root, value_find_pred_a, true, asdf_find_descend_mapping_only, 1, &iter);
+    item = asdf_value_find_iter(root, value_find_pred_a, &iter);
     assert_not_null(item);
     path = asdf_find_item_path(item);
     assert_string_equal(path, "/c/a");
@@ -776,8 +774,7 @@ MU_TEST(test_value_find_iter_ex_descend_mapping_only) {
     assert_int(err, ==, ASDF_VALUE_OK);
     assert_string_equal(str, "a");
 
-    item = asdf_value_find_iter_ex(
-        root, value_find_pred_a, true, asdf_find_descend_mapping_only, 1, &iter);
+    item = asdf_value_find_iter(root, value_find_pred_a, &iter);
     // Found all values matching the predicate
     assert_null(item);
 
@@ -795,11 +792,10 @@ MU_TEST(test_value_find_iter_ex_descend_sequence_only) {
     assert_not_null(root);
     assert_true(asdf_value_is_mapping(root));
 
-    asdf_find_iter_t iter = asdf_find_iter_init();
+    asdf_find_iter_t iter = asdf_find_iter_init_ex(true, asdf_find_descend_sequence_only, 1);
     asdf_find_item_t *item = NULL;
     
-    item = asdf_value_find_iter_ex(
-        root, value_find_pred_a, true, asdf_find_descend_sequence_only, 1, &iter);
+    item = asdf_value_find_iter(root, value_find_pred_a, &iter);
     assert_not_null(item);
     const char *str = NULL;
     const char *path = asdf_find_item_path(item);
@@ -809,8 +805,7 @@ MU_TEST(test_value_find_iter_ex_descend_sequence_only) {
     assert_int(err, ==, ASDF_VALUE_OK);
     assert_string_equal(str, "a");
 
-    item = asdf_value_find_iter_ex(
-        root, value_find_pred_a, true, asdf_find_descend_sequence_only, 1, &iter);
+    item = asdf_value_find_iter(root, value_find_pred_a, &iter);
     assert_not_null(item);
     path = asdf_find_item_path(item);
     assert_string_equal(path, "/d/0");
@@ -819,8 +814,7 @@ MU_TEST(test_value_find_iter_ex_descend_sequence_only) {
     assert_int(err, ==, ASDF_VALUE_OK);
     assert_string_equal(str, "a");
 
-    item = asdf_value_find_iter_ex(
-        root, value_find_pred_a, true, asdf_find_descend_sequence_only, 1, &iter);
+    item = asdf_value_find_iter(root, value_find_pred_a, &iter);
     // Found all values matching the predicate
     assert_null(item);
 

@@ -486,7 +486,7 @@ ASDF_EXPORT asdf_find_item_t *asdf_value_find(asdf_value_t *root, asdf_value_pre
  * Return the path of a value found with `asdf_value_find` and friends
  *
  * :param item: `asdf_find_item_t *` result from `asdf_value_find`, `asdf_value_find_iter`
- *   `asdf_value_find_ex` or `asdf_value_find_iter_ex`
+ *   `asdf_value_find_ex`
  * :return: Full path of the found value
  */
 ASDF_EXPORT const char *asdf_find_item_path(asdf_find_item_t *item);
@@ -495,7 +495,7 @@ ASDF_EXPORT const char *asdf_find_item_path(asdf_find_item_t *item);
  * Return the value found with `asdf_value_find` and friends
  *
  * :param item: `asdf_find_item_t *` result from `asdf_value_find`, `asdf_value_find_iter`
- *   `asdf_value_find_ex` or `asdf_value_find_iter_ex`
+ *   `asdf_value_find_ex`
  * :return: The `asdf_value_t *` handle to the found value
  */
 ASDF_EXPORT asdf_value_t *asdf_find_item_value(asdf_find_item_t *item);
@@ -504,8 +504,7 @@ ASDF_EXPORT asdf_value_t *asdf_find_item_value(asdf_find_item_t *item);
 typedef struct _asdf_find_iter_impl _asdf_find_iter_impl_t;
 
 /**
- * Opaque struct used to manage state across `asdf_value_find_iter` and
- * `asdf_value_find_iter_ex` calls.
+ * Opaque struct used to manage state across `asdf_value_find_iter` calls
  */
 typedef _asdf_find_iter_impl_t *asdf_find_iter_t;
 
@@ -542,14 +541,14 @@ ASDF_EXPORT asdf_find_item_t *asdf_value_find_iter(
 
 /**
  * Alias for `true` for use with `asdf_value_find_ex` and
- * `asdf_value_find_iter_ex` for added clarity
+ * `asdf_find_iter_init_ex` for added clarity
  */
 #define ASDF_DEPTH_FIRST true
 
 
 /**
  * Alias for `false` for use with `asdf_value_find_ex` and
- * `asdf_value_find_iter_ex` for added clarity
+ * `asdf_find_iter_init_ex` for added clarity
  */
 #define ASDF_BREADTH_FIRST false
 
@@ -585,41 +584,8 @@ ASDF_EXPORT asdf_find_item_t *asdf_value_find_ex(
 
 
 /**
- * Extended version of `asdf_value_find_iter` with additional options
- *
- * :param value: `asdf_value_t *` handle for the root node in which to start
- *   the search--if the value is neither a mapping or sequence this function
- *   will still return non-NULL if this value matches the predicate
- * :param pred: A predicate function to match the value to return; see
- *   `asdf_value_pred_t`
- * :param depth_first: If `true` descend the tree in depth-first order;
- *   otherwise the tree is traversed breadth-first
- * :param descend_pred: Optional predicate (NULL indicates descend into all
- *   nodes) indicating whether a given mapping or sequence should be descended
- *   during traversal
- * :param max_depth: Maximum depth into the tree to descend; -1 indicates no
- *   limit
- * :param iter: A pointer to an `asdf_find_iter_t` used internally to track
- *   the iteration state
- *
- *   There are also some built-in defaults `asdf_find_descend_mapping_only` and
- *   `asdf_find_descend_sequence_only`, as well as `asdf_find_descend_all`
- *   (which is equivalent to passing `NULL`).
- * :return: An `asdf_find_item_t *` for the first matching value or NULL if the
- *   tree is exhausted without finding a matching value
- */
-ASDF_EXPORT asdf_find_item_t *asdf_value_find_iter_ex(
-    asdf_value_t *root,
-    asdf_value_pred_t pred,
-    bool depth_first,
-    asdf_value_pred_t descend_pred,
-    ssize_t max_depth,
-    asdf_find_iter_t *iter);
-
-
-/**
  * For use as the ``descend_pred`` argument to `asdf_value_find_ex` and
- * `asdf_value_find_iter_ex`
+ * `asdf_find_iter_init_ex`
  *
  * Only descend into mappings (don't iterate over sequences).
  */
@@ -628,7 +594,7 @@ ASDF_EXPORT asdf_find_item_t *asdf_value_find_iter_ex(
 
 /**
  * For use as the ``descend_pred`` argument to `asdf_value_find_ex` and
- * `asdf_value_find_iter_ex`
+ * `asdf_find_iter_init_ex`
  *
  * Only iterate over sequences and nested sequences (don't descend into nested
  * mappings).
@@ -638,7 +604,7 @@ ASDF_EXPORT asdf_find_item_t *asdf_value_find_iter_ex(
 
 /**
  * For use as the ``descend_pred`` argument to `asdf_value_find_ex` and
- * `asdf_value_find_iter_ex`
+ * `asdf_find_iter_init_ex`
  *
  * Equivalent to passing this argument ``NULL``, meaning always descend
  * into nested mappings and sequences.
@@ -648,12 +614,33 @@ ASDF_EXPORT asdf_find_item_t *asdf_value_find_iter_ex(
 
 /**
  * Instantiate an `asdf_find_iter_t` as a local variable to use with
- * `asdf_value_find_iter` or `asdf_value_find_iter_ex`
+ * `asdf_value_find_iter`
  *
  * :return: An `asdf_find_iter_t`, the address of which should be passed to
- *   to `asdf_value_find_iter` or `asdf_value_find_iter_ex`.
+ *   to `asdf_value_find_iter`
  */
 ASDF_EXPORT asdf_find_iter_t asdf_find_iter_init(void);
+
+
+/**
+ * Like `asdf_find_iter_init` but allows providing additional options for
+ * the tree traversal similar to those accepted by `asdf_value_find_ex`
+ *
+ * These options only need to be passed to instantiate the iterator, and not
+ * in subsequent calls to `asdf_value_find`.
+ *
+ * :param depth_first: If `true` descend the tree in depth-first order;
+ *   otherwise the tree is traversed breadth-first
+ * :param descend_pred: Optional predicate (NULL indicates descend into all
+ *   nodes) indicating whether a given mapping or sequence should be descended
+ *   during traversal
+ * :param max_depth: Maximum depth into the tree to descend; -1 indicates no
+ *   limit
+ * :return: An `asdf_find_iter_t`, the address of which should be passed to
+ *   to `asdf_value_find_iter`
+ */
+ASDF_EXPORT asdf_find_iter_t
+asdf_find_iter_init_ex(bool depth_first, asdf_value_pred_t descend_pred, ssize_t max_depth);
 
 
 /**
