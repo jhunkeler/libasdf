@@ -1,4 +1,7 @@
+#include <ctype.h>
 #include <stdbool.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <asdf/value.h>
 
@@ -209,4 +212,68 @@ asdf_value_err_t asdf_get_optional_property(
     }
 #endif
     return err;
+}
+
+
+/**
+ * Right now we don't don any parsing of the version part of the tag, but this will
+ * be useful for when we do...
+static bool is_simple_version(const char *version, size_t len) {
+    if (!version || !*version)
+        return false;
+
+    size_t idx = 0;
+
+    for (int part_idx = 0; part_idx < 3; part_idx++) {
+        if (!isdigit(version[idx]))
+            return false;
+
+        while (idx < len && isdigit(version[idx]))
+            idx++;
+
+        if (part_idx < 2 && (idx >= len || version[idx++] != '.'))
+            return false;
+    }
+
+    return idx == len;
+}
+*/
+
+
+asdf_tag_t *asdf_tag_parse(const char *tag) {
+    if (!tag)
+        return NULL;
+
+    asdf_tag_t *res = calloc(1, sizeof(asdf_tag_t));
+
+    if (!res)
+        return NULL;
+
+    // We assume that the version part of the tag comes after the first -
+    // This is the convention that's always been used even though it's not
+    // formally specified in the standard:
+    // https://github.com/asdf-format/asdf-standard/issues/495
+    const char *sep = strchr(tag, '-');
+
+    if (!sep) {
+        res->name = strdup(tag);
+        res->version = NULL;
+        return res;
+    }
+
+    size_t name_len = sep - tag;
+    const char *version = sep + 1;
+    res->name = strndup(tag, name_len);
+    res->version = strdup(version);
+    return res;
+}
+
+
+void asdf_tag_free(asdf_tag_t *tag) {
+    if (!tag)
+        return;
+
+    free((char *)tag->name);
+    free((char *)tag->version);
+    free(tag);
 }

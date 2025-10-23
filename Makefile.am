@@ -56,6 +56,7 @@ if WITH_GWCS
         src/gwcs/wcs.c
 
     src_headers += \
+        src/gwcs/fitswcs_imaging.h \
         src/gwcs/frame.h \
         src/gwcs/step.h \
         src/gwcs/transform.h \

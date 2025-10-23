@@ -14,7 +14,6 @@
 #define ASDF_GWCS_TRANSFORM_H
 
 #include <asdf/core/asdf.h>
-#include <asdf/gwcs/gwcs.h>
 #include <asdf/gwcs/transforms/property/bounding_box.h>
 
 ASDF_BEGIN_DECLS
@@ -65,6 +64,7 @@ typedef enum {
     ASDF_GWCS_TRANSFORM_ZENITHAL_EQUAL_AREA,
     ASDF_GWCS_TRANSFORM_ZENITHAL_EQUIDISTANT,
     ASDF_GWCS_TRANSFORM_ZENITHAL_PERSPECTIVE,
+    ASDF_GWCS_TRANSFORM_LAST
 } asdf_gwcs_transform_type_t;
 
 
@@ -109,7 +109,6 @@ typedef struct _asdf_gwcs_transform {
     /** Input unit equivalences (not yet implemented) */
     const void *input_units_equivalencies;
 } asdf_gwcs_transform_t;
-
 
 ASDF_END_DECLS
 

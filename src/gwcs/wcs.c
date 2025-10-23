@@ -3,14 +3,27 @@
 #include <asdf/core/asdf.h>
 #include <asdf/extension.h>
 #define ASDF_GWCS_INTERNAL
+#include <asdf/gwcs/fitswcs_imaging.h>
 #include <asdf/gwcs/gwcs.h>
+#include <asdf/gwcs/transform.h>
 #undef ASDF_GWCS_INTERNAL
 #include <asdf/value.h>
 
 #include "../extension_util.h"
+#include "../log.h"
 #include "../util.h"
 #include "../value.h"
+#include "fitswcs_imaging.h"
 #include "step.h"
+
+
+static asdf_gwcs_err_t asdf_gwcs_finalize_fitswcs_imaging(asdf_file_t *file, asdf_gwcs_t *gwcs) {
+    assert(gwcs->n_steps == 2);
+    const asdf_gwcs_step_t *step0 = &gwcs->steps[0];
+    assert(step0->transform && step0->transform->type == ASDF_GWCS_TRANSFORM_FITSWCS_IMAGING);
+    asdf_gwcs_fits_t *fits = (asdf_gwcs_fits_t *)step0->transform;
+    return asdf_gwcs_fits_get_ctype(file, gwcs, &fits->ctype[0], &fits->ctype[1]);
+}
 
 
 static asdf_value_err_t asdf_gwcs_deserialize(
@@ -70,6 +83,25 @@ static asdf_value_err_t asdf_gwcs_deserialize(
     }
 
     asdf_value_destroy(prop);
+
+    // Special finalization step in the case of a FITS WCS, to fill in the
+    // ctype parameters.  Maybe useful to have such hooks for other GWCS
+    // instances, but the fitswcs_imaging is the only case I can think of
+    // at the moment
+    if (asdf_gwcs_is_fits(value->file, gwcs)) {
+        asdf_gwcs_err_t gwcs_err = asdf_gwcs_finalize_fitswcs_imaging(value->file, gwcs);
+        // Just log a warning for now
+        if (ASDF_GWCS_OK != gwcs_err) {
+#ifdef ASDF_LOG_ENABLED
+            const char *path = asdf_value_path(value);
+            ASDF_LOG(
+                value->file,
+                ASDF_LOG_WARN,
+                "failure to finalize fitswcs_imaging transform in gwcs at %s",
+                path);
+#endif
+        }
+    }
 
     *out = gwcs;
     return ASDF_VALUE_OK;

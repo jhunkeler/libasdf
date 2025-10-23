@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <asdf/extension.h>
 #include <asdf/util.h>
 
 #include "value.h"
@@ -36,3 +37,10 @@ ASDF_LOCAL asdf_value_err_t asdf_get_required_property(
  */
 ASDF_LOCAL asdf_value_err_t asdf_get_optional_property(
     asdf_value_t *mapping, const char *name, asdf_value_type_t type, const char *tag, void *out);
+
+
+/**
+ * Tag and version-related routines
+ */
+ASDF_LOCAL asdf_tag_t *asdf_tag_parse(const char *tag);
+ASDF_LOCAL void asdf_tag_free(asdf_tag_t *tag);

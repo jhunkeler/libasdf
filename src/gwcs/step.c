@@ -15,6 +15,7 @@
 #include "../util.h"
 #include "../value.h"
 #include "step.h"
+#include "transform.h"
 
 
 static asdf_value_err_t asdf_gwcs_step_deserialize(
@@ -23,6 +24,7 @@ static asdf_value_err_t asdf_gwcs_step_deserialize(
     asdf_value_err_t err = ASDF_VALUE_ERR_PARSE_FAILURE;
     asdf_value_t *prop = NULL;
     asdf_gwcs_frame_t *frame = NULL;
+    asdf_gwcs_transform_t *transform = NULL;
 
     if (!asdf_value_is_mapping(value))
         goto failure;
@@ -46,11 +48,11 @@ static asdf_value_err_t asdf_gwcs_step_deserialize(
     err = asdf_get_required_property(value, "frame", ASDF_VALUE_UNKNOWN, NULL, (void *)&prop);
 
     if (ASDF_IS_OK(err)) {
-        asdf_value_as_gwcs_frame(prop, &frame);
+        err = asdf_value_as_gwcs_frame(prop, &frame);
         asdf_value_destroy(prop);
     }
 
-    if (!frame) {
+    if (ASDF_IS_ERR(err) || !frame) {
 #ifdef ASDF_LOG_ENABLED
         const char *path = asdf_value_path(value);
         ASDF_LOG(value->file, ASDF_LOG_WARN, "invalid frame value for step at %s", path);
@@ -60,11 +62,32 @@ static asdf_value_err_t asdf_gwcs_step_deserialize(
 
     step->frame = frame;
 
+    err = asdf_get_optional_property(value, "transform", ASDF_VALUE_UNKNOWN, NULL, (void *)&prop);
+
+    if (ASDF_IS_OK(err)) {
+        // transform may be null
+        if (!asdf_value_is_null(prop))
+            err = asdf_value_as_gwcs_transform(prop, &transform);
+
+        asdf_value_destroy(prop);
+    }
+
+    if (ASDF_IS_ERR(err)) {
+#ifdef ASDF_LOG_ENABLED
+        const char *path = asdf_value_path(value);
+        ASDF_LOG(value->file, ASDF_LOG_WARN, "invalid transform value for step at %s", path);
+#endif
+        goto failure;
+    }
+
+    step->transform = transform;
+
     if (!*out)
         *out = step;
 
     return ASDF_VALUE_OK;
 failure:
+    asdf_gwcs_transform_destroy(transform);
     return err;
 }
 
@@ -77,6 +100,9 @@ static void asdf_gwcs_step_dealloc(void *value) {
 
     if (step->frame)
         asdf_gwcs_frame_destroy(step->frame);
+
+    if (step->transform)
+        asdf_gwcs_transform_destroy((asdf_gwcs_transform_t *)step->transform);
 
     if (step->free)
         free(step);

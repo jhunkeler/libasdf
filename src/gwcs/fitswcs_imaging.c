@@ -1,11 +1,20 @@
 #include <assert.h>
 #include <stdlib.h>
 
+// NOTE: The internal definitions for asdf_gwcs_transform_t must be included early
+#include "transform.h"
+
 #include <asdf/core/asdf.h>
 #include <asdf/core/ndarray.h>
 #include <string.h>
 #define ASDF_GWCS_INTERNAL
+#include <asdf/gwcs/core.h>
 #include <asdf/gwcs/fitswcs_imaging.h>
+#include <asdf/gwcs/frame.h>
+#include <asdf/gwcs/frame_celestial.h>
+#include <asdf/gwcs/gwcs.h>
+#include <asdf/gwcs/step.h>
+#include <asdf/gwcs/transform.h>
 #include <asdf/gwcs/transforms/property/bounding_box.h>
 #undef ASDF_GWCS_INTERNAL
 #include <asdf/value.h>
@@ -14,7 +23,7 @@
 #include "../log.h"
 #include "../util.h"
 
-#include "transform.h"
+#include "step.h"
 
 
 /** Helper to read crpix, crval, etc. */
@@ -123,27 +132,27 @@ static asdf_value_err_t asdf_gwcs_fits_deserialize(
 
     err = asdf_gwcs_transform_parse(value, &fits->base);
 
-    if (ASDF_VALUE_OK != err)
+    if (ASDF_IS_ERR(err))
         goto failure;
 
     err = get_coordinates_prop(value, "crpix", (double *)fits->crpix);
 
-    if (ASDF_VALUE_OK != err)
+    if (ASDF_IS_ERR(err))
         goto failure;
 
     err = get_coordinates_prop(value, "crval", (double *)fits->crval);
 
-    if (ASDF_VALUE_OK != err)
+    if (ASDF_IS_ERR(err))
         goto failure;
 
     err = get_coordinates_prop(value, "cdelt", (double *)fits->cdelt);
 
-    if (ASDF_VALUE_OK != err)
+    if (ASDF_IS_ERR(err))
         goto failure;
 
     err = get_matrix_prop(value, "pc", (double *)fits->pc);
 
-    if (ASDF_VALUE_OK != err)
+    if (ASDF_IS_ERR(err))
         goto failure;
 
     err = asdf_get_required_property(value, "projection", ASDF_VALUE_UNKNOWN, NULL, &prop);
@@ -165,12 +174,12 @@ static asdf_value_err_t asdf_gwcs_fits_deserialize(
     //
     // For present purposes just allow any of the currently hard-coded transforms (most
     // of which currently *are* projection types associated with FITS WCS)
-    if (ASDF_VALUE_OK != err)
+    if (ASDF_IS_ERR(err))
         goto failure;
 
     err = asdf_gwcs_transform_parse(prop, &fits->projection);
 
-    if (ASDF_VALUE_OK != err)
+    if (ASDF_IS_ERR(err))
         goto failure;
 
     asdf_value_destroy(prop);
@@ -193,6 +202,8 @@ static void asdf_gwcs_fits_dealloc(void *value) {
     asdf_gwcs_fits_t *fits = (asdf_gwcs_fits_t *)value;
     asdf_gwcs_transform_clean(&fits->base);
     asdf_gwcs_transform_clean(&fits->projection);
+    free((char *)fits->ctype[0]);
+    free((char *)fits->ctype[1]);
     free(fits);
 }
 
@@ -205,3 +216,212 @@ ASDF_REGISTER_EXTENSION(
     asdf_gwcs_fits_deserialize,
     asdf_gwcs_fits_dealloc,
     NULL);
+
+
+/**
+ * Maps a UCD1+ term to the corresponding coordinate type value in the FITS
+ * WCS scheme.
+ *
+ * Returns `NULL` if no appropiate mapping is found.
+ *
+ * .. todo::
+ *
+ *   This is far from all-inclusive, and only includes some basic celestial
+ *   coordinate types for now, no spectral, time, etc.; left as a later
+ *   exercise.
+ *
+ * .. todo::
+ *
+ *   Maybe just make this an STC hash map...
+ */
+
+typedef struct {
+    const char *ucd1;
+    const char *ctype;
+} ucd1_ctype_map_t;
+
+
+static const ucd1_ctype_map_t ucd1_ctype_map[] = {
+    {"pos.eq.ra", "RA"},
+    {"pos.eq.dec", "DEC"},
+    {"pos.galactic.lon", "GLON"},
+    {"pos.galactic.lat", "GLAT"},
+    {"pos.ecliptic.lon", "ELON"},
+    {"pos.ecliptic.lat", "ELAT"},
+    {"pos.bodyrc.lon", "TLON"},
+    {"pos.bodyrc.lat", "TLAT"},
+    {NULL, NULL}};
+
+
+static const char *ucd1_to_ctype(const char *ucd1) {
+    if (UNLIKELY(!ucd1))
+        return NULL;
+
+    for (int idx = 0; ucd1_ctype_map[idx].ucd1; idx++) {
+        if (strcmp(ucd1_ctype_map[idx].ucd1, ucd1) == 0)
+            return ucd1_ctype_map[idx].ctype;
+    }
+    return NULL;
+}
+
+
+static const char *transform_type_ctype_map[] = {
+    [ASDF_GWCS_TRANSFORM_GENERIC] = "",
+    [ASDF_GWCS_TRANSFORM_AIRY] = "AIR",
+    [ASDF_GWCS_TRANSFORM_BONNE_EQUAL_AREA] = "BON",
+    [ASDF_GWCS_TRANSFORM_COBE_QUAD_SPHERICAL_CUBE] = "CSC",
+    [ASDF_GWCS_TRANSFORM_CONIC_EQUAL_AREA] = "COE",
+    [ASDF_GWCS_TRANSFORM_CONIC_EQUIDISTANT] = "COD",
+    [ASDF_GWCS_TRANSFORM_CONIC_ORTHOMORPHIC] = "COO",
+    [ASDF_GWCS_TRANSFORM_CONIC_PERSPECTIVE] = "COP",
+    [ASDF_GWCS_TRANSFORM_CYLINDRICAL_EQUAL_AREA] = "CEA",
+    [ASDF_GWCS_TRANSFORM_CYLINDRICAL_PERSPECTIVE] = "CYP",
+    [ASDF_GWCS_TRANSFORM_FITSWCS_IMAGING] = "",
+    [ASDF_GWCS_TRANSFORM_GNOMONIC] = "TAN",
+    [ASDF_GWCS_TRANSFORM_HAMMER_AITOFF] = "AIT",
+    [ASDF_GWCS_TRANSFORM_HEALPIX_POLAR] = "XPH",
+    [ASDF_GWCS_TRANSFORM_MOLLEWEIDE] = "MOL",
+    [ASDF_GWCS_TRANSFORM_PARABOLIC] = "PAR",
+    [ASDF_GWCS_TRANSFORM_PLATE_CARREE] = "CAR",
+    [ASDF_GWCS_TRANSFORM_POLYCONIC] = "PCO",
+    [ASDF_GWCS_TRANSFORM_SANSON_FLAMSTEED] = "SFL",
+    [ASDF_GWCS_TRANSFORM_SLANT_ORTHOGRAPHIC] = "SIN",
+    [ASDF_GWCS_TRANSFORM_STEREOGRAPHIC] = "STG",
+    [ASDF_GWCS_TRANSFORM_QUAD_SPHERICAL_CUBE] = "QSC",
+    [ASDF_GWCS_TRANSFORM_SLANT_ZENITHAL_PERSPECTIVE] = "SZP",
+    [ASDF_GWCS_TRANSFORM_TANGENTIAL_SPHERICAL_CUBE] = "TSC",
+    [ASDF_GWCS_TRANSFORM_ZENITHAL_EQUAL_AREA] = "ZEA",
+    [ASDF_GWCS_TRANSFORM_ZENITHAL_EQUIDISTANT] = "ARC",
+    [ASDF_GWCS_TRANSFORM_ZENITHAL_PERSPECTIVE] = "AZP"};
+
+
+bool asdf_gwcs_is_fits(asdf_file_t *file, asdf_gwcs_t *gwcs) {
+    if (gwcs->n_steps != 2) {
+        ASDF_LOG(
+            file,
+            ASDF_LOG_DEBUG,
+            "GWCS object for FITS WCS must have only two steps, got WCS with %d steps",
+            gwcs->n_steps);
+        return false;
+    }
+
+    const asdf_gwcs_step_t *step0 = &gwcs->steps[0];
+    if (!step0->transform || step0->transform->type != ASDF_GWCS_TRANSFORM_FITSWCS_IMAGING) {
+        ASDF_LOG(
+            file,
+            ASDF_LOG_DEBUG,
+            "GWCS object for FITS WCS must have a fitswcs_imaging transform for its first step");
+        return false;
+    }
+
+    const asdf_gwcs_step_t *step1 = &gwcs->steps[1];
+    if (step1->frame->type != ASDF_GWCS_FRAME_CELESTIAL) {
+        ASDF_LOG(
+            file,
+            ASDF_LOG_DEBUG,
+            "currently only celestial coordinates in a ``gwcs/celestial_frame-*`` are supported");
+        return false;
+    }
+
+    const asdf_gwcs_frame_celestial_t *celestial = (asdf_gwcs_frame_celestial_t *)step1->frame;
+
+    for (int idx = 0; idx < 2; idx++) {
+        if (!ucd1_to_ctype(celestial->axis_physical_types[idx])) {
+            ASDF_LOG(
+                file,
+                ASDF_LOG_DEBUG,
+                "missing or unsupported axis_physical_types in celestial frame: %s",
+                celestial->axis_physical_types[idx]);
+            return false;
+        }
+    }
+    return true;
+}
+
+
+/**
+ * Length of a CTYPEn FITS header
+ */
+#define CTYPE_SIZE 8
+
+
+/**
+ * Get the FITS WCS CTYPEn parameters from an `asdf_gwcs_t` object
+ *
+ * Doing this requires the full `asdf_gwcs_t` since for this to make sense
+ * we need:
+ *
+ * - A GWCS with two steps, with a fitswcs_imaging transform between the two
+ * - The projection type of the fitswcs_imaging transform
+ * - The physical axis types of the output frame
+ *
+ * This does not handle every conceivable case yet, with focus just on
+ * celestial coordinate frames for now.
+ *
+ * It outputs two values ``ctype1`` and ``ctype2`` since ``fitswcs_imaging``
+ * currently only supports two-dimensional transforms.
+ */
+asdf_gwcs_err_t asdf_gwcs_fits_get_ctype(
+    asdf_file_t *file, asdf_gwcs_t *gwcs, const char **ctype1, const char **ctype2) {
+
+    assert(ctype1);
+    assert(ctype2);
+
+    if (!asdf_gwcs_is_fits(file, gwcs))
+        return ASDF_GWCS_ERR_NOT_IMPLEMENTED;
+
+    asdf_gwcs_err_t err = ASDF_GWCS_ERR_NOT_IMPLEMENTED;
+    char *ctypes[2] = {0};
+
+    // These should already be effectively asserted by asdf_gwcs_is_fits
+    assert(gwcs->n_steps == 2);
+    const asdf_gwcs_step_t *step0 = &gwcs->steps[0];
+    const asdf_gwcs_step_t *step1 = &gwcs->steps[1];
+    assert(step0->transform && step0->transform->type == ASDF_GWCS_TRANSFORM_FITSWCS_IMAGING);
+    assert(step1->frame->type == ASDF_GWCS_FRAME_CELESTIAL);
+    asdf_gwcs_fits_t *fits = (asdf_gwcs_fits_t *)step0->transform;
+    asdf_gwcs_frame_celestial_t *celestial = (asdf_gwcs_frame_celestial_t *)step1->frame;
+
+    for (int idx = 0; idx < 2; idx++) {
+        char *ctype = malloc(CTYPE_SIZE + 1); // -------- with null
+        //
+        if (!ctype) {
+            err = ASDF_GWCS_ERR_OOM;
+            goto failure;
+        }
+
+        memset(ctype, '-', CTYPE_SIZE);
+        ctype[CTYPE_SIZE] = '\0';
+        const char *axis_type = ucd1_to_ctype(celestial->axis_physical_types[idx]);
+
+        if (!axis_type)
+            goto failure;
+
+        size_t axis_type_len = strlen(axis_type);
+        assert(axis_type_len <= CTYPE_SIZE);
+        memcpy(ctype, axis_type, axis_type_len);
+
+        asdf_gwcs_transform_type_t projection_type = fits->projection.type;
+        assert(projection_type >= 0);
+        assert(
+            (unsigned int)projection_type <
+            (sizeof(transform_type_ctype_map) / sizeof(const char *)));
+        const char *proj_str = transform_type_ctype_map[projection_type];
+
+        if (!proj_str)
+            goto failure;
+
+        size_t proj_str_len = strlen(proj_str);
+        assert((axis_type_len + proj_str_len) <= CTYPE_SIZE);
+        memcpy(ctype + (CTYPE_SIZE - proj_str_len), proj_str, proj_str_len);
+        ctypes[idx] = ctype;
+    }
+
+    *ctype1 = ctypes[0];
+    *ctype2 = ctypes[1];
+    return ASDF_GWCS_OK;
+failure:
+    free(ctypes[0]);
+    free(ctypes[1]);
+    return err;
+}

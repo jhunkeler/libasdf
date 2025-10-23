@@ -80,6 +80,13 @@ MU_TEST(test_asdf_get_gwcs) {
     assert_string_equal(frame2d->axis_physical_types[1], "custom:y");
     assert_int(frame2d->axes_order[0], ==, 0);
     assert_int(frame2d->axes_order[1], ==, 1);
+    assert_not_null(step->transform);
+    assert_int(step->transform->type, ==, ASDF_GWCS_TRANSFORM_FITSWCS_IMAGING);
+
+    // Check that the FITS CTYPEn keywords were initialized successfully
+    asdf_gwcs_fits_t *fits = (asdf_gwcs_fits_t *)step->transform;
+    assert_string_equal(fits->ctype[0], "RA---TAN");
+    assert_string_equal(fits->ctype[1], "DEC--TAN");
 
     step = &gwcs->steps[1];
     assert_not_null(step->frame);
@@ -93,6 +100,7 @@ MU_TEST(test_asdf_get_gwcs) {
     assert_null(frame_celestial->axes_names[2]);
     assert_int(frame_celestial->axes_order[0], ==, 0);
     assert_int(frame_celestial->axes_order[1], ==, 1);
+    assert_null(step->transform);
 
     asdf_gwcs_destroy(gwcs);
     asdf_close(file);
