@@ -754,7 +754,7 @@ MU_TEST(test_value_find_iter_ex_descend_mapping_only) {
 
     asdf_find_iter_t iter = asdf_find_iter_init_ex(true, asdf_find_descend_mapping_only, 1);
     asdf_find_item_t *item = NULL;
-    
+
     item = asdf_value_find_iter(root, value_find_pred_a, &iter);
     assert_not_null(item);
     const char *str = NULL;
@@ -811,6 +811,40 @@ MU_TEST(test_value_find_iter_ex_descend_sequence_only) {
     assert_string_equal(path, "/d/0");
     val = asdf_find_item_value(item);
     err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "a");
+
+    item = asdf_value_find_iter(root, value_find_pred_a, &iter);
+    // Found all values matching the predicate
+    assert_null(item);
+
+    asdf_value_destroy(root);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_value_find_iter_max_depth) {
+    const char *filename = get_fixture_file_path("nested.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    asdf_value_t *root = asdf_get_value(file, "/");
+    assert_not_null(root);
+    assert_true(asdf_value_is_mapping(root));
+
+    // When iteration is set with max_depth = 0 it should never descend into
+    // any sub-collections, but should still find values at the top-level of
+    // the input root collection
+    asdf_find_iter_t iter = asdf_find_iter_init_ex(true, asdf_find_descend_all, 0);
+    asdf_find_item_t *item = NULL;
+
+    item = asdf_value_find_iter(root, value_find_pred_a, &iter);
+    assert_not_null(item);
+    const char *str = NULL;
+    const char *path = asdf_find_item_path(item);
+    assert_string_equal(path, "/a");
+    asdf_value_t *val = asdf_find_item_value(item);
+    asdf_value_err_t err = asdf_value_as_string0(val, &str);
     assert_int(err, ==, ASDF_VALUE_OK);
     assert_string_equal(str, "a");
 
@@ -985,6 +1019,7 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_value_copy_with_parent_path),
     MU_RUN_TEST(test_value_find_iter_ex_descend_mapping_only),
     MU_RUN_TEST(test_value_find_iter_ex_descend_sequence_only),
+    MU_RUN_TEST(test_value_find_iter_max_depth),
     MU_RUN_TEST(test_value_find_ex),
     MU_RUN_TEST(test_value_find_iter),
     MU_RUN_TEST(test_value_find),
