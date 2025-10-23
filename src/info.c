@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <libfyaml.h>
-
 #include "block.h"
 #include "event.h"
 #include "info.h"

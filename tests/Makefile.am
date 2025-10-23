@@ -246,6 +246,7 @@ EXTRA_DIST += \
     fixtures/info/unicode_bmp.info.txt \
     fixtures/info/unicode_spp.info.txt \
     fixtures/multiple_hdu.asdf \
+    fixtures/nested.asdf \
     fixtures/numeric.asdf \
     fixtures/parse-minimal.asdf \
     fixtures/parse-minimal-extra-comment.asdf \
