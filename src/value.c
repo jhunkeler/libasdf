@@ -12,8 +12,8 @@
 
 #include <libfyaml.h>
 
-#include "asdf/value.h"
 #include "error.h"
+#include "file.h"
 #include "log.h"
 #include "util.h"
 #include "value.h"
@@ -450,6 +450,23 @@ asdf_value_t *asdf_container_item_value(asdf_container_item_t *item) {
 }
 
 
+void asdf_container_item_destroy(asdf_container_item_t *item) {
+    if (!item)
+        return;
+
+    if (item->is_mapping) {
+        item->path.key = NULL;
+        free(item->iter.mapping);
+    } else {
+        item->path.index = -1;
+        free(item->iter.sequence);
+    }
+
+    item->value = NULL;
+    free(item);
+}
+
+
 asdf_container_item_t *asdf_container_iter(asdf_value_t *container, asdf_container_iter_t *iter) {
     if (container->type != ASDF_VALUE_MAPPING && container->type != ASDF_VALUE_SEQUENCE) {
 #ifdef ASDF_LOG_ENABLED
@@ -504,15 +521,14 @@ asdf_container_item_t *asdf_container_iter(asdf_value_t *container, asdf_contain
     return impl;
 
 cleanup:
-    if (impl->is_mapping)
-        impl->path.key = NULL;
-    else
-        impl->path.index = -1;
-
-    impl->value = NULL;
-    free(impl);
+    asdf_container_item_destroy(impl);
     *iter = NULL;
     return NULL;
+}
+
+
+bool asdf_value_is_container(asdf_value_t *value) {
+    return value->type == ASDF_VALUE_MAPPING || value->type == ASDF_VALUE_SEQUENCE;
 }
 
 
@@ -1762,4 +1778,282 @@ asdf_value_err_t asdf_value_as_type(asdf_value_t *value, asdf_value_type_t type,
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
     }
     return ASDF_VALUE_ERR_TYPE_MISMATCH;
+}
+
+/**
+ * Implementation details for `asdf_value_find_iter_ex` which is the workhorse
+ * for all the other variants (`asdf_value_find_iter`, `asdf_value_find_ex`,
+ * `asdf_value_find`)
+ */
+static _asdf_find_iter_impl_t *asdf_value_find_iter_create(
+    bool depth_first, asdf_value_pred_t descend_pred, ssize_t max_depth) {
+    _asdf_find_iter_impl_t *it = calloc(1, sizeof(_asdf_find_iter_impl_t));
+
+    if (!it)
+        return NULL;
+
+    it->depth_first = depth_first;
+    it->descend_pred = descend_pred;
+    it->max_depth = max_depth;
+    it->value = NULL;
+    // Initial small frame stack, though we can also use max_depth as a
+    // heuristic
+    it->frame_cap = (max_depth < 0) ? 8 : ((max_depth > 256) ? 256 : max_depth + 1);
+    it->frames = calloc(it->frame_cap, sizeof(_asdf_find_frame_t));
+    return it;
+}
+
+
+/** Just doubles the frame capacity */
+static inline void asdf_find_iter_push_frame(
+    _asdf_find_iter_impl_t *it, asdf_value_t *container, ssize_t depth) {
+    // Refuse to push a new frame if we are already at max-depth or the new
+    // container doesn't match the descend predicate
+    // Always allow push though if frame_count == 0; that is, the root node is
+    // always searched through regardless of descend_prod
+    if ((it->max_depth >= 0 && depth > it->max_depth) ||
+        (it->frame_count > 0 && it->descend_pred && !it->descend_pred(container)))
+        return;
+
+    if (it->frame_count == it->frame_cap) {
+        size_t new_frame_cap = it->frame_cap * 2;
+        _asdf_find_frame_t *new_frames =
+            realloc(it->frames, new_frame_cap * sizeof(_asdf_find_frame_t));
+
+        if (!new_frames) {
+            ASDF_ERROR_OOM(container->file);
+            return;
+        }
+
+        it->frames = new_frames;
+        it->frame_cap = new_frame_cap;
+    }
+
+    _asdf_find_frame_t *frame = &it->frames[it->frame_count++];
+    ZERO_MEMORY(frame, sizeof(_asdf_find_frame_t));
+    frame->container = container;
+    frame->iter = asdf_container_iter_init();
+    frame->is_mapping = container->type == ASDF_VALUE_MAPPING;
+    frame->depth = depth;
+}
+
+
+/**
+ * Pop the idx-th frame from the stack
+ *
+ * Breadth-first traversal can be slightly more expensive here since we have
+ * to shift all the frames down
+ */
+static inline void asdf_find_iter_pop_frame(_asdf_find_iter_impl_t *it, size_t idx) {
+    _asdf_find_frame_t *frame = &it->frames[idx];
+
+    asdf_container_item_destroy(frame->iter);
+
+    // Hack needed for BFS
+    // TODO: Should be fixed
+    if (frame->owns_container)
+        asdf_value_destroy(frame->container);
+
+    memset(frame, 0, sizeof(_asdf_find_frame_t));
+
+    if (idx != it->frame_count - 1) {
+        // Normally we only pop from the bottom in BFS (idx == 0), but let's
+        // handle generic idx
+        memmove(
+            &it->frames[idx],
+            &it->frames[idx + 1],
+            (it->frame_count - idx - 1) * sizeof(_asdf_find_frame_t));
+    }
+
+    it->frame_count--;
+}
+
+
+/** DFS strategy for `asdf_find_iter_next` */
+static asdf_value_t *asdf_find_iter_next_dfs(_asdf_find_iter_impl_t *it) {
+    assert(it->frame_count > 0);
+    _asdf_find_frame_t *frame = &it->frames[it->frame_count - 1];
+
+    if (!frame->visited) {
+        frame->visited = true;
+        return frame->container;
+    }
+
+    asdf_container_item_t *item = NULL;
+    while ((item = asdf_container_iter(frame->container, &frame->iter))) {
+        if (asdf_value_is_container(item->value)) {
+            asdf_find_iter_push_frame(it, item->value, frame->depth + 1);
+            return NULL;
+        }
+
+        return item->value;
+    }
+    asdf_find_iter_pop_frame(it, it->frame_count - 1);
+    return NULL;
+}
+
+
+/** BFS strategy for `asdf_find_iter_next` */
+static asdf_value_t *asdf_find_iter_next_bfs(_asdf_find_iter_impl_t *it) {
+    assert(it->frame_count > 0);
+    _asdf_find_frame_t *frame = &it->frames[0];
+
+    if (!frame->visited) {
+        frame->visited = true;
+        return frame->container;
+    }
+
+    asdf_container_item_t *item = NULL;
+    while ((item = asdf_container_iter(frame->container, &frame->iter))) {
+        if (asdf_value_is_container(item->value)) {
+            // In the BFS case it is important to *clone* the value before
+            // pushing it onto the stack, because the next call of
+            // asdf_container_iter will destroy the original; a design
+            // choice that makes sense most of the time but is a foot-gun
+            // here.  Would be better if we boxed values with reference
+            // counting
+            asdf_find_iter_push_frame(it, asdf_value_clone(item->value), frame->depth + 1);
+            it->frames[it->frame_count - 1].visited = true;
+            it->frames[it->frame_count - 1].owns_container = true;
+        }
+
+        return item->value;
+    }
+    asdf_find_iter_pop_frame(it, 0);
+    return NULL;
+}
+
+/**
+ * The core of asdf_value_find_iter_ex
+ *
+ * We maintain our own little stack of values being descended into (similar
+ * to the implementation of `asdf_info`) so that we can traverse the tree
+ * to arbitrary (modulo system resource) depths without blowing the C stack.
+ *
+ * This is probably unnecessary for most files though may be useful in some
+ * cases.  In any case I usually prefer such an approach over brute recursion.
+ *
+ * In fact, `asdf_info` could, and later should, be rewritten on top of this
+ * if possible. `asdf_info` was written very early in the project when I was
+ * just trying to get a handle on libfyaml.
+ */
+static asdf_value_t *asdf_find_iter_next(_asdf_find_iter_impl_t *it) {
+    if (it->value && !asdf_value_is_container(it->value))
+        return it->value;
+
+    if (!it->frame_count)
+        return NULL;
+
+    // Originally had this all combined together, but I think the logic is
+    // clearer if we split the DFS and BFS versions into separate subroutines
+    // even though there's a lot of overlap.
+    if (it->depth_first)
+        return asdf_find_iter_next_dfs(it);
+
+    return asdf_find_iter_next_bfs(it);
+}
+
+
+asdf_find_iter_t asdf_find_iter_init(void) {
+    return NULL;
+}
+
+
+void asdf_find_item_destroy(asdf_find_item_t *item) {
+    if (!item)
+        return;
+
+    asdf_value_destroy(item->value);
+
+    // Pop all remaining frames off the stack if any
+    // This is important to do before freeing item->frames since sometimes
+    // individual frames need cleanup too
+    while (item->frame_count > 0)
+        asdf_find_iter_pop_frame(item, item->frame_count - 1);
+
+    free(item->frames);
+    free(item);
+}
+
+
+asdf_find_item_t *asdf_value_find_iter_ex(
+    asdf_value_t *root,
+    asdf_value_pred_t pred,
+    bool depth_first,
+    asdf_value_pred_t descend_pred,
+    ssize_t max_depth,
+    asdf_find_iter_t *iter) {
+
+    _asdf_find_iter_impl_t *it = NULL;
+
+    if (!*iter) {
+        it = asdf_value_find_iter_create(depth_first, descend_pred, max_depth);
+
+        if (!it) {
+            ASDF_ERROR_OOM(root->file);
+            return NULL;
+        }
+
+        // Should only get here on the first call to the iter routine;
+        // Subsequent calls with the same iterator but a different root result
+        // in undefined behavior.  Push the root node onto the stack to begin
+        if (root->type == ASDF_VALUE_MAPPING || root->type == ASDF_VALUE_SEQUENCE)
+            asdf_find_iter_push_frame(it, root, 0);
+        else
+            // Special case when we are given a scalar "root" value
+            it->value = root;
+
+        *iter = it;
+    } else {
+        it = *iter;
+        it->value = NULL;
+    }
+    assert(it);
+
+    asdf_value_t *current = NULL;
+
+    while (it->frame_count > 0 || it->value) {
+        current = asdf_find_iter_next(it);
+        if (current && (!pred || pred(current))) {
+            // wrap in find_item_t and return
+            it->value = current;
+            // TODO: Build path
+            return (asdf_find_item_t *)it;
+        }
+        it->value = NULL;
+    }
+    asdf_find_item_destroy(it);
+    return NULL;
+}
+
+
+asdf_find_item_t *asdf_value_find_iter(
+    asdf_value_t *root, asdf_value_pred_t pred, asdf_find_iter_t *iter) {
+    return asdf_value_find_iter_ex(root, pred, false, NULL, -1, iter);
+}
+
+
+asdf_find_item_t *asdf_value_find_ex(
+    asdf_value_t *root,
+    asdf_value_pred_t pred,
+    bool depth_first,
+    asdf_value_pred_t descend_pred,
+    ssize_t max_depth) {
+    asdf_find_iter_t iter = asdf_find_iter_init();
+    return asdf_value_find_iter_ex(root, pred, depth_first, descend_pred, max_depth, &iter);
+}
+
+
+asdf_find_item_t *asdf_value_find(asdf_value_t *root, asdf_value_pred_t pred) {
+    return asdf_value_find_ex(root, pred, false, NULL, -1);
+}
+
+
+const char *asdf_find_item_path(asdf_find_item_t *item) {
+    return item->path;
+}
+
+
+asdf_value_t *asdf_find_item_value(asdf_find_item_t *item) {
+    return item->value;
 }

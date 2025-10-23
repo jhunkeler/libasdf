@@ -722,6 +722,257 @@ MU_TEST(test_value_copy_with_parent_path) {
 }
 
 
+static bool value_find_pred_a(asdf_value_t *value) {
+    const char *str = NULL;
+    asdf_value_err_t err = asdf_value_as_string0(value, &str);
+
+    if (ASDF_VALUE_OK != err)
+        return false;
+
+    return strcmp(str, "a") == 0;
+}
+
+
+static bool value_find_pred_b(asdf_value_t *value) {
+    const char *str = NULL;
+    asdf_value_err_t err = asdf_value_as_string0(value, &str);
+
+    if (ASDF_VALUE_OK != err)
+        return false;
+
+    return strcmp(str, "b") == 0;
+}
+
+
+MU_TEST(test_value_find_iter_ex_descend_mapping_only) {
+    const char *filename = get_fixture_file_path("nested.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    asdf_value_t *root = asdf_get_value(file, "/");
+    assert_not_null(root);
+    assert_true(asdf_value_is_mapping(root));
+
+    asdf_find_iter_t iter = asdf_find_iter_init();
+    asdf_find_item_t *item = NULL;
+    
+    item = asdf_value_find_iter_ex(
+        root, value_find_pred_a, true, asdf_find_descend_mapping_only, 1, &iter);
+    assert_not_null(item);
+    const char *str = NULL;
+    // TODO
+    // const char *path = asdf_find_item_path(item);
+    // assert_string_equal(path, "/a");
+    asdf_value_t *val = asdf_find_item_value(item);
+    asdf_value_err_t err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "a");
+
+    item = asdf_value_find_iter_ex(
+        root, value_find_pred_a, true, asdf_find_descend_mapping_only, 1, &iter);
+    assert_not_null(item);
+    // TODO
+    // path = asdf_find_item_path(item);
+    // assert_string_equal(path, "/c/a");
+    val = asdf_find_item_value(item);
+    err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "a");
+
+    item = asdf_value_find_iter_ex(
+        root, value_find_pred_a, true, asdf_find_descend_mapping_only, 1, &iter);
+    // Found all values matching the predicate
+    assert_null(item);
+
+    asdf_value_destroy(root);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_value_find_iter_ex_descend_sequence_only) {
+    const char *filename = get_fixture_file_path("nested.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    asdf_value_t *root = asdf_get_value(file, "/");
+    assert_not_null(root);
+    assert_true(asdf_value_is_mapping(root));
+
+    asdf_find_iter_t iter = asdf_find_iter_init();
+    asdf_find_item_t *item = NULL;
+    
+    item = asdf_value_find_iter_ex(
+        root, value_find_pred_a, true, asdf_find_descend_sequence_only, 1, &iter);
+    assert_not_null(item);
+    const char *str = NULL;
+    // TODO
+    // const char *path = asdf_find_item_path(item);
+    // assert_string_equal(path, "/a");
+    asdf_value_t *val = asdf_find_item_value(item);
+    asdf_value_err_t err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "a");
+
+    item = asdf_value_find_iter_ex(
+        root, value_find_pred_a, true, asdf_find_descend_sequence_only, 1, &iter);
+    assert_not_null(item);
+    // TODO
+    // path = asdf_find_item_path(item);
+    // assert_string_equal(path, "/d/0");
+    val = asdf_find_item_value(item);
+    err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "a");
+
+    item = asdf_value_find_iter_ex(
+        root, value_find_pred_a, true, asdf_find_descend_sequence_only, 1, &iter);
+    // Found all values matching the predicate
+    assert_null(item);
+
+    asdf_value_destroy(root);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_value_find_ex) {
+    const char *filename = get_fixture_file_path("nested.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    asdf_value_t *root = asdf_get_value(file, "/");
+    assert_not_null(root);
+    assert_true(asdf_value_is_mapping(root));
+
+    asdf_find_item_t *item = asdf_value_find_ex(
+        root, value_find_pred_a, true, asdf_find_descend_all, 1);
+    assert_not_null(item);
+    const char *str = NULL;
+
+    // TODO
+    // const char *path = asdf_find_item_path(item);
+    // assert_string_equal(path, "/a);
+    asdf_value_t *val = asdf_find_item_value(item);
+    asdf_value_err_t err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "a");
+
+    asdf_find_item_destroy(item);
+    asdf_value_destroy(root);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_value_find_iter) {
+    const char *filename = get_fixture_file_path("nested.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    asdf_value_t *root = asdf_get_value(file, "/");
+    assert_not_null(root);
+    assert_true(asdf_value_is_mapping(root));
+
+    asdf_find_iter_t iter = asdf_find_iter_init();
+    asdf_find_item_t *item = NULL;
+
+    item = asdf_value_find_iter(root, value_find_pred_b, &iter);
+    assert_not_null(item);
+    const char *str = NULL;
+    // TODO
+    // const char *path = asdf_find_item_path(item);
+    // BFS should find the value "b" at the top-level first
+    // assert_string_equal(path, "/b");
+    asdf_value_t *val = asdf_find_item_value(item);
+    asdf_value_err_t err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "b");
+
+    item = asdf_value_find_iter(root, value_find_pred_b, &iter);
+    // TODO
+    // path = asdf_find_item_path(item);
+    // assert_string_equal(path, "/c/b");
+    val = asdf_find_item_value(item);
+    err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "b");
+
+    item = asdf_value_find_iter(root, value_find_pred_b, &iter);
+    // TODO
+    // path = asdf_find_item_path(item);
+    // assert_string_equal(path, "/d/1");
+    val = asdf_find_item_value(item);
+    err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "b");
+
+    // Should be no more values found
+    item = asdf_value_find_iter(root, value_find_pred_b, &iter);
+    assert_null(item);
+
+    asdf_value_destroy(root);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_value_find) {
+    const char *filename = get_fixture_file_path("nested.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    asdf_value_t *root = asdf_get_value(file, "/");
+    assert_not_null(root);
+    assert_true(asdf_value_is_mapping(root));
+
+    asdf_find_item_t *item = asdf_value_find(root, value_find_pred_b);
+    assert_not_null(item);
+    const char *str = NULL;
+    // TODO
+    // const char *path = asdf_find_item_path(item);
+    // BFS should find the value "b" at the top-level first
+    // assert_string_equal(path, "/b");
+    asdf_value_t *val = asdf_find_item_value(item);
+    asdf_value_err_t err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "b");
+    asdf_find_item_destroy(item);
+
+    asdf_value_destroy(root);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(test_value_find_on_scalar) {
+    const char *filename = get_fixture_file_path("nested.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    asdf_value_t *root = asdf_get_value(file, "/a");
+    assert_not_null(root);
+    assert_true(asdf_value_is_scalar(root));
+
+    asdf_find_item_t *item = asdf_value_find(root, value_find_pred_a);
+    assert_not_null(item);
+    const char *str = NULL;
+    // TODO
+    // const char *path = asdf_find_item_path(item);
+    // BFS should find the value "b" at the top-level first
+    // assert_string_equal(path, "/b");
+    asdf_value_t *val = asdf_find_item_value(item);
+    asdf_value_err_t err = asdf_value_as_string0(val, &str);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_string_equal(str, "a");
+    asdf_find_item_destroy(item);
+
+    root = asdf_get_value(file, "/b");
+    assert_not_null(root);
+    assert_true(asdf_value_is_scalar(root));
+    item = asdf_value_find(root, value_find_pred_a);
+    assert_null(item);
+
+    asdf_value_destroy(root);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_value,
     MU_RUN_TEST(test_asdf_value_get_type),
@@ -748,7 +999,13 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_sequence_iter),
     MU_RUN_TEST(test_asdf_sequence_get),
     MU_RUN_TEST(test_asdf_container_iter),
-    MU_RUN_TEST(test_value_copy_with_parent_path)
+    MU_RUN_TEST(test_value_copy_with_parent_path),
+    MU_RUN_TEST(test_value_find_iter_ex_descend_mapping_only),
+    MU_RUN_TEST(test_value_find_iter_ex_descend_sequence_only),
+    MU_RUN_TEST(test_value_find_ex),
+    MU_RUN_TEST(test_value_find_iter),
+    MU_RUN_TEST(test_value_find),
+    MU_RUN_TEST(test_value_find_on_scalar)
 );
 
 
