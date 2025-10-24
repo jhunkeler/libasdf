@@ -238,6 +238,11 @@ const char *asdf_value_tag(asdf_value_t *value) {
 }
 
 
+const asdf_file_t *asdf_value_file(asdf_value_t *value) {
+    return (const asdf_file_t *)value->file;
+}
+
+
 /* Mapping functions */
 bool asdf_value_is_mapping(asdf_value_t *value) {
     return value->raw_type == ASDF_VALUE_MAPPING;

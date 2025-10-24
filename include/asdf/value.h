@@ -179,6 +179,12 @@ ASDF_EXPORT const char *asdf_value_type_string(asdf_value_type_t type);
 /* Return the value's tag if it has an *explicit* tag (implict tags are not returned) */
 ASDF_EXPORT const char *asdf_value_tag(asdf_value_t *value);
 
+// Forward-declaration needed for `asdf_value_file`
+typedef struct asdf_file asdf_file_t;
+
+/** Get the `asdf_file_t *` handle to the file to which a value belongs */
+ASDF_EXPORT const asdf_file_t *asdf_value_file(asdf_value_t *value);
+
 /* Mapping-related definitions */
 ASDF_EXPORT bool asdf_value_is_mapping(asdf_value_t *value);
 ASDF_EXPORT int asdf_mapping_size(asdf_value_t *mapping);
