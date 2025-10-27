@@ -21,6 +21,8 @@ typedef struct {
 typedef struct asdf_value {
     asdf_file_t *file;
     asdf_value_type_t type;
+    /** Preserve the underling YAML type even after type inference; see #75 */
+    asdf_value_type_t raw_type;
     asdf_value_err_t err;
     struct fy_node *node;
     const char *tag;

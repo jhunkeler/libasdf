@@ -217,7 +217,7 @@ asdf_value_err_t asdf_get_mapping(asdf_file_t *file, const char *path, asdf_valu
     if (!value)
         return ASDF_VALUE_ERR_NOT_FOUND;
 
-    if (value->type != ASDF_VALUE_MAPPING) {
+    if (value->raw_type != ASDF_VALUE_MAPPING) {
         asdf_value_destroy(value);
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
     }
@@ -233,7 +233,7 @@ asdf_value_err_t asdf_get_sequence(asdf_file_t *file, const char *path, asdf_val
     if (!value)
         return ASDF_VALUE_ERR_NOT_FOUND;
 
-    if (value->type != ASDF_VALUE_SEQUENCE) {
+    if (value->raw_type != ASDF_VALUE_SEQUENCE) {
         asdf_value_destroy(value);
         return ASDF_VALUE_ERR_TYPE_MISMATCH;
     }

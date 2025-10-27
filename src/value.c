@@ -54,6 +54,7 @@ static asdf_value_t *asdf_value_create_ex(
 
     value->file = file;
     value->type = asdf_value_type_from_node(node);
+    value->raw_type = value->type;
     value->err = ASDF_VALUE_ERR_UNKNOWN;
     value->node = node;
     value->tag = NULL;
@@ -185,10 +186,12 @@ static asdf_value_t *asdf_value_clone_impl(asdf_value_t *value, bool preserve_ty
 
         new_value->extension_checked = value->extension_checked;
         new_value->type = value->type;
+        new_value->raw_type = value->raw_type;
         new_value->err = value->err;
         new_value->scalar = value->scalar;
     } else {
         new_value->type = asdf_value_type_from_node(new_node);
+        new_value->raw_type = new_value->type;
         new_value->err = ASDF_VALUE_ERR_UNKNOWN;
         new_value->extension_checked = false;
         new_value->scalar.ext = NULL;
@@ -237,7 +240,7 @@ const char *asdf_value_tag(asdf_value_t *value) {
 
 /* Mapping functions */
 bool asdf_value_is_mapping(asdf_value_t *value) {
-    return value->type == ASDF_VALUE_MAPPING;
+    return value->raw_type == ASDF_VALUE_MAPPING;
 }
 
 
@@ -250,7 +253,7 @@ int asdf_mapping_size(asdf_value_t *mapping) {
 
 
 asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key) {
-    if (mapping->type != ASDF_VALUE_MAPPING) {
+    if (mapping->raw_type != ASDF_VALUE_MAPPING) {
 #ifdef ASDF_LOG_ENABLED
         ASDF_LOG(mapping->file, ASDF_LOG_WARN, "%s is not a mapping", asdf_value_path(mapping));
 #endif
@@ -282,7 +285,7 @@ asdf_value_t *asdf_mapping_item_value(asdf_mapping_item_t *item) {
 
 
 asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_mapping_iter_t *iter) {
-    if (mapping->type != ASDF_VALUE_MAPPING) {
+    if (mapping->raw_type != ASDF_VALUE_MAPPING) {
 #ifdef ASDF_LOG_ENABLED
         ASDF_LOG(mapping->file, ASDF_LOG_WARN, "%s is not a mapping", asdf_value_path(mapping));
 #endif
@@ -350,7 +353,7 @@ cleanup:
 
 /* Sequence functions */
 bool asdf_value_is_sequence(asdf_value_t *value) {
-    return value->type == ASDF_VALUE_SEQUENCE;
+    return value->raw_type == ASDF_VALUE_SEQUENCE;
 }
 
 
@@ -389,7 +392,7 @@ asdf_sequence_iter_t asdf_sequence_iter_init() {
 
 
 asdf_value_t *asdf_sequence_iter(asdf_value_t *sequence, asdf_sequence_iter_t *iter) {
-    if (sequence->type != ASDF_VALUE_SEQUENCE) {
+    if (sequence->raw_type != ASDF_VALUE_SEQUENCE) {
 #ifdef ASDF_LOG_ENABLED
         ASDF_LOG(sequence->file, ASDF_LOG_WARN, "%s is not a sequence", asdf_value_path(sequence));
 #endif
@@ -477,7 +480,7 @@ void asdf_container_item_destroy(asdf_container_item_t *item) {
 
 
 asdf_container_item_t *asdf_container_iter(asdf_value_t *container, asdf_container_iter_t *iter) {
-    if (container->type != ASDF_VALUE_MAPPING && container->type != ASDF_VALUE_SEQUENCE) {
+    if (container->raw_type != ASDF_VALUE_MAPPING && container->raw_type != ASDF_VALUE_SEQUENCE) {
 #ifdef ASDF_LOG_ENABLED
         const char *path = asdf_value_path(container);
         ASDF_LOG(container->file, ASDF_LOG_WARN, "%s is not a container", path);
@@ -495,7 +498,7 @@ asdf_container_item_t *asdf_container_iter(asdf_value_t *container, asdf_contain
             return false;
         }
 
-        if (ASDF_VALUE_MAPPING == container->type) {
+        if (ASDF_VALUE_MAPPING == container->raw_type) {
             impl->is_mapping = true;
             impl->iter.mapping = NULL;
             impl->path.key = NULL;
@@ -537,7 +540,7 @@ cleanup:
 
 
 bool asdf_value_is_container(asdf_value_t *value) {
-    return value->type == ASDF_VALUE_MAPPING || value->type == ASDF_VALUE_SEQUENCE;
+    return value->raw_type == ASDF_VALUE_MAPPING || value->raw_type == ASDF_VALUE_SEQUENCE;
 }
 
 
@@ -1842,7 +1845,7 @@ static inline void asdf_find_iter_push_frame(
     ZERO_MEMORY(frame, sizeof(_asdf_find_frame_t));
     frame->container = container;
     frame->iter = asdf_container_iter_init();
-    frame->is_mapping = container->type == ASDF_VALUE_MAPPING;
+    frame->is_mapping = container->raw_type == ASDF_VALUE_MAPPING;
     frame->depth = depth;
 }
 
@@ -2005,7 +2008,7 @@ asdf_find_item_t *asdf_value_find_iter(
     if (it->frame_count == 0) {
         // Subsequent calls with the same iterator but a different root result
         // in undefined behavior.  Push the root node onto the stack to begin
-        if (root->type == ASDF_VALUE_MAPPING || root->type == ASDF_VALUE_SEQUENCE)
+        if (asdf_value_is_container(root))
             asdf_find_iter_push_frame(it, root, 0);
         else
             // Special case when we are given a scalar "root" value
