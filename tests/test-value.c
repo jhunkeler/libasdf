@@ -4,6 +4,7 @@
 
 #include <libfyaml.h>
 
+#include <asdf/core/asdf.h>
 #include <asdf/file.h>
 #include <asdf/value.h>
 
@@ -990,6 +991,39 @@ MU_TEST(test_value_find_on_scalar) {
 }
 
 
+/** Regression test for issue #75 */
+MU_TEST(test_raw_value_type_preserved_after_type_resolution) {
+    const char *filename = get_fixture_file_path("nested.asdf");
+    asdf_file_t *file = asdf_open_file(filename, "r");
+    assert_not_null(file);
+    asdf_value_t *root = asdf_get_value(file, "/");
+    assert_not_null(root);
+    assert_true(asdf_value_is_mapping(root));
+    assert_true(asdf_value_is_container(root));
+
+    asdf_meta_t *meta = NULL;
+    assert_int(asdf_value_as_meta(root, &meta), ==, ASDF_VALUE_OK);
+    assert_not_null(meta);
+
+    assert_true(asdf_value_is_meta(root));
+    assert_true(asdf_value_is_mapping(root));
+    assert_true(asdf_value_is_container(root));
+
+    // It can still be iterated over too, etc
+    asdf_mapping_iter_t iter = asdf_mapping_iter_init();
+    asdf_mapping_item_t *item = asdf_mapping_iter(root, &iter);
+    assert_not_null(item);
+    asdf_value_t *a = asdf_mapping_item_value(item);
+    assert_string_equal(asdf_value_path(a), "/a");
+    asdf_value_destroy(a);
+    free(item);
+    asdf_meta_destroy(meta);
+    asdf_value_destroy(root);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     test_asdf_value,
     MU_RUN_TEST(test_asdf_value_get_type),
@@ -1023,7 +1057,8 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_value_find_ex),
     MU_RUN_TEST(test_value_find_iter),
     MU_RUN_TEST(test_value_find),
-    MU_RUN_TEST(test_value_find_on_scalar)
+    MU_RUN_TEST(test_value_find_on_scalar),
+    MU_RUN_TEST(test_raw_value_type_preserved_after_type_resolution)
 );
 
 
