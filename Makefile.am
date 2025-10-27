@@ -87,7 +87,7 @@ bin_PROGRAMS = asdf
 asdf_SOURCES = src/main.c
 asdf_CFLAGS = $(AM_CFLAGS) $(FYAML_CFLAGS) $(CODE_COVERAGE_CFLAGS)
 asdf_LDFLAGS = $(CODE_COVERAGE_LDFLAGS)
-asdf_LDADD = libasdf.la $(ARGP_LIB)
+asdf_LDADD = libasdf.la $(ARGP_LIB) $(FYAML_LIBS)
 endif # ASDF_BUILD_TOOL
 
 
