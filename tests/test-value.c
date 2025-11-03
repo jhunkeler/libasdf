@@ -5,6 +5,7 @@
 #include <libfyaml.h>
 
 #include <asdf/core/asdf.h>
+#include <asdf/core/ndarray.h>
 #include <asdf/file.h>
 #include <asdf/value.h>
 
@@ -1023,6 +1024,23 @@ MU_TEST(test_raw_value_type_preserved_after_type_resolution) {
     return MUNIT_OK;
 }
 
+/** Regression test for double-free bug on cloned extension values */
+MU_TEST(test_clone_extension_value) {
+    const char *path = get_reference_file_path("1.6.0/basic.asdf");
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    asdf_value_t *value = asdf_get_value(file, "data");
+    assert_not_null(value);
+    assert_true(asdf_value_is_ndarray(value));
+    asdf_value_t *cloned = asdf_value_clone(value);
+    assert_true(asdf_value_is_ndarray(cloned));
+    assert_string_equal(asdf_value_path(value), asdf_value_path(cloned));
+    asdf_value_destroy(value);
+    asdf_value_destroy(cloned);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
 
 MU_TEST_SUITE(
     test_asdf_value,
@@ -1058,7 +1076,8 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_value_find_iter),
     MU_RUN_TEST(test_value_find),
     MU_RUN_TEST(test_value_find_on_scalar),
-    MU_RUN_TEST(test_raw_value_type_preserved_after_type_resolution)
+    MU_RUN_TEST(test_raw_value_type_preserved_after_type_resolution),
+    MU_RUN_TEST(test_clone_extension_value)
 );
 
 

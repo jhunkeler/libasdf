@@ -182,13 +182,14 @@ static asdf_value_t *asdf_value_clone_impl(asdf_value_t *value, bool preserve_ty
 
             new_ext->ext = value->scalar.ext->ext;
             new_value->scalar.ext = new_ext;
+        } else {
+            new_value->scalar = value->scalar;
         }
 
         new_value->extension_checked = value->extension_checked;
         new_value->type = value->type;
         new_value->raw_type = value->raw_type;
         new_value->err = value->err;
-        new_value->scalar = value->scalar;
     } else {
         new_value->type = asdf_value_type_from_node(new_node);
         new_value->raw_type = new_value->type;
