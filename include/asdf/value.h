@@ -220,6 +220,20 @@ ASDF_EXPORT asdf_value_t *asdf_mapping_item_value(asdf_mapping_item_t *item);
 ASDF_EXPORT asdf_mapping_item_t *asdf_mapping_iter(
     asdf_value_t *mapping, asdf_mapping_iter_t *iter);
 
+/**
+ * Release memory resources used by `asdf_mapping_item_t`
+ *
+ * If the iterator was run to exhaustion (i.e. `asdf_mapping_iter` called
+ * until returning `NULL`) this happens automatically, but in cases where the
+ * iteration is stopped early it is necessary to free these resources manually
+ * once the contained value is no longer needed.
+ *
+ * This also destroys the contained `asdf_value_t`.
+ *
+ * :param item: The `asdf_mapping_item_t *` to destroy
+ */
+ASDF_EXPORT void asdf_mapping_item_destroy(asdf_mapping_item_t *item);
+
 
 /** Sequence-related functions */
 ASDF_EXPORT bool asdf_value_is_sequence(asdf_value_t *value);

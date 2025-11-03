@@ -289,6 +289,17 @@ asdf_value_t *asdf_mapping_item_value(asdf_mapping_item_t *item) {
 }
 
 
+void asdf_mapping_item_destroy(asdf_mapping_item_t *item) {
+    if (!item)
+        return;
+
+    item->key = NULL;
+    asdf_value_destroy(item->value);
+    item->value = NULL;
+    free(item);
+}
+
+
 asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_mapping_iter_t *iter) {
     if (mapping->raw_type != ASDF_VALUE_MAPPING) {
 #ifdef ASDF_LOG_ENABLED
@@ -347,10 +358,7 @@ asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_mapping_iter_
     return impl;
 
 cleanup:
-    impl->key = NULL;
-    asdf_value_destroy(impl->value);
-    impl->value = NULL;
-    free(impl);
+    asdf_mapping_item_destroy(impl);
     *iter = NULL;
     return NULL;
 }
