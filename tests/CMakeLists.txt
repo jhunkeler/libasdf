@@ -9,8 +9,9 @@ file(GLOB source_files "test-*.c")
 file(GLOB shell_files "test-*.sh")
 set(ext_pattern "(^.*/|\\.[^.]*$)")
 
-# TODO: Add this back in optionally when compiling with GWCS support
-list(REMOVE_ITEM source_files "${CMAKE_CURRENT_SOURCE_DIR}/test-gwcs.c")
+if (NOT WITH_GWCS)
+    list(REMOVE_ITEM source_files "${CMAKE_CURRENT_SOURCE_DIR}/test-gwcs.c")
+endif()
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/fixtures
         DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
