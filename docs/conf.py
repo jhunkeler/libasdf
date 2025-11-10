@@ -7,12 +7,12 @@ from pathlib import Path
 def read_config_h() -> tuple[str, str, str]:
     """Read package data out of config.h if possible"""
     project = 'libasdf'
-    version = '0.0'
     release = '0.0.0'
 
     config_h_path = Path(__file__).parent.parent / 'config.h'
 
     if not config_h_path.is_file():
+        version = '.'.join(release.split('.')[:2])
         return project, version, release
 
     content = config_h_path.read_text()
