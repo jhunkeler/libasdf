@@ -182,13 +182,14 @@ static asdf_value_t *asdf_value_clone_impl(asdf_value_t *value, bool preserve_ty
 
             new_ext->ext = value->scalar.ext->ext;
             new_value->scalar.ext = new_ext;
+        } else {
+            new_value->scalar = value->scalar;
         }
 
         new_value->extension_checked = value->extension_checked;
         new_value->type = value->type;
         new_value->raw_type = value->raw_type;
         new_value->err = value->err;
-        new_value->scalar = value->scalar;
     } else {
         new_value->type = asdf_value_type_from_node(new_node);
         new_value->raw_type = new_value->type;
@@ -238,6 +239,11 @@ const char *asdf_value_tag(asdf_value_t *value) {
 }
 
 
+const asdf_file_t *asdf_value_file(asdf_value_t *value) {
+    return (const asdf_file_t *)value->file;
+}
+
+
 /* Mapping functions */
 bool asdf_value_is_mapping(asdf_value_t *value) {
     return value->raw_type == ASDF_VALUE_MAPPING;
@@ -281,6 +287,17 @@ const char *asdf_mapping_item_key(asdf_mapping_item_t *item) {
 
 asdf_value_t *asdf_mapping_item_value(asdf_mapping_item_t *item) {
     return item->value;
+}
+
+
+void asdf_mapping_item_destroy(asdf_mapping_item_t *item) {
+    if (!item)
+        return;
+
+    item->key = NULL;
+    asdf_value_destroy(item->value);
+    item->value = NULL;
+    free(item);
 }
 
 
@@ -342,10 +359,7 @@ asdf_mapping_item_t *asdf_mapping_iter(asdf_value_t *mapping, asdf_mapping_iter_
     return impl;
 
 cleanup:
-    impl->key = NULL;
-    asdf_value_destroy(impl->value);
-    impl->value = NULL;
-    free(impl);
+    asdf_mapping_item_destroy(impl);
     *iter = NULL;
     return NULL;
 }

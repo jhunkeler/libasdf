@@ -7,6 +7,7 @@
 #include <asdf/util.h>
 #include <asdf/value.h>
 
+
 ASDF_LOCAL asdf_value_err_t
 asdf_gwcs_transform_parse(asdf_value_t *value, asdf_gwcs_transform_t *transform);
 
@@ -17,3 +18,10 @@ asdf_gwcs_transform_parse(asdf_value_t *value, asdf_gwcs_transform_t *transform)
  * Does not free the transform struct's own memory.
  */
 ASDF_LOCAL void asdf_gwcs_transform_clean(asdf_gwcs_transform_t *transform);
+
+/**
+ * Read an `asdf_value_t *` as any type of GWCS transform
+ */
+ASDF_EXPORT asdf_value_err_t
+asdf_value_as_gwcs_transform(asdf_value_t *value, asdf_gwcs_transform_t **out);
+ASDF_EXPORT void asdf_gwcs_transform_destroy(asdf_gwcs_transform_t *transform);

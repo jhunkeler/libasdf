@@ -8,6 +8,14 @@ set(ASDF_DEFAULT_LOG_LEVEL TRACE CACHE STRING "One of TRACE|DEBUG|INFO|WARN|ERRO
 set(ASDF_LOG_MIN_LEVEL TRACE CACHE STRING "One of TRACE|DEBUG|INFO|WARN|ERROR|FATAL|NONE")
 set(ASDF_DEBUG OFF CACHE BOOL "Enable DEBUG code")
 
+# Additional feature flags
+option(
+    WITH_GWCS
+    "Build with GWCS extension support (will later be moved to an external plugin)"
+    OFF
+)
+
+
 # Documentation
 option(ENABLE_DOCS OFF)
 if (ENABLE_DOCS)

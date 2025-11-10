@@ -24,6 +24,22 @@ target_sources(libasdf PUBLIC
     value_util.c
     yaml.c
 )
+
+# Add optional gwcs extension sources
+if (WITH_GWCS)
+    target_sources(libasdf PUBLIC
+        gwcs/fitswcs_imaging.c
+        gwcs/frame2d.c
+        gwcs/frame.c
+        gwcs/frame_celestial.c
+        gwcs/step.c
+        gwcs/transform.c
+        gwcs/transforms/property/bounding_box.c
+        gwcs/wcs.c
+    )
+endif()
+
+
 target_link_libraries(libasdf PUBLIC
     stc
     ${FYAML_LIBRARIES}

@@ -17,9 +17,9 @@ typedef struct {
     char **axes_names;
     uint32_t *axes_order;
     char **unit;
+    char **axis_physical_types;
     // TODO:
     // - reference_frame
-    // - axes_physical_type
 } asdf_gwcs_frame_common_params_t;
 
 

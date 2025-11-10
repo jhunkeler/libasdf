@@ -179,6 +179,12 @@ ASDF_EXPORT const char *asdf_value_type_string(asdf_value_type_t type);
 /* Return the value's tag if it has an *explicit* tag (implict tags are not returned) */
 ASDF_EXPORT const char *asdf_value_tag(asdf_value_t *value);
 
+// Forward-declaration needed for `asdf_value_file`
+typedef struct asdf_file asdf_file_t;
+
+/** Get the `asdf_file_t *` handle to the file to which a value belongs */
+ASDF_EXPORT const asdf_file_t *asdf_value_file(asdf_value_t *value);
+
 /* Mapping-related definitions */
 ASDF_EXPORT bool asdf_value_is_mapping(asdf_value_t *value);
 ASDF_EXPORT int asdf_mapping_size(asdf_value_t *mapping);
@@ -213,6 +219,20 @@ ASDF_EXPORT asdf_value_t *asdf_mapping_item_value(asdf_mapping_item_t *item);
  */
 ASDF_EXPORT asdf_mapping_item_t *asdf_mapping_iter(
     asdf_value_t *mapping, asdf_mapping_iter_t *iter);
+
+/**
+ * Release memory resources used by `asdf_mapping_item_t`
+ *
+ * If the iterator was run to exhaustion (i.e. `asdf_mapping_iter` called
+ * until returning `NULL`) this happens automatically, but in cases where the
+ * iteration is stopped early it is necessary to free these resources manually
+ * once the contained value is no longer needed.
+ *
+ * This also destroys the contained `asdf_value_t`.
+ *
+ * :param item: The `asdf_mapping_item_t *` to destroy
+ */
+ASDF_EXPORT void asdf_mapping_item_destroy(asdf_mapping_item_t *item);
 
 
 /** Sequence-related functions */

@@ -161,6 +161,13 @@ asdf_value_err_t asdf_gwcs_frame_parse(
             value, "unit", params->unit, params->min_axes, params->max_axes)))
         goto failure;
 
+    if (!ASDF_IS_OPTIONAL_OK(get_frame_axes_string_param(
+            value,
+            "axis_physical_types",
+            params->axis_physical_types,
+            params->min_axes,
+            params->max_axes)))
+        goto failure;
 
     if (!(ASDF_IS_OPTIONAL_OK(get_frame_axes_order_param(
             value, params->axes_order, params->min_axes, params->max_axes))))
