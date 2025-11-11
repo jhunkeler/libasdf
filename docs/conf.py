@@ -61,6 +61,10 @@ rst_epilog = ''
 with open('links.rst') as fobj:
     rst_epilog += fobj.read()
 
+exclude_patterns = [
+    'links.rst'
+]
+
 
 # Enable nitpicky mode - which ensures that all references in the docs
 # resolve.

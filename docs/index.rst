@@ -34,6 +34,15 @@ headers.
   api/asdf/extension.h
 
 
+Resources
+=========
+
+.. toctree::
+  :maxdepth: 2
+
+  changes
+
+
 See also
 ========
 
@@ -44,4 +53,3 @@ Index
 =====
 
 * :ref:`genindex`
-* :ref:`modindex`
