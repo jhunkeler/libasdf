@@ -8,18 +8,30 @@ libasdf - The ASDF C Library
   :start-after: begin-badges:
 
 
+Usage
+=====
+
+.. toctree::
+  :maxdepth: 2
+
+  usage/overview
+
+
 API documentation
 =================
 
+The API documentation is organized according to the header files from which each
+documented member is included.
+
 Most of the commonly used features of libasdf can be imported simply by
-including ``asdf.h``.  This in turn includes the following headers, documented
-below:
+including ``asdf.h``.  This in turn includes the following headers:
 
 .. toctree::
   :maxdepth: 2
 
   api/asdf/file.h
   api/asdf/value.h
+  api/asdf/core/ndarray.h
 
 Additional less commonly used APIs can be used by including the relevant
 headers.

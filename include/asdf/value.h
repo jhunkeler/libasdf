@@ -5,6 +5,9 @@
  *
  *   Document API for generic values.
  */
+
+//
+
 #ifndef ASDF_VALUE_H
 #define ASDF_VALUE_H
 
@@ -271,6 +274,9 @@ ASDF_EXPORT asdf_value_t *asdf_sequence_iter(asdf_value_t *sequence, asdf_sequen
  *
  *   Document these better.
  */
+
+//
+
 typedef struct _asdf_container_iter_impl _asdf_container_iter_impl_t;
 
 
