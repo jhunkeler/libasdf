@@ -9,8 +9,10 @@ features still missing:
 * ndarray masks
 * ndarrays with compound datatypes
 * External block data for ndarray is not supported yet
+
   * Some preliminary support exists for parsing compound datatypes, but no
     routines exist yet for reading records/columns out of ndarrays.
+
 * YAML anchors in the tree
 * Not all of the core schemas are implemented yet (complex, externalarray,
   etc.)
