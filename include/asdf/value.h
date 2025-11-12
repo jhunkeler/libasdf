@@ -160,6 +160,15 @@ typedef enum {
 } asdf_value_err_t;
 
 
+/**
+ * Free memory held by an `asdf_value_t`
+ *
+ * Calling this does *not* destroy any memory allocated for C-native data
+ * coerced from the value, including extension types.  It just frees up the
+ * `asdf_value_t` that wrapped it.
+ *
+ * :param value: The `asdf_value_t *` handle
+ */
 ASDF_EXPORT void asdf_value_destroy(asdf_value_t *value);
 ASDF_EXPORT asdf_value_t *asdf_value_clone(asdf_value_t *value);
 
@@ -191,6 +200,18 @@ ASDF_EXPORT const asdf_file_t *asdf_value_file(asdf_value_t *value);
 /* Mapping-related definitions */
 ASDF_EXPORT bool asdf_value_is_mapping(asdf_value_t *value);
 ASDF_EXPORT int asdf_mapping_size(asdf_value_t *mapping);
+
+/**
+ * Return an `asdf_value_t` from the given mapping at a given key
+ *
+ * If the key does not exist in the mapping, or the first argument is not a
+ * mapping at all, returns `NULL`
+ *
+ * :param mapping: An `asdf_value_t *` containing a mapping
+ * :param key: The key into the mapping
+ * :return: The `asdf_value_t *` wrapping the value at that key, if any.
+ *   Make sure to release it with `asdf_value_destroy` when no-longer needed.
+ */
 ASDF_EXPORT asdf_value_t *asdf_mapping_get(asdf_value_t *mapping, const char *key);
 
 typedef struct _asdf_mapping_iter_impl _asdf_mapping_iter_impl_t;

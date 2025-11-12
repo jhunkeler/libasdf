@@ -15,6 +15,9 @@ Usage
   :maxdepth: 2
 
   usage/overview
+  usage/opening
+  usage/values
+  usage/extensions
 
 
 API documentation

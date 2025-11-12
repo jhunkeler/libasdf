@@ -71,6 +71,8 @@ the format itself is language-independent, it retains this spirit of structured
 object serialization. One of the most common tagged objects is the **ndarray**,
 which provides efficient storage for numerical array data—described next.
 
+.. _ndarrays:
+
 ndarrays (N-dimension typed arrays)
 ===================================
 

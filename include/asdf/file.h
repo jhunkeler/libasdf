@@ -433,6 +433,9 @@ ASDF_EXPORT bool asdf_is_int64(asdf_file_t *file, const char *path);
 /** See :ref:`int getters` */
 ASDF_EXPORT asdf_value_err_t asdf_get_int64(asdf_file_t *file, const char *path, int64_t *out);
 
+/** Alias for `asdf_get_int64` */
+#define asdf_get_int asdf_get_int64
+
 /** See :ref:`int getters` */
 ASDF_EXPORT bool asdf_is_uint8(asdf_file_t *file, const char *path);
 
