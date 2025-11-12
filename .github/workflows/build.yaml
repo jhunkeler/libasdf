@@ -118,9 +118,7 @@ jobs:
             llvm \
             python3-sphinx \
             python3-clang
-          # Don't use docs/requirements.txt here since we are trying with the
-          # system packages for sphinx and clang
-          pip install furo hawkmoth
+          pip install furo hawkmoth towncrier
 
       - name: Set LD_LIBRARY_PATH
         run: echo "LD_LIBRARY_PATH=$(llvm-config --libdir):$LD_LIBRARY_PATH" >> $GITHUB_ENV
@@ -131,6 +129,13 @@ jobs:
       - name: Configure
         run: |
           ./configure --enable-docs
+
+      - name: Extract changelog
+        description: |
+          Run towncrier to build the changelog--since this gets included into
+          docs it's important to check that the changelog entries don't
+          introduce any doc build failures.
+        run: scripts/changelog.sh
 
       - name: Build Sphinx documentation
         run: make docs SPHINX_FLAGS=-W
