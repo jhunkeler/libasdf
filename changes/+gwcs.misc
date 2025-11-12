@@ -1,0 +1,7 @@
+This release also contains a preview of the libasdf-gwcs extension, which
+partially supports reading `GWCS <https://github.com/spacetelescope/gwcs>`_
+objects into C-native datastructures (not actually evaluating the GWCS
+transforms, however).
+
+This will later be moved to a separate libasdf extension plugin, but for this
+release it is included in the main library for ease of evaluation.

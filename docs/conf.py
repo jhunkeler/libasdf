@@ -7,12 +7,12 @@ from pathlib import Path
 def read_config_h() -> tuple[str, str, str]:
     """Read package data out of config.h if possible"""
     project = 'libasdf'
-    version = '0.0'
     release = '0.0.0'
 
     config_h_path = Path(__file__).parent.parent / 'config.h'
 
     if not config_h_path.is_file():
+        version = '.'.join(release.split('.')[:2])
         return project, version, release
 
     content = config_h_path.read_text()
@@ -61,6 +61,10 @@ rst_epilog = ''
 with open('links.rst') as fobj:
     rst_epilog += fobj.read()
 
+exclude_patterns = [
+    'links.rst'
+]
+
 
 # Enable nitpicky mode - which ensures that all references in the docs
 # resolve.
@@ -78,10 +82,12 @@ nitpick_ignore = [
     ('c:identifier', 'FILE'),
     ('c:identifier', 'NULL'),
     ('c:identifier', 'errno'),
+    ('c:identifier', 'file'),
     ('c:identifier', 'int16_t'),
     ('c:identifier', 'int32_t'),
     ('c:identifier', 'int64_t'),
     ('c:identifier', 'int8_t'),
+    ('c:identifier', 'open'),
     ('c:identifier', 'size_t'),
     ('c:identifier', 'ssize_t'),
     ('c:identifier', 'strtod'),
@@ -94,7 +100,9 @@ nitpick_ignore = [
 # Add intersphinx mappings
 # e.g. intersphinx_mapping["semantic_version"] = ("https://python-semanticversion.readthedocs.io/en/latest/", None)
 intersphinx_mapping = {
-    'asdf-standard': ('https://www.asdf-format.org/projects/asdf-standard/en/latest/', None)
+    'asdf': ('https://www.asdf-format.org/projects/asdf/en/stable', None),
+    'asdf-standard': ('https://www.asdf-format.org/projects/asdf-standard/en/latest/', None),
+    'numpy': ('https://numpy.org/doc/stable/', None)
 }
 
 extensions = ['sphinx.ext.intersphinx', 'sphinx.ext.todo', 'hawkmoth']

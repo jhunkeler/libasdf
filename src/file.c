@@ -92,7 +92,23 @@ void asdf_close(asdf_file_t *file) {
 
 
 const char *asdf_error(asdf_file_t *file) {
-    return ASDF_ERROR_GET(file);
+    asdf_base_t *base = (asdf_base_t *)file;
+
+    if (!base) {
+        // Return errors from the global context
+        base = (asdf_base_t *)asdf_global_context_get();
+
+        if (!base) {
+            asdf_log_fallback(
+                ASDF_LOG_FATAL,
+                __FILE__,
+                __LINE__,
+                "libasdf global context not initialized; the library is in an "
+                "undefined state");
+            return NULL;
+        }
+    }
+    return ASDF_ERROR_GET(base);
 }
 
 

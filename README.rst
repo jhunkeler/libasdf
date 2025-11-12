@@ -175,18 +175,6 @@ the ASDF tree, as well as extract block data.  Inline comments provide further e
 Development
 ===========
 
-Minimal requirements
---------------------
-
-First we'll have to have some (probably libfyaml + headers)
-
-
-Building from source tarballs
------------------------------
-
-First we'd have to have some.
-
-
 Building from git
 -----------------
 

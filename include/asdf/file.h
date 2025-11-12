@@ -33,7 +33,7 @@ ASDF_BEGIN_DECLS
 typedef struct asdf_file asdf_file_t;
 
 // Forward-declaration for asdf_open
-asdf_file_t *asdf_open_file(const char *filename, const char* mode);
+asdf_file_t *asdf_open_file(const char *filename, const char *mode);
 
 /**
  * Opens an ASDF file for reading
@@ -55,7 +55,7 @@ static inline asdf_file_t *asdf_open(const char *filename, const char *mode) {
  *
  * Equivalent to `asdf_open`.
  */
-ASDF_EXPORT asdf_file_t *asdf_open_file(const char *filename, const char* mode);
+ASDF_EXPORT asdf_file_t *asdf_open_file(const char *filename, const char *mode);
 
 /**
  * Opens an ASDF file from an already open `FILE *`
@@ -95,10 +95,14 @@ ASDF_EXPORT void asdf_close(asdf_file_t *file);
  *
  * This is typically used to check for errors on the file itself, such as
  * parse errors, and not for user data errors (such as invalid type conversions
- * on an `asdf_value_t`).  See the section on :ref:`error-handling` for more
- * details.
+ * on an `asdf_value_t`).
  *
- * :param file: An open `asdf_file_t *`
+ * If passed `NULL`, returns any global error, if set (typically from errors
+ * opening a file), or from library initialization.
+ *
+ * See the section on :ref:`error-handling` for more details.
+ *
+ * :param file: An open `asdf_file_t *` or `NULL`
  * :return: `NULL` if there is no error set, otherwise a pointer to the error
  *   message string
  */
@@ -181,7 +185,8 @@ ASDF_EXPORT bool asdf_is_mapping(asdf_file_t *file, const char *path);
  * :return: `ASDF_VALUE_OK` if the value exists and is a mapping, otherwise
  *   `ASDF_VALUE_ERR_NOT_FOUND` or `ASDF_VALUE_ERR_TYPE_MISMATCH`.
  */
-ASDF_EXPORT asdf_value_err_t asdf_get_mapping(asdf_file_t *file, const char *path, asdf_value_t **value);
+ASDF_EXPORT asdf_value_err_t
+asdf_get_mapping(asdf_file_t *file, const char *path, asdf_value_t **value);
 
 /**
  * Check if the value at the given tree path is a YAML sequence
@@ -215,7 +220,8 @@ ASDF_EXPORT bool asdf_is_sequence(asdf_file_t *file, const char *path);
  * :return: `ASDF_VALUE_OK` if the value exists and is a sequence, otherwise
  *   `ASDF_VALUE_ERR_NOT_FOUND` or `ASDF_VALUE_ERR_TYPE_MISMATCH`.
  */
-ASDF_EXPORT asdf_value_err_t asdf_get_sequence(asdf_file_t *file, const char *path, asdf_value_t **value);
+ASDF_EXPORT asdf_value_err_t
+asdf_get_sequence(asdf_file_t *file, const char *path, asdf_value_t **value);
 
 /**
  * Check if the value at the given tree path is a string scalar
@@ -258,7 +264,8 @@ ASDF_EXPORT bool asdf_is_string(asdf_file_t *file, const char *path);
  * :return: `ASDF_VALUE_OK` if the value exists and is a string, otherwise
  *   `ASDF_VALUE_ERR_NOT_FOUND` or `ASDF_VALUE_ERR_TYPE_MISMATCH`.
  */
-ASDF_EXPORT asdf_value_err_t asdf_get_string(asdf_file_t *file, const char *path, const char **out, size_t *out_len);
+ASDF_EXPORT asdf_value_err_t
+asdf_get_string(asdf_file_t *file, const char *path, const char **out, size_t *out_len);
 
 /**
  * Get a null-terminated string out of the ASDF tree
@@ -271,7 +278,8 @@ ASDF_EXPORT asdf_value_err_t asdf_get_string(asdf_file_t *file, const char *path
  * :return: `ASDF_VALUE_OK` if the value exists and is a string, otherwise
  *   `ASDF_VALUE_ERR_NOT_FOUND` or `ASDF_VALUE_ERR_TYPE_MISMATCH`.
  */
-ASDF_EXPORT asdf_value_err_t asdf_get_string0(asdf_file_t *file, const char *path, const char **out);
+ASDF_EXPORT asdf_value_err_t
+asdf_get_string0(asdf_file_t *file, const char *path, const char **out);
 
 /**
  * Check if the value at the given tree path is a YAML scalar of any kind
@@ -298,7 +306,8 @@ ASDF_EXPORT bool asdf_is_scalar(asdf_file_t *file, const char *path);
  * :return: `ASDF_VALUE_OK` if the value exists and is a scalar, otherwise
  *   `ASDF_VALUE_ERR_NOT_FOUND` or `ASDF_VALUE_ERR_TYPE_MISMATCH`.
  */
-ASDF_EXPORT asdf_value_err_t asdf_get_scalar(asdf_file_t *file, const char *path, const char **out, size_t *out_len);
+ASDF_EXPORT asdf_value_err_t
+asdf_get_scalar(asdf_file_t *file, const char *path, const char **out, size_t *out_len);
 
 /**
  * Like `asdf_get_scalar0` but returns a null-terminated string
@@ -310,7 +319,8 @@ ASDF_EXPORT asdf_value_err_t asdf_get_scalar(asdf_file_t *file, const char *path
  * :return: `ASDF_VALUE_OK` if the value exists and is a scalar, otherwise
  *   `ASDF_VALUE_ERR_NOT_FOUND` or `ASDF_VALUE_ERR_TYPE_MISMATCH`.
  */
-ASDF_EXPORT asdf_value_err_t asdf_get_scalar0(asdf_file_t *file, const char *path, const char **out);
+ASDF_EXPORT asdf_value_err_t
+asdf_get_scalar0(asdf_file_t *file, const char *path, const char **out);
 
 /**
  * Check if the value at the given tree path is a boolean scalar
@@ -423,6 +433,9 @@ ASDF_EXPORT bool asdf_is_int64(asdf_file_t *file, const char *path);
 /** See :ref:`int getters` */
 ASDF_EXPORT asdf_value_err_t asdf_get_int64(asdf_file_t *file, const char *path, int64_t *out);
 
+/** Alias for `asdf_get_int64` */
+#define asdf_get_int asdf_get_int64
+
 /** See :ref:`int getters` */
 ASDF_EXPORT bool asdf_is_uint8(asdf_file_t *file, const char *path);
 
@@ -475,22 +488,23 @@ ASDF_EXPORT bool asdf_is_double(asdf_file_t *file, const char *path);
 /** See :ref:`float getters` */
 ASDF_EXPORT asdf_value_err_t asdf_get_double(asdf_file_t *file, const char *path, double *out);
 
-/** 
+/**
  * Extension object getters
  * ------------------------
  *
  * .. todo::
- * 
+ *
  *   Needs :ref:`extensions` documentation.
  */
 ASDF_EXPORT bool asdf_is_extension_type(asdf_file_t *file, const char *path, asdf_extension_t *ext);
 
-/** 
+/**
  * .. todo::
- * 
+ *
  *   Needs :ref:`extensions` documentation.
  */
-ASDF_EXPORT asdf_value_err_t asdf_get_extension_type(asdf_file_t *file, const char *path, asdf_extension_t *ext, void **out);
+ASDF_EXPORT asdf_value_err_t
+asdf_get_extension_type(asdf_file_t *file, const char *path, asdf_extension_t *ext, void **out);
 
 /**
  * Block-related APIs
