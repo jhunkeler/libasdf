@@ -15,7 +15,8 @@ push = true
     '\[libasdf\], \[{version}\]'
 ]
 "CMakeLists.txt" = [
-    'VERSION {version}'
+    'set(PACKAGE_VERSION {version})',
+    'set(PROJECT_VERSION MAJOR.MINOR.PATCH)'
 ]
 "docs/conf.py" = [
     "release = '{version}'"

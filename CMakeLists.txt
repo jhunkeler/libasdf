@@ -1,6 +1,13 @@
 cmake_minimum_required(VERSION 3.21)
+
+# Internal full package version
+set(PACKAGE_VERSION 0.1.0-alpha0)
+
+# CMake-compatible project version
+set(PROJECT_VERSION 0.1.0)
+
 project(libasdf
-    VERSION 0.1.0-alpha0
+    VERSION ${PROJECT_VERSION}
     LANGUAGES C
 )
 
@@ -19,7 +26,6 @@ set(MUNIT_DIR ${CMAKE_SOURCE_DIR}/tests/munit)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(PACKAGE_NAME "${PROJECT_NAME}")
-set(PACKAGE_VERSION "${PROJECT_VERSION}")
 
 # Update git submodules
 list(APPEND submodules
