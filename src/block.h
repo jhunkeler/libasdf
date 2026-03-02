@@ -81,6 +81,11 @@ typedef struct asdf_block_header {
 } asdf_block_header_t;
 
 
+// Forward-declarations
+typedef struct asdf_compressor asdf_compressor_t;
+typedef struct asdf_file asdf_file_t;
+
+
 typedef struct asdf_block_info {
     size_t index;
     off_t header_pos;
@@ -93,6 +98,8 @@ typedef struct asdf_block_info {
      * block to the file this is set to the user's provided data buffer.
      */
     const void *data;
+    /** Optional output compressor */
+    const asdf_compressor_t *write_compressor;
 } asdf_block_info_t;
 
 
@@ -112,6 +119,8 @@ ASDF_LOCAL void asdf_block_info_init(
 ASDF_LOCAL bool asdf_block_info_read(asdf_stream_t *stream, asdf_block_info_t *out_block);
 ASDF_LOCAL bool asdf_block_info_write(
     asdf_stream_t *stream, asdf_block_info_t *block, bool checksum);
+ASDF_LOCAL int asdf_block_info_compression_set(
+    asdf_file_t *file, asdf_block_info_t *block_info, const char *compression);
 
 
 #ifdef HAVE_MD5

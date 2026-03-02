@@ -120,6 +120,7 @@ test_parser_unit_LDADD = $(unit_test_ldadd)
 test_parse_util_unit_SOURCES = \
     test-parse-util.c \
     $(top_srcdir)/src/block.c \
+    $(top_srcdir)/src/compression/compressor_registry.c \
     $(top_srcdir)/src/context.c \
     $(top_srcdir)/src/error.c \
     $(top_srcdir)/src/log.c \

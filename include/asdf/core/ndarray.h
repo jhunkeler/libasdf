@@ -212,6 +212,21 @@ ASDF_EXPORT void asdf_ndarray_data_dealloc(asdf_ndarray_t *ndarray);
 
 
 /**
+ * Set the compression method to use for the ndarray data when writing
+ *
+ * See also `asdf_block_compression_set` for which this is a shortcut (applies
+ * to the block created for holding this ndarray's data).
+ *
+ * :param ndarray: An `asdf_ndarray_t *` handle
+ * :param compression: String representing the compressor to use (e.g. "bzp2")
+ *   if any, or NULL or the empty string to set no compression
+ * :return: Non-zero if the compression could not be set (e.g. invalid/unknown
+ *   compressor; use `asdf_error` to check the error code
+ */
+ASDF_EXPORT int asdf_ndarray_compression_set(asdf_ndarray_t *ndarray, const char *compression);
+
+
+/**
  * Get the pointer to the open `asdf_block_t` associated with the ndarray
  *
  * This is mostly for debugging/low-level inspection and is not needed for

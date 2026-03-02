@@ -11,6 +11,7 @@
 #endif
 
 #include "../context.h"
+#include "../error.h"
 #include "../extension_util.h"
 #include "../file.h"
 #include "../log.h"
@@ -22,6 +23,27 @@
 #include "datatype.h"
 #include "ndarray.h"
 #include "ndarray_convert.h"
+
+
+/**
+ * Return the ndarray internal data if exists, and/or optionally create and
+ * return it if not
+ */
+static asdf_ndarray_internal_t *asdf_ndarray_internal(asdf_ndarray_t *ndarray, bool create) {
+    if (UNLIKELY(!ndarray))
+        return NULL;
+
+    if (!ndarray->internal && create) {
+        asdf_ndarray_internal_t *internal = calloc(1, sizeof(asdf_ndarray_internal_t));
+
+        if (UNLIKELY(!internal))
+            return NULL;
+
+        ndarray->internal = internal;
+    }
+
+    return ndarray->internal;
+}
 
 
 const asdf_block_t *asdf_ndarray_block(asdf_ndarray_t *ndarray) {
@@ -224,14 +246,12 @@ static asdf_value_err_t asdf_ndarray_deserialize(
         goto cleanup;
     }
 
-    internal = calloc(1, sizeof(asdf_ndarray_internal_t));
+    internal = asdf_ndarray_internal(ndarray, true);
 
     if (UNLIKELY(!internal)) {
         err = ASDF_VALUE_ERR_OOM;
         goto cleanup;
     }
-
-    ndarray->internal = internal;
 
     if (!is_inline) {
         err = asdf_ndarray_parse_block_data(ndarray_map, ndarray);
@@ -253,7 +273,7 @@ static asdf_value_err_t asdf_ndarray_deserialize(
         goto cleanup;
 
     ndarray->source = source;
-    ndarray->internal->file = value->file;
+    internal->file = value->file;
     *out = ndarray;
     err = ASDF_VALUE_OK;
 cleanup:
@@ -454,6 +474,16 @@ static asdf_value_t *asdf_ndarray_serialize(
             goto cleanup;
         }
 
+        if (ndarray->internal && ndarray->internal->write_compression) {
+            asdf_block_info_t *info = asdf_block_info_vec_at_mut(&file->blocks, (isize)block_idx);
+            const char *compression = ndarray->internal->write_compression;
+
+            if (asdf_block_info_compression_set(file, info, compression) != 0) {
+                err = ASDF_VALUE_ERR_EMIT_FAILURE;
+                goto cleanup;
+            }
+        }
+
         err = asdf_mapping_set_int64(ndarray_map, "source", (int64_t)block_idx);
     }
 
@@ -577,28 +607,26 @@ void *asdf_ndarray_data_alloc(asdf_ndarray_t *ndarray) {
     if (UNLIKELY(!ndarray))
         return NULL;
 
-    if (ndarray->internal && ndarray->internal->data)
-        return ndarray->internal->data;
+    asdf_ndarray_internal_t *internal = asdf_ndarray_internal(ndarray, true);
 
-    if (!ndarray->internal) {
-        asdf_ndarray_internal_t *internal = calloc(1, sizeof(asdf_ndarray_internal_t));
+    if (internal && internal->data)
+        return internal->data;
 
-        if (!internal)
-            return NULL;
-
-        ndarray->internal = internal;
+    if (!internal) {
+        ASDF_ERROR_OOM(NULL);
+        return NULL;
     }
 
     uint64_t size = asdf_ndarray_nbytes(ndarray);
     void *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     if (data == MAP_FAILED || !data) {
-        free(ndarray->internal);
+        free(internal);
         ndarray->internal = NULL;
         return NULL;
     }
 
-    ndarray->internal->data = data;
+    internal->data = data;
     return data;
 }
 
@@ -607,7 +635,9 @@ void asdf_ndarray_data_dealloc(asdf_ndarray_t *ndarray) {
     if (UNLIKELY(!ndarray))
         return;
 
-    if (UNLIKELY(!ndarray->internal || !ndarray->internal->data)) {
+    asdf_ndarray_internal_t *internal = asdf_ndarray_internal(ndarray, false);
+
+    if (UNLIKELY(!internal || !internal->data)) {
         asdf_context_t *ctx = NULL;
         if (ndarray->internal)
             ctx = asdf_get_context_helper(ndarray->internal->file);
@@ -624,10 +654,23 @@ void asdf_ndarray_data_dealloc(asdf_ndarray_t *ndarray) {
     }
 
     uint64_t size = asdf_ndarray_nbytes(ndarray);
-    munmap(ndarray->internal->data, size);
-    asdf_block_close(ndarray->internal->block);
-    free(ndarray->internal);
+    munmap(internal->data, size);
+    asdf_block_close(internal->block);
+    free(internal);
     ndarray->internal = NULL;
+}
+
+
+int asdf_ndarray_compression_set(asdf_ndarray_t *ndarray, const char *compression) {
+    asdf_ndarray_internal_t *internal = asdf_ndarray_internal(ndarray, true);
+
+    if (!internal) {
+        ASDF_ERROR_OOM(NULL);
+        return -1;
+    }
+
+    internal->write_compression = compression;
+    return 0;
 }
 
 

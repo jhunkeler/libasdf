@@ -17,6 +17,7 @@
 
 #include "block.h"
 #include "compat/endian.h" // IWYU pragma: keep
+#include "compression/compressor_registry.h"
 #include "error.h"
 #include "stream.h"
 #include "util.h"
@@ -177,6 +178,23 @@ bool asdf_block_info_write(asdf_stream_t *stream, asdf_block_info_t *block, bool
     block->data_pos = asdf_stream_tell(stream);
     WRITE_CHECK(stream, block->data, block->header.data_size);
     return true;
+}
+
+
+int asdf_block_info_compression_set(
+    asdf_file_t *file, asdf_block_info_t *block_info, const char *compression) {
+    if (UNLIKELY(!file || !block_info))
+        return -1;
+
+    const asdf_compressor_t *comp = asdf_compressor_get(file, compression);
+
+    if (!comp) {
+        ASDF_ERROR(file, "no compressor extension found for %s compression", compression);
+        return -1;
+    }
+
+    block_info->write_compressor = comp;
+    return 0;
 }
 
 

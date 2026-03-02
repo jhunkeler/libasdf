@@ -47,7 +47,7 @@ typedef int (*asdf_compressor_decomp_fn)(
 typedef void (*asdf_compressor_destroy_fn)(asdf_compressor_userdata_t *userdata);
 
 
-typedef struct {
+typedef struct asdf_compressor {
     /** Compression string from the block header */
     const char *compression;
     asdf_compressor_init_fn init;
