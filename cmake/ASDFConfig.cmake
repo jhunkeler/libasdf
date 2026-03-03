@@ -56,6 +56,7 @@ check_endian_decl(htobe16)
 check_endian_decl(htobe32)
 check_endian_decl(htobe64)
 check_endian_decl(le32toh)
+check_endian_decl(htole32)
 
 
 check_function_exists(strptime HAVE_STRPTIME)

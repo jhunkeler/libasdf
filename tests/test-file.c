@@ -612,6 +612,96 @@ MU_TEST(write_ndarray) {
 }
 
 
+MU_TEST(write_compressed_ndarray) {
+    const char *comp = munit_parameters_get(params, "comp");
+
+    /* 4 KiB of a short repeating pattern: highly compressible */
+    const size_t n = 4096;
+    const uint64_t shape[] = {n};
+
+    uint8_t *ref = malloc(n);
+    if (!ref)
+        return MUNIT_ERROR;
+    for (size_t idx = 0; idx < n; idx++)
+        ref[idx] = (uint8_t)(idx % 4);
+
+    char comp_suffix[32], nocomp_suffix[32];
+    snprintf(comp_suffix, sizeof(comp_suffix), "%s-comp.asdf", comp);
+    snprintf(nocomp_suffix, sizeof(nocomp_suffix), "%s-nocomp.asdf", comp);
+    const char *comp_path = strdup(get_temp_file_path(fixture->tempfile_prefix, comp_suffix));
+    const char *nocomp_path = strdup(get_temp_file_path(fixture->tempfile_prefix, nocomp_suffix));
+
+    /* Write compressed version to a temp file */
+    {
+        asdf_ndarray_t ndarray = {
+            .datatype = (asdf_datatype_t){.type = ASDF_DATATYPE_UINT8},
+            .byteorder = ASDF_BYTEORDER_BIG,
+            .ndim = 1,
+            .shape = shape,
+        };
+        uint8_t *data = asdf_ndarray_data_alloc(&ndarray);
+        if (!data) { free(ref); return MUNIT_ERROR; }
+        memcpy(data, ref, n);
+        assert_int(asdf_ndarray_compression_set(&ndarray, comp), ==, 0);
+        asdf_file_t *file = asdf_open(NULL);
+        assert_not_null(file);
+        asdf_value_t *value = asdf_value_of_ndarray(file, &ndarray);
+        assert_not_null(value);
+        assert_int(asdf_set_value(file, "data", value), ==, ASDF_VALUE_OK);
+        assert_int(asdf_write_to(file, comp_path), ==, 0);
+        asdf_close(file);
+        asdf_ndarray_data_dealloc(&ndarray);
+    }
+
+    /* Write uncompressed version for size comparison */
+    {
+        asdf_ndarray_t ndarray = {
+            .datatype = (asdf_datatype_t){.type = ASDF_DATATYPE_UINT8},
+            .byteorder = ASDF_BYTEORDER_BIG,
+            .ndim = 1,
+            .shape = shape,
+        };
+        uint8_t *data = asdf_ndarray_data_alloc(&ndarray);
+        if (!data) { free(ref); return MUNIT_ERROR; }
+        memcpy(data, ref, n);
+        asdf_file_t *file = asdf_open(NULL);
+        assert_not_null(file);
+        asdf_value_t *value = asdf_value_of_ndarray(file, &ndarray);
+        assert_not_null(value);
+        assert_int(asdf_set_value(file, "data", value), ==, ASDF_VALUE_OK);
+        assert_int(asdf_write_to(file, nocomp_path), ==, 0);
+        asdf_close(file);
+        asdf_ndarray_data_dealloc(&ndarray);
+    }
+
+    /* Compressed file should be strictly smaller */
+    struct stat comp_st, nocomp_st;
+    assert_int(stat(comp_path, &comp_st), ==, 0);
+    assert_int(stat(nocomp_path, &nocomp_st), ==, 0);
+    munit_logf(MUNIT_LOG_INFO, "%s: compressed=%lld uncompressed=%lld",
+               comp, (long long)comp_st.st_size, (long long)nocomp_st.st_size);
+    assert_true(comp_st.st_size < nocomp_st.st_size);
+
+    /* Read back compressed file and verify round-trip */
+    asdf_file_t *file = asdf_open_file(comp_path, "r");
+    assert_not_null(file);
+    asdf_ndarray_t *ndarray = NULL;
+    assert_int(asdf_get_ndarray(file, "data", &ndarray), ==, ASDF_VALUE_OK);
+    assert_not_null(ndarray);
+    size_t read_size = 0;
+    const uint8_t *read_data = asdf_ndarray_data_raw(ndarray, &read_size);
+    assert_not_null(read_data);
+    assert_size(read_size, ==, n);
+    assert_memory_equal(n, read_data, ref);
+    asdf_ndarray_destroy(ndarray);
+    asdf_close(file);
+    free(ref);
+    free((void *)comp_path);
+    free((void *)nocomp_path);
+    return MUNIT_OK;
+}
+
+
 MU_TEST(test_asdf_set_scalar_type) {
     const char *filename = get_temp_file_path(fixture->tempfile_prefix, ".asdf");
     asdf_file_t *file = asdf_open(NULL);
@@ -1210,6 +1300,7 @@ MU_TEST_SUITE(
     MU_RUN_TEST(write_block_no_checksum),
     MU_RUN_TEST(write_blocks_and_index),
     MU_RUN_TEST(write_ndarray),
+    MU_RUN_TEST(write_compressed_ndarray, comp_test_params),
     MU_RUN_TEST(test_asdf_set_scalar_type),
     MU_RUN_TEST(test_asdf_set_scalar_overwrite),
     MU_RUN_TEST(test_asdf_set_path_materialization),

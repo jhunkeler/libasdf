@@ -68,6 +68,70 @@ static const asdf_compressor_info_t *asdf_compressor_bzp2_info(
 }
 
 
+#define ASDF_COMPRESSOR_BZP2_BLOCK_SIZE 9
+#define ASDF_COMPRESSOR_BZP2_WORK_FACTOR 30
+/**
+ * From the bzip2 manual:
+ *
+ *     To guarantee that the compressed data will fit in its buffer, allocate
+ *     an output buffer of size 1% larger than the uncompressed data, plus six
+ *     hundred extra bytes.
+ */
+#define ASDF_COMPRESSOR_BZP2_BUF_CAPACITY(buf_size) ((buf_size) + ((buf_size) / 100) + 601)
+
+
+static int asdf_compressor_bzp2_comp(
+    const uint8_t *buf, size_t buf_size, uint8_t **out, size_t *out_size) {
+
+    int ret;
+    bz_stream stream;
+
+    if (UNLIKELY(!buf || !out || !out_size))
+        return -1;
+
+    *out = NULL;
+    *out_size = 0;
+
+    memset(&stream, 0, sizeof(stream));
+
+    /* Recommended block size 9 (max compression), verbosity 0, workFactor 30 */
+    /* TODO: Allow additional compression options in config */
+    ret = BZ2_bzCompressInit(
+        &stream, ASDF_COMPRESSOR_BZP2_BLOCK_SIZE, 0, ASDF_COMPRESSOR_BZP2_WORK_FACTOR);
+    if (ret != BZ_OK)
+        return ret;
+
+    /* Worst-case expansion per bzip2 docs */
+    size_t capacity = ASDF_COMPRESSOR_BZP2_BUF_CAPACITY(buf_size);
+    uint8_t *output = malloc(capacity);
+
+    if (!output) {
+        BZ2_bzCompressEnd(&stream);
+        return -1;
+    }
+
+    stream.next_in = (char *)buf;
+    stream.avail_in = buf_size;
+    stream.next_out = (char *)output;
+    stream.avail_out = capacity;
+
+    ret = BZ2_bzCompress(&stream, BZ_FINISH);
+
+    if (ret != BZ_STREAM_END) {
+        free(output);
+        BZ2_bzCompressEnd(&stream);
+        return ret;
+    }
+
+    *out_size = capacity - stream.avail_out;
+    *out = output;
+
+    BZ2_bzCompressEnd(&stream);
+
+    return 0;
+}
+
+
 static int asdf_compressor_bzp2_decomp(
     asdf_compressor_userdata_t *userdata,
     uint8_t *buf,
@@ -104,4 +168,5 @@ ASDF_REGISTER_COMPRESSOR(
     asdf_compressor_bzp2_init,
     asdf_compressor_bzp2_destroy,
     asdf_compressor_bzp2_info,
+    asdf_compressor_bzp2_comp,
     asdf_compressor_bzp2_decomp);

@@ -133,8 +133,10 @@ bool asdf_block_info_read(asdf_stream_t *stream, asdf_block_info_t *out_block) {
 #define WRITE_CHECK(stream, data, size) \
     do { \
         size_t n_written = asdf_stream_write((stream), (data), (size)); \
-        if (n_written != (size)) \
-            return false; \
+        if (n_written != (size)) { \
+            ret = false; \
+            goto cleanup; \
+        } \
     } while (0)
 
 
@@ -142,26 +144,55 @@ bool asdf_block_info_write(asdf_stream_t *stream, asdf_block_info_t *block, bool
     assert(stream);
     assert(stream->is_writeable);
     assert(block);
+
+    bool ret = true;
+    uint8_t *comp_buf = NULL;
+    const void *write_data = block->data;
+    size_t write_size = block->header.data_size;
+    const asdf_compressor_t *compressor = block->write_compressor;
+
+    /* Compress if a write compressor is set and there is data to compress */
+    if (compressor != NULL && write_data != NULL) {
+        if (compressor->comp(write_data, write_size, &comp_buf, &write_size) != 0) {
+            ret = false;
+            goto cleanup;
+        }
+        write_data = comp_buf;
+    }
+
     block->header_pos = asdf_stream_tell(stream);
     WRITE_CHECK(stream, asdf_block_magic, ASDF_BLOCK_MAGIC_SIZE);
+
     uint16_t header_size = htobe16(ASDF_BLOCK_HEADER_SIZE);
     WRITE_CHECK(stream, &header_size, sizeof(uint16_t));
+
     uint32_t flags = htobe32(block->header.flags);
     WRITE_CHECK(stream, &flags, sizeof(uint32_t));
-    WRITE_CHECK(stream, block->header.compression, ASDF_BLOCK_COMPRESSION_FIELD_SIZE);
-    uint64_t data_size = htobe64(block->header.data_size);
+
+    /* Use compressor name for the compression field when compressing, else preserve
+     * whatever was in the block header (e.g. when passing through already-compressed data) */
+    char comp_field[ASDF_BLOCK_COMPRESSION_FIELD_SIZE] = {0};
+    if (compressor != NULL)
+        strncpy(comp_field, compressor->compression, ASDF_BLOCK_COMPRESSION_FIELD_SIZE);
+    else
+        memcpy(comp_field, block->header.compression, ASDF_BLOCK_COMPRESSION_FIELD_SIZE);
+    WRITE_CHECK(stream, comp_field, ASDF_BLOCK_COMPRESSION_FIELD_SIZE);
+
     // allocated_size -- generally same as used_size, but could be useful to add
     // an option to reserve more size for a block to grow
+    uint64_t alloc_size = htobe64(write_size);
+    WRITE_CHECK(stream, &alloc_size, sizeof(uint64_t));
+    // used_size -- compressed size when compressed, otherwise same as data_size
+    WRITE_CHECK(stream, &alloc_size, sizeof(uint64_t));
+    // data_size -- always the uncompressed size
+    uint64_t data_size = htobe64(block->header.data_size);
     WRITE_CHECK(stream, &data_size, sizeof(uint64_t));
-    // used_size -- will need to be updated when adding compression support
-    WRITE_CHECK(stream, &data_size, sizeof(uint64_t));
-    // data_size
-    WRITE_CHECK(stream, &data_size, sizeof(uint64_t));
+
 #ifdef HAVE_MD5
     if (checksum) {
         asdf_md5_ctx_t md5_ctx = {0};
         asdf_md5_init(&md5_ctx);
-        asdf_md5_update(&md5_ctx, block->data, block->header.data_size);
+        asdf_md5_update(&md5_ctx, write_data, write_size);
         asdf_md5_final(&md5_ctx, (unsigned char *)&block->header.checksum);
     } else {
         ASDF_LOG(stream, ASDF_LOG_DEBUG, "block checksum calculation disabled by emitter flags");
@@ -175,9 +206,13 @@ bool asdf_block_info_write(asdf_stream_t *stream, asdf_block_info_t *block, bool
                      "checksum will not be written");
 #endif
     WRITE_CHECK(stream, block->header.checksum, ASDF_BLOCK_CHECKSUM_FIELD_SIZE);
+
     block->data_pos = asdf_stream_tell(stream);
-    WRITE_CHECK(stream, block->data, block->header.data_size);
-    return true;
+    WRITE_CHECK(stream, write_data, write_size);
+
+cleanup:
+    free(comp_buf);
+    return ret;
 }
 
 

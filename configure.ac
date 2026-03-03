@@ -40,6 +40,7 @@ AX_CHECK_ENDIAN_DECL([htobe16])
 AX_CHECK_ENDIAN_DECL([htobe32])
 AX_CHECK_ENDIAN_DECL([htobe64])
 AX_CHECK_ENDIAN_DECL([le32toh])
+AX_CHECK_ENDIAN_DECL([htole32])
 
 # Check functions
 AC_CHECK_FUNCS([strptime])

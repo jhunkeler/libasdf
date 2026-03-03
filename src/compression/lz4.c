@@ -225,6 +225,87 @@ static int asdf_compresser_lz4_read_block(asdf_compressor_lz4_userdata_t *lz4) {
 
 
 /**
+ * Size of blocks to compress
+ *
+ * This is the same default as used by the Python library; later we could make
+ * this configurable if such a desire is ever expressed.
+ */
+#define ASDF_COMPRESSOR_LZ4_BLOCK_SIZE (1u << 22) /* 4 MB */
+
+
+static int asdf_compressor_lz4_comp(
+    const uint8_t *buf, size_t buf_size, uint8_t **out, size_t *out_size) {
+    if (UNLIKELY(!buf || !out || !out_size))
+        return -1;
+
+    size_t capacity = 0;
+    size_t offset = 0;
+    *out = NULL;
+    *out_size = 0;
+
+    /* First pass: compute worst-case total size */
+    while (offset < buf_size) {
+        size_t chunk_size = buf_size - offset;
+        if (chunk_size > ASDF_COMPRESSOR_LZ4_BLOCK_SIZE)
+            chunk_size = ASDF_COMPRESSOR_LZ4_BLOCK_SIZE;
+
+        int bound = LZ4_compressBound((int)chunk_size);
+        if (bound <= 0)
+            return -1;
+
+        capacity += sizeof(uint32_t); /* BE compressed-size */
+        capacity += sizeof(uint32_t); /* LE decompressed chunk size */
+        capacity += (size_t)bound;
+        offset += chunk_size;
+    }
+
+    uint8_t *output = malloc(capacity);
+
+    if (!output)
+        return -1;
+
+    offset = 0;
+    size_t out_offset = 0;
+
+    while (offset < buf_size) {
+        size_t chunk_size = buf_size - offset;
+        if (chunk_size > ASDF_COMPRESSOR_LZ4_BLOCK_SIZE)
+            chunk_size = ASDF_COMPRESSOR_LZ4_BLOCK_SIZE;
+
+        int bound = LZ4_compressBound((int)chunk_size);
+
+        /* Compress after both headers */
+        int compressed_size = LZ4_compress_default(
+            (const char *)(buf + offset),
+            (char *)(output + out_offset + 2 * sizeof(uint32_t)),
+            (int)chunk_size,
+            bound);
+
+        if (compressed_size <= 0) {
+            free(output);
+            return -1;
+        }
+
+        /* BE: compressed size + sizeof(uint32_t) (includes python-lz4 decompressed-size header) */
+        uint32_t be_size = htobe32((uint32_t)(compressed_size + sizeof(uint32_t)));
+        memcpy(output + out_offset, &be_size, sizeof(uint32_t));
+
+        /* LE: decompressed chunk size */
+        uint32_t le_chunk_size = htole32((uint32_t)chunk_size);
+        memcpy(output + out_offset + sizeof(uint32_t), &le_chunk_size, sizeof(uint32_t));
+
+        out_offset += 2 * sizeof(uint32_t) + (size_t)compressed_size;
+        offset += chunk_size;
+    }
+
+    *out = output;
+    *out_size = out_offset;
+
+    return 0;
+}
+
+
+/**
  * LZ4 doesn't have a stream interface like zlib and libbz2, so this implements our own similar
  *
  * .. todo::
@@ -283,4 +364,5 @@ ASDF_REGISTER_COMPRESSOR(
     asdf_compressor_lz4_init,
     asdf_compressor_lz4_destroy,
     asdf_compressor_lz4_info,
+    asdf_compressor_lz4_comp,
     asdf_compressor_lz4_decomp);

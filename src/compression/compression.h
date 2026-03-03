@@ -38,6 +38,8 @@ typedef asdf_compressor_userdata_t *(*asdf_compressor_init_fn)(
     const asdf_block_t *block, const void *dest, size_t dest_size);
 typedef const asdf_compressor_info_t *(*asdf_compressor_info_fn)(
     asdf_compressor_userdata_t *userdata);
+typedef int (*asdf_compressor_comp_fn)(
+    const uint8_t *buf, size_t buf_size, uint8_t **out, size_t *out_size);
 typedef int (*asdf_compressor_decomp_fn)(
     asdf_compressor_userdata_t *userdata,
     uint8_t *buf,
@@ -47,11 +49,21 @@ typedef int (*asdf_compressor_decomp_fn)(
 typedef void (*asdf_compressor_destroy_fn)(asdf_compressor_userdata_t *userdata);
 
 
+/**
+ * NOTE: Despite the name "compressor" most of the stateful machinery
+ * in this struct is actually geared towards decompression, which under the
+ * current implementation is more complicated
+ *
+ * Compression is performed in a one-shot manner in-memory and doesn't involve
+ * any streaming state.  If we wish to change this in the future it might make
+ * sense to split this up into separate compressor/decompressor structures.
+ */
 typedef struct asdf_compressor {
     /** Compression string from the block header */
     const char *compression;
     asdf_compressor_init_fn init;
     asdf_compressor_info_fn info;
+    asdf_compressor_comp_fn comp;
     asdf_compressor_decomp_fn decomp;
     asdf_compressor_destroy_fn destroy;
 } asdf_compressor_t;
