@@ -146,6 +146,7 @@ check_PROGRAMS += test-malloc-fail.unit
 test_malloc_fail_unit_SOURCES = \
     test-malloc-fail.c \
     $(top_srcdir)/src/block.c \
+    $(top_srcdir)/src/compression/compressor_registry.c \
     $(top_srcdir)/src/context.c \
     $(top_srcdir)/src/tag.c \
     $(top_srcdir)/src/error.c \
