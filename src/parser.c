@@ -102,7 +102,20 @@ static parse_result_t parse_asdf_version(asdf_parser_t *parser, asdf_event_t *ev
 
     event->type = ASDF_ASDF_VERSION_EVENT;
     event->payload.version = malloc(sizeof(asdf_version_t));
+
+    if (!event->payload.version) {
+        ASDF_ERROR_OOM(parser);
+        return ASDF_PARSE_ERROR;
+    }
+
     event->payload.version->version = strdup(parser->asdf_version);
+
+    if (!event->payload.version->version) {
+        free(event->payload.version);
+        ASDF_ERROR_OOM(parser);
+        return ASDF_PARSE_ERROR;
+    }
+
     parser->state = ASDF_PARSER_STATE_STANDARD_VERSION;
     return ASDF_PARSE_EVENT;
 }
@@ -118,7 +131,20 @@ static parse_result_t parse_standard_version(asdf_parser_t *parser, asdf_event_t
 
     event->type = ASDF_STANDARD_VERSION_EVENT;
     event->payload.version = malloc(sizeof(asdf_version_t));
+
+    if (!event->payload.version) {
+        ASDF_ERROR_OOM(parser);
+        return ASDF_PARSE_ERROR;
+    }
+
     event->payload.version->version = strdup(parser->standard_version);
+
+    if (!event->payload.version->version) {
+        free(event->payload.version);
+        ASDF_ERROR_OOM(parser);
+        return ASDF_PARSE_ERROR;
+    }
+
     parser->state = ASDF_PARSER_STATE_COMMENT;
     return ASDF_PARSE_EVENT;
 }
@@ -152,6 +178,12 @@ static parse_result_t parse_comment(asdf_parser_t *parser, asdf_event_t *event) 
             }
 
             char *comment = strndup((const char *)buf + 1, len - 1);
+
+            if (!comment) {
+                ASDF_ERROR_OOM(parser);
+                return ASDF_PARSE_ERROR;
+            }
+
             comment[strcspn(comment, "\r\n")] = '\0';
             event->type = ASDF_COMMENT_EVENT;
             event->payload.comment = comment;
@@ -173,6 +205,12 @@ static parse_result_t emit_tree_start_event(asdf_parser_t *parser, asdf_event_t 
     parser->state = ASDF_PARSER_STATE_TREE;
     event->type = ASDF_TREE_START_EVENT;
     event->payload.tree = calloc(1, sizeof(asdf_tree_info_t));
+
+    if (!event->payload.tree) {
+        ASDF_ERROR_OOM(parser);
+        return ASDF_PARSE_ERROR;
+    }
+
     event->payload.tree->start = offset;
     return ASDF_PARSE_EVENT;
 }
