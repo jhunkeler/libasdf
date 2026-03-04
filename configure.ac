@@ -78,6 +78,17 @@ AX_CHECK_COMPILE_FLAG([-Wparentheses],  [ASDF_CFLAGS="$ASDF_CFLAGS -Wparentheses
 AX_CHECK_COMPILE_FLAG([-Wpointer-sign], [ASDF_CFLAGS="$ASDF_CFLAGS -Wpointer-sign"])
 AX_CHECK_COMPILE_FLAG([-Wshadow],       [ASDF_CFLAGS="$ASDF_CFLAGS -Wshadow"])
 
+# Check whether the linker supports --wrap (GNU ld / lld only; Apple ld does not)
+AC_MSG_CHECKING([whether linker supports -Wl,--wrap])
+save_LDFLAGS="$LDFLAGS"
+LDFLAGS="$LDFLAGS -Wl,--wrap=malloc"
+AC_LINK_IFELSE([AC_LANG_PROGRAM([], [])],
+  [have_linker_wrap=yes],
+  [have_linker_wrap=no])
+LDFLAGS="$save_LDFLAGS"
+AC_MSG_RESULT([$have_linker_wrap])
+AM_CONDITIONAL([HAVE_LINKER_WRAP], [test "x$have_linker_wrap" = "xyes"])
+
 
 # Additional enable flags
 # --enable-debug
