@@ -4,6 +4,7 @@
 
 #include "extension_util.h"
 #include "log.h"
+#include "tag.h"
 #include "value.h"
 
 
@@ -237,67 +238,3 @@ static bool is_simple_version(const char *version, size_t len) {
     return idx == len;
 }
 */
-
-
-asdf_tag_t *asdf_tag_parse(const char *tag) {
-    if (!tag)
-        return NULL;
-
-    asdf_tag_t *res = calloc(1, sizeof(asdf_tag_t));
-
-    if (!res)
-        return NULL;
-
-    // We assume that the version part of the tag comes after the first -
-    // This is the convention that's always been used even though it's not
-    // formally specified in the standard:
-    // https://github.com/asdf-format/asdf-standard/issues/495
-    const char *sep = strchr(tag, '-');
-
-    if (!sep) {
-        res->name = strdup(tag);
-        res->version = NULL;
-        return res;
-    }
-
-    size_t name_len = sep - tag;
-    const char *version = sep + 1;
-    res->name = strndup(tag, name_len);
-    res->version = strdup(version);
-    return res;
-}
-
-
-void asdf_tag_free(asdf_tag_t *tag) {
-    if (!tag)
-        return;
-
-    free((char *)tag->name);
-    free((char *)tag->version);
-    free(tag);
-}
-
-
-void **asdf_array_concat(void **dst, const void **src) {
-    size_t dst_len = 0;
-    size_t src_len = 0;
-    void *new_dst = NULL;
-
-    for (const void **p = src; *p; ++p)
-        src_len++;
-
-    if (!dst) {
-        new_dst = malloc((src_len + 1) * sizeof(*src));
-
-        if (!new_dst)
-            return NULL;
-    } else {
-        for (void **p = dst; *p; ++p)
-            dst_len++;
-
-        new_dst = realloc((void *)dst, (dst_len + src_len + 1) * sizeof(*dst));
-    }
-
-    memcpy(new_dst + (dst_len * sizeof(*dst)), (const void *)src, (src_len + 1) * sizeof(*src));
-    return (void **)new_dst;
-}

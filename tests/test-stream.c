@@ -194,6 +194,51 @@ MU_TEST(stream_mem_open_mem) {
 }
 
 
+/**
+ * Regression test for the realloc wrong-size bug in
+ * ``file_open_mem``.
+ *
+ * The mmap-info array starts at ``ASDF_FILE_STREAM_INITIAL_MMAPS``
+ * slots and doubles when full.  The old code passed the new element
+ * count instead of ``new_count * sizeof(file_mmap_info_t)`` bytes to
+ * ``realloc``, allocating far too little memory.  Opening
+ * ``ASDF_FILE_STREAM_INITIAL_MMAPS + 1`` regions without closing them
+ * exercises the realloc path; AddressSanitizer will catch any
+ * out-of-bounds writes from the old bug.
+ *
+ * The new slots must also be zeroed so the free-slot search finds
+ * them; the test verifies that the extra slot is usable.
+ */
+MU_TEST(stream_file_open_mem_realloc) {
+    const char *filename = get_fixture_file_path("255.asdf");
+    asdf_stream_t *stream = asdf_stream_from_file(NULL, filename, false);
+    assert_not_null(stream);
+
+    off_t offset = 0x3bb;
+    size_t size = 256;
+    size_t avail = 0;
+
+    // Open ASDF_FILE_STREAM_INITIAL_MMAPS + 1 regions without closing,
+    // forcing the internal mmap-info array to realloc.
+    uint8_t *addrs[ASDF_FILE_STREAM_INITIAL_MMAPS + 1];
+    for (int idx = 0; idx <= ASDF_FILE_STREAM_INITIAL_MMAPS; idx++) {
+        addrs[idx] = stream->open_mem(stream, offset, size, &avail);
+        assert_not_null(addrs[idx]);
+        assert_int(avail, ==, size);
+    }
+
+    // Verify the last (post-realloc) region is accessible and correct
+    for (int idx = 0; idx <= 255; idx++)
+        assert_int(addrs[ASDF_FILE_STREAM_INITIAL_MMAPS][idx], ==, idx);
+
+    for (int idx = 0; idx <= ASDF_FILE_STREAM_INITIAL_MMAPS; idx++)
+        assert_int(stream->close_mem(stream, addrs[idx]), ==, 0);
+
+    asdf_stream_close(stream);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     stream,
     MU_RUN_TEST(file_scan_token_at_beginning),
@@ -202,7 +247,8 @@ MU_TEST_SUITE(
     MU_RUN_TEST(file_scan_token_spans_buffers),
     MU_RUN_TEST(file_write),
     MU_RUN_TEST(stream_file_open_mem),
-    MU_RUN_TEST(stream_mem_open_mem)
+    MU_RUN_TEST(stream_mem_open_mem),
+    MU_RUN_TEST(stream_file_open_mem_realloc)
 );
 
 

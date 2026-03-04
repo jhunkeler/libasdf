@@ -1,3 +1,5 @@
+include(CheckLinkerFlag)
+
 find_program(BASH_PROGRAM bash)
 set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/tests)
 set(CTEST_BINARY_DIRECTORY ${CMAKE_BINARY_DIR}/tests)
@@ -15,6 +17,14 @@ endif()
 
 if (NOT WITH_GWCS)
     list(REMOVE_ITEM source_files "${CMAKE_CURRENT_SOURCE_DIR}/test-gwcs.c")
+endif()
+
+# test-malloc-fail requires --wrap linker support (GNU/LLVM ld).
+# Apple ld does not support it, so exclude the test on those platforms.
+check_linker_flag(C "-Wl,--wrap=malloc" HAVE_LINKER_WRAP)
+if (NOT HAVE_LINKER_WRAP)
+    list(REMOVE_ITEM source_files
+        "${CMAKE_CURRENT_SOURCE_DIR}/test-malloc-fail.c")
 endif()
 
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/fixtures
@@ -119,6 +129,12 @@ foreach(source_file ${source_files})
     set_property(TEST ${test_executable}
         PROPERTY ENVIRONMENT_MODIFICATION "${runtime}")
 endforeach()
+
+# test-malloc-fail needs --wrap flags for malloc injection.
+if (HAVE_LINKER_WRAP)
+    target_link_options(test-malloc-fail PRIVATE
+        -Wl,--wrap=malloc,--wrap=calloc,--wrap=strdup,--wrap=strndup)
+endif()
 
 
 # -------- Build and run optional C++ header test ----------------------------

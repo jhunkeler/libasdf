@@ -20,6 +20,7 @@ set(libasdf_sources
     event.c
     extension_registry.c
     extension_util.c
+    tag.c
     file.c
     info.c
     log.c

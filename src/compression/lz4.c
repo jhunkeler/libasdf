@@ -183,7 +183,7 @@ static int asdf_compresser_lz4_read_block(asdf_compressor_lz4_userdata_t *lz4) {
     }
 
     if (lz4->header.decomp_block_size < 0) {
-        // Zero-width compressed block encountered--I guess done?
+        // Negative decompressed block size is invalid
         ASDF_LOG(
             lz4->file,
             ASDF_LOG_ERROR,

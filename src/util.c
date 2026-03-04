@@ -1,4 +1,6 @@
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "config.h"
 
@@ -23,4 +25,32 @@ size_t asdf_util_get_total_memory(void) {
 
     return mem_stats->total;
 #endif
+}
+
+
+void **asdf_array_concat(void **dst, const void **src) {
+    size_t dst_len = 0;
+    size_t src_len = 0;
+    void *new_dst = NULL;
+
+    for (const void **p = src; *p; ++p)
+        src_len++;
+
+    if (!dst) {
+        new_dst = malloc((src_len + 1) * sizeof(*src));
+
+        if (!new_dst)
+            return NULL;
+    } else {
+        for (void **p = dst; *p; ++p)
+            dst_len++;
+
+        new_dst = realloc((void *)dst, (dst_len + src_len + 1) * sizeof(*dst));
+
+        if (!new_dst)
+            return NULL;
+    }
+
+    memcpy(new_dst + (dst_len * sizeof(*dst)), (const void *)src, (src_len + 1) * sizeof(*src));
+    return (void **)new_dst;
 }

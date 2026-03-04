@@ -255,8 +255,10 @@ static struct fy_emitter *asdf_fy_emitter_create(asdf_emitter_t *emitter) {
 
     struct fy_emitter *fy_emitter = fy_emitter_create(&config);
 
-    if (!fy_emitter)
+    if (!fy_emitter) {
+        free(userdata);
         return NULL;
+    }
 
     fy_emitter_set_finalizer(fy_emitter, asdf_fy_emitter_finalize);
 

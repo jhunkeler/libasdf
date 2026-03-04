@@ -53,6 +53,8 @@ typedef struct asdf_parser_tree_info {
     size_t size;
     // Found the full YAML tree
     bool found;
+    // Done YAML parsing
+    bool done;
     // Indicates whether the file even has a YAML tree; rare to be false but possible
     // in the case of exploded files.  This is a trinary value with a negative indicating
     // unknown, 0 false, >= 1 true.
