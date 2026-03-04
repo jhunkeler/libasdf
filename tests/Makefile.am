@@ -145,6 +145,7 @@ test_malloc_fail_unit_SOURCES = \
     test-malloc-fail.c \
     $(top_srcdir)/src/block.c \
     $(top_srcdir)/src/context.c \
+    $(top_srcdir)/src/tag.c \
     $(top_srcdir)/src/error.c \
     $(top_srcdir)/src/event.c \
     $(top_srcdir)/src/log.c \

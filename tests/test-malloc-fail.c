@@ -23,6 +23,7 @@
 
 #include "event.h"
 #include "parser.h"
+#include "tag.h"
 
 
 /** malloc injection */
@@ -213,12 +214,67 @@ MU_TEST(oom_emit_tree_start) {
 }
 
 
+/**
+ * ``asdf_tag_parse`` -- ``strdup`` of ``name`` without NULL check,
+ * no-separator path.
+ *
+ * For a tag string with no ``-`` separator, ``asdf_tag_parse`` calls
+ * ``calloc`` (call 0) then ``strdup`` for the name (call 1).
+ * fail_after=1 lets the calloc succeed and fails the strdup.
+ */
+MU_TEST(oom_tag_parse_name_only) {
+    malloc_fail_after(1);
+    asdf_tag_t *tag = asdf_tag_parse("ndarray");
+    malloc_fail_reset();
+
+    assert_null(tag);
+    return MUNIT_OK;
+}
+
+
+/**
+ * ``asdf_tag_parse`` -- ``strndup`` of ``name`` without NULL check,
+ * separator path.
+ *
+ * For a tag string with a ``-`` separator, ``asdf_tag_parse`` calls
+ * ``calloc`` (0), ``strndup`` for the name (1), ``strdup`` for the
+ * version (2).  fail_after=1 fails the strndup.
+ */
+MU_TEST(oom_tag_parse_name_strndup) {
+    malloc_fail_after(1);
+    asdf_tag_t *tag = asdf_tag_parse("ndarray-1.0.0");
+    malloc_fail_reset();
+
+    assert_null(tag);
+    return MUNIT_OK;
+}
+
+
+/**
+ * ``asdf_tag_parse`` -- ``strdup`` of ``version`` without NULL check.
+ *
+ * Same as above but fail_after=2 lets the calloc and strndup succeed
+ * then fails the strdup for the version string.
+ */
+MU_TEST(oom_tag_parse_version_strdup) {
+    malloc_fail_after(2);
+    asdf_tag_t *tag = asdf_tag_parse("ndarray-1.0.0");
+    malloc_fail_reset();
+
+    assert_null(tag);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     malloc_fail,
     MU_RUN_TEST(oom_parse_asdf_version),
     MU_RUN_TEST(oom_parse_standard_version),
     MU_RUN_TEST(oom_parse_comment),
-    MU_RUN_TEST(oom_emit_tree_start)
+    MU_RUN_TEST(oom_emit_tree_start),
+    MU_RUN_TEST(oom_tag_parse_name_only),
+    MU_RUN_TEST(oom_tag_parse_name_strndup),
+    MU_RUN_TEST(oom_tag_parse_version_strdup)
 );
 
 

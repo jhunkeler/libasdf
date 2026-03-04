@@ -459,13 +459,14 @@ static void *file_open_mem(asdf_stream_t *stream, off_t offset, size_t size, siz
 
     if (!mmap_info && data->mmaps_size) {
         size_t new_size = data->mmaps_size * 2;
-        file_mmap_info_t *mmaps = realloc(data->mmaps, new_size);
+        file_mmap_info_t *mmaps = realloc(data->mmaps, new_size * sizeof(*mmaps));
 
         if (!mmaps) {
             ASDF_ERROR_OOM(stream);
             return NULL;
         }
 
+        memset(mmaps + data->mmaps_size, 0, (new_size - data->mmaps_size) * sizeof(*mmaps));
         data->mmaps = mmaps;
         mmap_info = &mmaps[data->mmaps_size];
         data->mmaps_size = new_size;

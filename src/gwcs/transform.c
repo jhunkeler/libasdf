@@ -1,6 +1,7 @@
 #include <stdatomic.h>
 
 #include "../extension_util.h"
+#include "../tag.h"
 
 #include "gwcs.h"
 #include "types/asdf_gwcs_transform_map.h"

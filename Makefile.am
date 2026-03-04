@@ -18,6 +18,7 @@ src_files = \
     src/event.c \
     src/extension_registry.c \
     src/extension_util.c \
+    src/tag.c \
     src/file.c \
     src/info.c \
     src/log.c \
@@ -47,6 +48,7 @@ src_headers = \
     src/error.h \
     src/extension_registry.h \
     src/extension_util.h \
+    src/tag.h \
     src/event.h \
     src/file.h \
     src/info.h \

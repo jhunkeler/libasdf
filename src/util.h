@@ -49,6 +49,17 @@
 ASDF_LOCAL size_t asdf_util_get_total_memory(void);
 
 
+/**
+ * Concatenate two NULL-terminated arrays returning a new array.
+ *
+ * Elements from ``src`` are appended to ``dst`` and the new address
+ * of the destination array is returned (via ``realloc``).  ``dst``
+ * may be NULL, in which case a fresh array containing a copy of
+ * ``src`` is allocated.  Returns NULL on OOM.
+ */
+ASDF_LOCAL void **asdf_array_concat(void **dst, const void **src);
+
+
 // Portable-enough way to get the maximum off_t on the system
 // Very weird that POSIX does not just define this
 #define ASDF_OFF_MAX (size_t)(((uintmax_t)1 << (sizeof(off_t) * CHAR_BIT - 1)) - 1)
