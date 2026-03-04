@@ -500,7 +500,7 @@ static parse_result_t parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
     assert(emit_yaml_events && (buffer_tree || parser->stream->is_seekable));
 #endif
 
-    if (parser->tree.found) {
+    if (parser->tree.done) {
         // Already found the end of the YAML tree; just emit the TREE_END event
         parser->state = ASDF_PARSER_STATE_PADDING;
         return emit_tree_end_event(parser, event);
@@ -509,17 +509,42 @@ static parse_result_t parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
     struct fy_event *yaml = fy_parser_parse(parser->yaml_parser);
 
     if (fy_parser_get_stream_error(parser->yaml_parser)) {
-        ASDF_ERROR_COMMON(parser, ASDF_ERR_YAML_PARSE_FAILED);
-        return ASDF_PARSE_ERROR;
+        if (parser->tree.found) {
+            /* If the document end was already found but we were not marked as
+             * done yet, we should treat this as the end of the YAML stream.
+             * In certain cases libfyaml generates an error here because it
+             * encounters block binary data and treats it as a parse error
+             * (invalid UTF-8).
+             *
+             * In this case we can synthesize a stream end event and return
+             * done.
+             */
+            yaml = fy_parse_event_create(parser->yaml_parser, FYET_STREAM_END);
+        }
+
+        if (!yaml) {
+            ASDF_ERROR_COMMON(parser, ASDF_ERR_YAML_PARSE_FAILED);
+            return ASDF_PARSE_ERROR;
+        }
     }
 
     event->type = ASDF_YAML_EVENT;
     event->payload.yaml = yaml;
 
     if (!yaml || yaml->type == FYET_STREAM_END) {
-        // We have reached the end of the YAML stream, maybe with an error
-        // but per TODO above no error handling yet so just move to the next
-        // state
+        parser->tree.done = true;
+    } else if (yaml->type == FYET_DOCUMENT_END) {
+        /* We have reached the end of the YAML stream, maybe with an error
+         * but per TODO above no error handling yet so just move to the next
+         * state
+         *
+         * Previously this worked off the end mark of the FYET_STREAM_END event
+         * but that is not reliably produced anymore if libfyaml encounters
+         * invalid UTF-8.  So instead we mark the end of the tree from the
+         * DOCUMENT_END event; this necessitates adding 1 to the document
+         * end position.
+         */
+
         // TODO: What if there are more documents?  Currently not allowed by ASDF
         // but is being discussed for ASDF 2.0.0
         const struct fy_mark *mark = fy_event_end_mark(yaml);
@@ -527,7 +552,7 @@ static parse_result_t parse_yaml(asdf_parser_t *parser, asdf_event_t *event) {
             // libfyaml doesn't care about FILE* and considers the the input it's handed
             // to be at position 0 when it starts parsing, so to get the actual tree end
             // relative to the start of the file we add it to the tree start position
-            parser->tree.end = parser->tree.start + (off_t)mark->input_pos;
+            parser->tree.end = parser->tree.start + (off_t)mark->input_pos + 1;
         } else {
             parser->tree.end = parser->tree.start;
         }
