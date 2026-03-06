@@ -147,8 +147,8 @@ bool asdf_block_info_write(asdf_stream_t *stream, asdf_block_info_t *block, bool
 
     bool ret = true;
     uint8_t *comp_buf = NULL;
-    const void *write_data = block->data;
-    size_t write_size = block->header.data_size;
+    const void *write_data = block->write_data ? block->write_data : block->data;
+    size_t write_size = block->write_data ? block->write_data_size : block->header.data_size;
     const asdf_compressor_t *compressor = block->write_compressor;
 
     /* Compress if a write compressor is set and there is data to compress */
@@ -212,6 +212,12 @@ bool asdf_block_info_write(asdf_stream_t *stream, asdf_block_info_t *block, bool
 
 cleanup:
     free(comp_buf);
+    if (block->owns_write_data) {
+        free((void *)block->write_data);
+        block->write_data = NULL;
+        block->write_data_size = 0;
+        block->owns_write_data = false;
+    }
     return ret;
 }
 

@@ -1143,7 +1143,19 @@ int asdf_block_compression_set(asdf_block_t *block, const char *compression) {
     if (!block)
         return -1;
 
-    return asdf_block_info_compression_set(block->file, &block->info, compression);
+    int ret = asdf_block_info_compression_set(block->file, &block->info, compression);
+
+    if (ret != 0)
+        return ret;
+
+    /* Propagate to file->blocks so the emitter sees the change */
+    asdf_block_info_t *file_block = asdf_block_info_vec_at_mut(
+        &block->file->blocks, (isize)block->info.index);
+
+    if (file_block)
+        file_block->write_compressor = block->info.write_compressor;
+
+    return 0;
 }
 
 

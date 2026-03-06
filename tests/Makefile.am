@@ -27,6 +27,7 @@ $(asdf_standard_submodule) $(munit_submodule):
 
 check_PROGRAMS = \
     test-block.unit \
+    test-compression.unit \
     test-core-extensions.unit \
     test-event.unit \
     test-extension.unit \
@@ -73,6 +74,13 @@ test_block_unit_CPPFLAGS = $(unit_test_cppflags)
 test_block_unit_CFLAGS = $(unit_test_cflags)
 test_block_unit_LDFLAGS = $(unit_test_ldflags)
 test_block_unit_LDADD = $(unit_test_ldadd)
+
+# test-compression.unit
+test_compression_unit_SOURCES = test-compression.c
+test_compression_unit_CPPFLAGS = $(unit_test_cppflags)
+test_compression_unit_CFLAGS = $(unit_test_cflags)
+test_compression_unit_LDFLAGS = $(unit_test_ldflags)
+test_compression_unit_LDADD = $(unit_test_ldadd)
 
 # test-core-extensions.unit
 test_core_extensions_unit_SOURCES = test-core-extensions.c

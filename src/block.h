@@ -100,6 +100,16 @@ typedef struct asdf_block_info {
     const void *data;
     /** Optional output compressor */
     const asdf_compressor_t *write_compressor;
+    /**
+     * Pre-processed write data (set by emit_blocks_prepare for existing blocks)
+     *
+     * For blocks read from a file (data == NULL), this holds either the
+     * raw compressed bytes (verbatim re-emit) or the decompressed bytes
+     * (for recompression). Freed after writing if owns_write_data is set.
+     */
+    const void *write_data;
+    size_t write_data_size;
+    bool owns_write_data;
 } asdf_block_info_t;
 
 
