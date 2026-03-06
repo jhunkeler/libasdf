@@ -688,7 +688,7 @@ int asdf_block_comp_open(asdf_block_t *block) {
     int ret = -1;
     asdf_block_comp_state_t *state = NULL;
 
-    const char *compression = asdf_block_compression(block);
+    const char *compression = asdf_block_compression_orig(block);
 
     if (strlen(compression) == 0) {
         // Actually nothing to do, just return 0
@@ -703,6 +703,7 @@ int asdf_block_comp_open(asdf_block_t *block) {
             ASDF_LOG_ERROR,
             "no compressor extension found for %s compression",
             compression);
+        ASDF_ERROR(block->file, "no compressor extension found for %s compression", compression);
         return ret;
     }
 
@@ -721,6 +722,7 @@ int asdf_block_comp_open(asdf_block_t *block) {
             ASDF_LOG_ERROR,
             "failed to initialize compressor for %s compression",
             compression);
+        ASDF_ERROR(block->file, "failed to initialize compressor for %s compression", compression);
         goto failure;
     }
 

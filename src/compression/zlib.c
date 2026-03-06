@@ -72,6 +72,44 @@ static const asdf_compressor_info_t *asdf_compressor_zlib_info(
 }
 
 
+static int asdf_compressor_zlib_comp(
+    const uint8_t *buf, size_t buf_size, uint8_t **out, size_t *out_size) {
+
+    if (UNLIKELY(!buf || !out || !out_size))
+        return -1;
+
+    *out = NULL;
+    *out_size = 0;
+
+    /* zlib uses uLong (typically 32-bit or 64-bit depending on build) */
+    if (buf_size > (size_t)ULONG_MAX)
+        return -1;
+
+    uLong src_len = (uLong)buf_size;
+    uLong bound = compressBound(src_len);
+
+    uint8_t *output = malloc(bound);
+
+    if (!output)
+        return -1;
+
+    uLong dest_len = bound;
+
+    /* Z_BEST_COMPRESSION or make this configurable later */
+    int ret = compress2(output, &dest_len, buf, src_len, Z_BEST_COMPRESSION);
+
+    if (ret != Z_OK) {
+        free(output);
+        return ret;
+    }
+
+    *out = output;
+    *out_size = (size_t)dest_len;
+
+    return 0;
+}
+
+
 static int asdf_compressor_zlib_decomp(
     asdf_compressor_userdata_t *userdata,
     uint8_t *buf,
@@ -109,4 +147,5 @@ ASDF_REGISTER_COMPRESSOR(
     asdf_compressor_zlib_init,
     asdf_compressor_zlib_destroy,
     asdf_compressor_zlib_info,
+    asdf_compressor_zlib_comp,
     asdf_compressor_zlib_decomp);

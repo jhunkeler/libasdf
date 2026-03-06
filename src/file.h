@@ -89,7 +89,7 @@ ASDF_LOCAL struct fy_document *asdf_file_tree_document(asdf_file_t *file);
 /** Internal helper to set and/or retrieve a normalized tag */
 ASDF_LOCAL const char *asdf_file_tag_normalize(asdf_file_t *file, const char *tag);
 
-// Forward-declaration
+// Forward-declarations
 typedef struct asdf_block_comp_state asdf_block_comp_state_t;
 
 /**
@@ -107,3 +107,7 @@ typedef struct asdf_block {
     const char *compression;
     asdf_block_comp_state_t *comp_state;
 } asdf_block_t;
+
+
+/** Internal block methods */
+ASDF_LOCAL const char *asdf_block_compression_orig(asdf_block_t *block);

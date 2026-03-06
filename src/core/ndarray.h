@@ -7,7 +7,12 @@
 typedef struct {
     asdf_block_t *block;
     asdf_file_t *file;
-    // User-provided data array for new ndarrays not written to a file
+    /**
+     * Optional compressor name to set on the block for the ndarray when
+     * writing a new ndarray
+     */
+    const char *write_compression;
+    /* User-provided data array for new ndarrays not written to a file */
     void *data;
 } asdf_ndarray_internal_t;
 

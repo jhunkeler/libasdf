@@ -27,6 +27,7 @@ $(asdf_standard_submodule) $(munit_submodule):
 
 check_PROGRAMS = \
     test-block.unit \
+    test-compression.unit \
     test-core-extensions.unit \
     test-event.unit \
     test-extension.unit \
@@ -74,6 +75,13 @@ test_block_unit_CFLAGS = $(unit_test_cflags)
 test_block_unit_LDFLAGS = $(unit_test_ldflags)
 test_block_unit_LDADD = $(unit_test_ldadd)
 
+# test-compression.unit
+test_compression_unit_SOURCES = test-compression.c
+test_compression_unit_CPPFLAGS = $(unit_test_cppflags)
+test_compression_unit_CFLAGS = $(unit_test_cflags)
+test_compression_unit_LDFLAGS = $(unit_test_ldflags)
+test_compression_unit_LDADD = $(unit_test_ldadd)
+
 # test-core-extensions.unit
 test_core_extensions_unit_SOURCES = test-core-extensions.c
 test_core_extensions_unit_CPPFLAGS = $(unit_test_cppflags)
@@ -120,6 +128,7 @@ test_parser_unit_LDADD = $(unit_test_ldadd)
 test_parse_util_unit_SOURCES = \
     test-parse-util.c \
     $(top_srcdir)/src/block.c \
+    $(top_srcdir)/src/compression/compressor_registry.c \
     $(top_srcdir)/src/context.c \
     $(top_srcdir)/src/error.c \
     $(top_srcdir)/src/log.c \
@@ -145,6 +154,7 @@ check_PROGRAMS += test-malloc-fail.unit
 test_malloc_fail_unit_SOURCES = \
     test-malloc-fail.c \
     $(top_srcdir)/src/block.c \
+    $(top_srcdir)/src/compression/compressor_registry.c \
     $(top_srcdir)/src/context.c \
     $(top_srcdir)/src/tag.c \
     $(top_srcdir)/src/error.c \

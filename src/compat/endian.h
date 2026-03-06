@@ -72,3 +72,13 @@
 #error le32toh not available
 #endif
 #endif
+
+
+#if !HAVE_DECL_HTOLE32
+#ifdef __APPLE__
+#include <libkern/OSByteOrder.h>
+#define htole32(x) OSSwapHostToLittleInt32(x)
+#else
+#error htole32 not available
+#endif
+#endif

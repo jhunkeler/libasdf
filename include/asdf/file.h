@@ -901,6 +901,18 @@ ASDF_EXPORT const char *asdf_block_compression(asdf_block_t *block);
 
 
 /**
+ * Set the output compression type, if any, of a block
+ *
+ * :param block: The `asdf_block_t *` handle
+ * :param compression: String representing the compressor to use (e.g. "bzp2")
+ *   if any, or NULL or the empty string to set no compression
+ * :return: Non-zero if the compression could not be set (e.g. invalid/unknown
+ *   compressor; use `asdf_error` to check the error code
+ */
+ASDF_EXPORT int asdf_block_compression_set(asdf_block_t *block, const char *compression);
+
+
+/**
  * Return the checksum from the block header
  *
  * :param block: The `asdf_block_t *` handle

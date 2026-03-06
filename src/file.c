@@ -1109,7 +1109,7 @@ const void *asdf_block_data(asdf_block_t *block, size_t *size) {
 }
 
 
-const char *asdf_block_compression(asdf_block_t *block) {
+const char *asdf_block_compression_orig(asdf_block_t *block) {
     if (!block)
         return "";
 
@@ -1123,6 +1123,39 @@ const char *asdf_block_compression(asdf_block_t *block) {
     }
 
     return block->compression;
+}
+
+
+const char *asdf_block_compression(asdf_block_t *block) {
+    if (!block)
+        return "";
+
+    // If the user set an output compression different from the original input
+    // compression
+    if (block->info.write_compressor)
+        return block->info.write_compressor->compression;
+
+    return asdf_block_compression_orig(block);
+}
+
+
+int asdf_block_compression_set(asdf_block_t *block, const char *compression) {
+    if (!block)
+        return -1;
+
+    int ret = asdf_block_info_compression_set(block->file, &block->info, compression);
+
+    if (ret != 0)
+        return ret;
+
+    /* Propagate to file->blocks so the emitter sees the change */
+    asdf_block_info_t *file_block = asdf_block_info_vec_at_mut(
+        &block->file->blocks, (isize)block->info.index);
+
+    if (file_block)
+        file_block->write_compressor = block->info.write_compressor;
+
+    return 0;
 }
 
 
