@@ -25,23 +25,23 @@
 
 
 #ifdef ASDF_LOG_ENABLED
-#define ASDF_LOG(obj, level, fmt, ...) \
+#define ASDF_LOG(obj, level, ...) \
     do { \
         if ((level) >= ASDF_LOG_MIN_LEVEL) { \
             ASDF_GET_CONTEXT(obj); \
-            asdf_log(__ctx, (level), __FILE__, __LINE__, fmt, ##__VA_ARGS__); \
+            asdf_log(__ctx, (level), __FILE__, __LINE__, __VA_ARGS__); \
         } \
     } while (0)
 
-#define ASDF_LOG_CTX(ctx, level, fmt, ...) \
+#define ASDF_LOG_CTX(ctx, level, ...) \
     do { \
         if ((level) >= ASDF_LOG_MIN_LEVEL) { \
-            asdf_log(ctx, (level), __FILE__, __LINE__, fmt, ##__VA_ARGS__); \
+            asdf_log(ctx, (level), __FILE__, __LINE__, __VA_ARGS__); \
         } \
     } while (0)
 #else
-#define ASDF_LOG(obj, level, fmt, ...) ((void)0)
-#define ASDF_LOG_CTX(obj, level, fmt, ...) ((void)0)
+#define ASDF_LOG(obj, level, ...) ((void)0)
+#define ASDF_LOG_CTX(obj, level, ...) ((void)0)
 #endif
 
 
