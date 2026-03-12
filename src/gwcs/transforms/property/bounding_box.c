@@ -120,6 +120,61 @@ cleanup:
 }
 
 
+static asdf_value_t *asdf_gwcs_bounding_box_serialize(
+    asdf_file_t *file, const void *obj, UNUSED(const void *userdata)) {
+    if (UNLIKELY(!file || !obj))
+        return NULL;
+
+    const asdf_gwcs_bounding_box_t *bbox = obj;
+    asdf_mapping_t *bbox_map = NULL;
+    asdf_mapping_t *intervals_map = NULL;
+    asdf_value_t *value = NULL;
+    asdf_value_err_t err = ASDF_VALUE_ERR_EMIT_FAILURE;
+
+    bbox_map = asdf_mapping_create(file);
+    if (UNLIKELY(!bbox_map))
+        goto cleanup;
+
+    intervals_map = asdf_mapping_create(file);
+    if (UNLIKELY(!intervals_map))
+        goto cleanup;
+
+    for (uint32_t idx = 0; idx < bbox->n_intervals; idx++) {
+        const asdf_gwcs_interval_t *interval = &bbox->intervals[idx];
+        asdf_sequence_t *bounds_seq = asdf_sequence_of_double(file, interval->bounds, 2);
+
+        if (!bounds_seq) {
+            err = ASDF_VALUE_ERR_OOM;
+            goto cleanup;
+        }
+
+        asdf_sequence_set_style(bounds_seq, ASDF_YAML_NODE_STYLE_FLOW);
+
+        err = asdf_mapping_set_sequence(intervals_map, interval->input_name, bounds_seq);
+
+        if (ASDF_IS_ERR(err)) {
+            asdf_sequence_destroy(bounds_seq);
+            goto cleanup;
+        }
+    }
+
+    err = asdf_mapping_set_mapping(bbox_map, "intervals", intervals_map);
+
+    if (ASDF_IS_ERR(err))
+        goto cleanup;
+
+    intervals_map = NULL; // owned by bbox_map now
+
+    value = asdf_value_of_mapping(bbox_map);
+    bbox_map = NULL; // owned by value
+
+cleanup:
+    asdf_mapping_destroy(intervals_map);
+    asdf_mapping_destroy(bbox_map);
+    return value;
+}
+
+
 static void asdf_gwcs_bounding_box_dealloc(void *value) {
     if (!value)
         return;
@@ -138,7 +193,7 @@ ASDF_REGISTER_EXTENSION(
     ASDF_GWCS_BOUNDING_BOX_TAG,
     asdf_gwcs_bounding_box_t,
     &libasdf_software,
-    NULL,
+    asdf_gwcs_bounding_box_serialize,
     asdf_gwcs_bounding_box_deserialize,
     NULL, /* TODO: copy */
     asdf_gwcs_bounding_box_dealloc,

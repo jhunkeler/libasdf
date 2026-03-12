@@ -90,6 +90,63 @@ failure:
 }
 
 
+static asdf_value_t *asdf_gwcs_step_serialize(
+    asdf_file_t *file, const void *obj, UNUSED(const void *userdata)) {
+    if (UNLIKELY(!file || !obj))
+        return NULL;
+
+    const asdf_gwcs_step_t *step = obj;
+    asdf_mapping_t *map = NULL;
+    asdf_value_t *value = NULL;
+    asdf_value_err_t err = ASDF_VALUE_ERR_EMIT_FAILURE;
+
+    map = asdf_mapping_create(file);
+
+    if (!map)
+        goto cleanup;
+
+    // frame is required
+    asdf_value_t *frame_val = asdf_gwcs_frame_value_of(file, step->frame);
+
+    if (!frame_val)
+        goto cleanup;
+
+    err = asdf_mapping_set(map, "frame", frame_val);
+
+    if (ASDF_IS_ERR(err)) {
+        asdf_value_destroy(frame_val);
+        goto cleanup;
+    }
+
+    // transform is optional; null means no transform (last step in wcs)
+    if (step->transform) {
+        asdf_value_t *transform_val = asdf_gwcs_transform_value_of(file, step->transform);
+
+        if (!transform_val)
+            goto cleanup;
+
+        err = asdf_mapping_set(map, "transform", transform_val);
+
+        if (ASDF_IS_ERR(err)) {
+            asdf_value_destroy(transform_val);
+            goto cleanup;
+        }
+    } else {
+        err = asdf_mapping_set_null(map, "transform");
+
+        if (ASDF_IS_ERR(err))
+            goto cleanup;
+    }
+
+    value = asdf_value_of_mapping(map);
+    map = NULL; // owned by value
+
+cleanup:
+    asdf_mapping_destroy(map);
+    return value;
+}
+
+
 static void asdf_gwcs_step_dealloc(void *value) {
     if (!value)
         return;
@@ -112,7 +169,7 @@ ASDF_REGISTER_EXTENSION(
     ASDF_GWCS_TAG_PREFIX "step-1.3.0",
     asdf_gwcs_step_t,
     &libasdf_software,
-    NULL,
+    asdf_gwcs_step_serialize,
     asdf_gwcs_step_deserialize,
     NULL, /* TODO: copy */
     asdf_gwcs_step_dealloc,

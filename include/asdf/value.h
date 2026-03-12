@@ -468,6 +468,56 @@ asdf_sequence_append_sequence(asdf_sequence_t *sequence, asdf_sequence_t *value)
 
 
 /**
+ * Create a new sequence pre-populated from a C array in a single call
+ *
+ * Each ``asdf_sequence_of_<type>`` function allocates a new sequence attached
+ * to ``file`` and appends ``size`` elements from ``arr``.  On success the
+ * caller owns the returned sequence and must eventually release it with
+ * `asdf_sequence_destroy` (or transfer ownership by inserting it into a
+ * mapping or parent sequence).  Returns ``NULL`` on allocation failure.
+ *
+ * ``asdf_sequence_of_null`` creates a sequence of ``size`` null values; it
+ * takes no array argument.
+ *
+ * ``asdf_sequence_of_string`` accepts an array of ``(str, len)`` pairs via
+ * separate ``arr`` and ``lens`` pointer arguments.
+ * ``asdf_sequence_of_string0`` is the null-terminated-string variant.
+ *
+ * All other variants mirror the corresponding ``asdf_sequence_append_<type>``
+ * scalar types.
+ */
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_null(asdf_file_t *file, int size);
+
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_string(
+    asdf_file_t *file, const char *const *arr, const size_t *lens, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_string0(
+    asdf_file_t *file, const char *const *arr, int size);
+
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_bool(asdf_file_t *file, const bool *arr, int size);
+
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_int8(asdf_file_t *file, const int8_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_int16(
+    asdf_file_t *file, const int16_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_int32(
+    asdf_file_t *file, const int32_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_int64(
+    asdf_file_t *file, const int64_t *arr, int size);
+
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_uint8(
+    asdf_file_t *file, const uint8_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_uint16(
+    asdf_file_t *file, const uint16_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_uint32(
+    asdf_file_t *file, const uint32_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_uint64(
+    asdf_file_t *file, const uint64_t *arr, int size);
+
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_float(asdf_file_t *file, const float *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_double(
+    asdf_file_t *file, const double *arr, int size);
+
+
+/**
  * Remove a value from a sequence and return the removed value
  *
  * If the index is greater than the size of the sequence, nothing is changed and returns
