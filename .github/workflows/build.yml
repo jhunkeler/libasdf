@@ -87,8 +87,11 @@ jobs:
           fi
           ./configure CC=${{ matrix.cc }} $CONFIGURE_FLAGS
 
+      # If make fails re-run with V=1 so we can inspect
       - name: Build
-        run: make ${{ github.event.inputs.make_flags }}
+        run: |
+          make ${{ github.event.inputs.make_flags }} || \
+          make ${{ github.event.inputs.make_flags }} V=1
 
       - name: Check
         run: make check ${{ github.event.inputs.make_flags }}
