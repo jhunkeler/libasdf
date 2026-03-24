@@ -187,13 +187,6 @@ cleanup:
  * Serialize a 1D float64 ndarray of 2 elements from a plain double[2] array.
  *
  * Returns the serialized value, or NULL on error.
- *
- * NOTE: The mmap'd data buffer is referenced (not copied) by asdf_block_append
- * and must remain valid until asdf_write_to completes.  The mmap allocation is
- * not tracked by LSAN, so it is not reported as a leak.  The heap-allocated
- * asdf_ndarray_internal_t wrapper is freed immediately after serialization
- * because file->blocks stores the mmap data pointer directly.
- * TODO: munmap the data after asdf_write_to -- needs a post-write cleanup hook.
  */
 static asdf_value_t *serialize_double2_ndarray(asdf_file_t *file, const double src[2]) {
     uint64_t shape[1] = {2};
@@ -204,19 +197,13 @@ static asdf_value_t *serialize_double2_ndarray(asdf_file_t *file, const double s
         .byteorder = ASDF_BYTEORDER_LITTLE,
     };
 
-    void *data = asdf_ndarray_data_alloc(&ndarray);
+    void *data = asdf_ndarray_data_alloc_temp(file, &ndarray);
 
     if (!data)
         return NULL;
 
     memcpy(data, src, 2 * sizeof(double));
-    asdf_value_t *val = asdf_value_of_ndarray(file, &ndarray);
-
-    // Free the wrapper struct; the mmap'd data is now owned by file->blocks
-    free(ndarray.internal);
-    ndarray.internal = NULL;
-
-    return val;
+    return asdf_value_of_ndarray(file, &ndarray);
 }
 
 
@@ -294,7 +281,7 @@ static asdf_value_t *asdf_gwcs_fits_serialize(
         .datatype = {.type = ASDF_DATATYPE_FLOAT64},
         .byteorder = ASDF_BYTEORDER_LITTLE,
     };
-    void *pc_data = asdf_ndarray_data_alloc(&pc_ndarray);
+    void *pc_data = asdf_ndarray_data_alloc_temp(file, &pc_ndarray);
 
     if (!pc_data) {
         err = ASDF_VALUE_ERR_OOM;
@@ -303,9 +290,6 @@ static asdf_value_t *asdf_gwcs_fits_serialize(
 
     memcpy(pc_data, fits->pc, 4 * sizeof(double));
     val = asdf_value_of_ndarray(file, &pc_ndarray);
-    // Free the wrapper struct; the mmap'd data is now owned by file->blocks
-    free(pc_ndarray.internal);
-    pc_ndarray.internal = NULL;
 
     if (!val) {
         err = ASDF_VALUE_ERR_EMIT_FAILURE;
