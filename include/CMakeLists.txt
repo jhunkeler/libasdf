@@ -8,6 +8,7 @@ install(
 install(
     FILES
         asdf/emitter.h
+        asdf/error.h
         asdf/event.h
         asdf/extension.h
         asdf/file.h

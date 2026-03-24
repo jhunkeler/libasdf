@@ -7,6 +7,7 @@ nobase_include_HEADERS = \
     asdf/core/ndarray.h \
     asdf/core/software.h \
     asdf/emitter.h \
+    asdf/error.h \
     asdf/event.h \
     asdf/extension.h \
     asdf/file.h \
