@@ -44,12 +44,16 @@ check_PROGRAMS = \
 TESTS_ENVIRONMENT = top_builddir=$(top_builddir) top_srcdir=$(top_srcdir)
 TESTS = $(check_PROGRAMS)
 
-unit_test_cppflags = \
-    $(AM_CPPFLAGS) \
+unit_test_base_cppflags = \
     -DREFERENCE_FILES_DIR=\"$(asdf_standard_dir)/reference_files\" \
     -DFIXTURES_DIR=\"$(abs_srcdir)/fixtures\" \
     -DTEMP_DIR=\"$(abs_builddir)/tmp\" \
     -D_GNU_SOURCE
+
+unit_test_cppflags = \
+    $(AM_CPPFLAGS) \
+    $(unit_test_base_cppflags)
+
 unit_test_cflags = \
     $(munit_cflags) $(FYAML_CFLAGS) $(STATGRAB_CFLAGS) $(LZ4_CFLAGS) $(CODE_COVERAGE_CFLAGS) $(ASDF_CFLAGS)
 unit_test_ldflags =
@@ -65,7 +69,7 @@ unit_test_ldadd = $(munit_ldflags) $(top_builddir)/libasdf.la $(ASDF_LIBS)
 # Unit tests
 check_LIBRARIES = libmunit.a
 libmunit_a_SOURCES = util.c $(munit_dir)/munit.c
-libmunit_a_CPPFLAGS = $(unit_test_cppflags)
+libmunit_a_CPPFLAGS = $(unit_test_base_cppflags)
 libmunit_a_CFLAGS = $(unit_test_cflags) -w
 
 # test-block.unit
