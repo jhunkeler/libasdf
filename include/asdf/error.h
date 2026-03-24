@@ -1,11 +1,13 @@
-#ifndef ASDF_ERROR_H
-#define ASDF_ERROR_H
-
 /**
  * .. _asdf/error.h:
  *
  * Public error codes for the libasdf error-handling API.
  */
+
+//
+
+#ifndef ASDF_ERROR_H
+#define ASDF_ERROR_H
 
 #include <asdf/util.h>
 
