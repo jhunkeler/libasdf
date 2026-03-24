@@ -195,6 +195,10 @@ PKG_CHECK_MODULES([FYAML], [libfyaml], [], [
   AC_MSG_ERROR([libfyaml is required but was not found])
 ])
 
+dnl Workaround for https://github.com/pantoniou/libfyaml/pull/275
+dnl This can be deleted if libfyaml is fixed upstream, though system
+dnl packagers are likely to fix this too
+FYAML_LIBS=$(printf '%s\n' "$FYAML_LIBS" | sed 's/none required//g')
 
 # Check for libstatgrab
 AC_ARG_WITH([libstatgrab],
