@@ -47,7 +47,9 @@ log messages, are tied to a single open file represented by an `asdf_file_t`.
 Most functions, like `asdf_open`, that return a pointer to some kind of object
 will return `NULL` if an error occurred, unless otherwise noted in the API
 documentation.  In such cases, calling `asdf_error(file)` will return a message
-explaining the error.
+explaining the error. For more fine-grained error handling you can use
+`asdf_error_code(file)` to return an `asdf_error_code_t` error code enum
+(similar to ``errno``).
 
 In the specific case of `asdf_open`, as an error result does not return an
 `asdf_file_t *` in the first place, calling `asdf_error(NULL)` will return
