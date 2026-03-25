@@ -51,7 +51,7 @@ add_compile_definitions(REFERENCE_FILES_DIR=\"${REFERENCE_FILES_DIR}\")
 add_compile_definitions(FIXTURES_DIR=\"${FIXTURES_DIR}\")
 add_compile_definitions(TEMP_DIR=\"${TEMP_DIR}\")
 
-set(runtime "WITH_CMAKE=set:YES;OBJC_DISABLE_INITIALIZE_FORK_SAFETY=set:YES;srcdir=set:${CMAKE_CURRENT_SOURCE_DIR};top_srcdir=set:${CMAKE_SOURCE_DIR};top_builddir=set:${CMAKE_BINARY_DIR}")
+set(runtime "WITH_CMAKE=set:YES;OBJC_DISABLE_INITIALIZE_FORK_SAFETY=set:YES;srcdir=set:${CMAKE_CURRENT_SOURCE_DIR};top_srcdir=set:${CMAKE_SOURCE_DIR};top_builddir=set:${CMAKE_BINARY_DIR};LD_LIBRARY_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/src")
 
 # -------- Run optional shell command tests ----------------------------------
 if (BASH_PROGRAM AND ENABLE_TESTING_SHELL)
@@ -164,6 +164,8 @@ if (ENABLE_TESTING_CPP)
     target_link_libraries(test-cpp-headers PRIVATE libasdf)
     target_compile_features(test-cpp-headers PRIVATE cxx_std_17)
     add_test(NAME test-cpp-headers COMMAND test-cpp-headers)
+    set_tests_properties(test-cpp-headers PROPERTIES
+        ENVIRONMENT_MODIFICATION "LD_LIBRARY_PATH=path_list_prepend:${CMAKE_BINARY_DIR}/src")
 endif()
 
 
