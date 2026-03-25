@@ -49,6 +49,7 @@ headers.
   :maxdepth: 2
 
   api/asdf/extension.h
+  api/asdf/yaml.h
 
 
 Resources

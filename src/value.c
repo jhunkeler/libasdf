@@ -961,6 +961,134 @@ ASDF_SEQUENCE_APPEND_CONTAINER_TYPE(mapping);
 ASDF_SEQUENCE_APPEND_CONTAINER_TYPE(sequence);
 
 
+/** Bulk sequence constructors (asdf_sequence_of_<type>) */
+
+/*
+ * Helper: allocate a new sequence and return both the asdf_sequence_t and its
+ * backing fy_document.  Returns NULL on failure.
+ */
+static asdf_sequence_t *sequence_of_begin(asdf_file_t *file, struct fy_document **tree_out) {
+    asdf_sequence_t *seq = asdf_sequence_create(file);
+
+    if (!seq)
+        return NULL;
+
+    struct fy_document *tree = asdf_file_tree_document(file);
+
+    if (!tree) {
+        asdf_sequence_destroy(seq);
+        return NULL;
+    }
+
+    *tree_out = tree;
+    return seq;
+}
+
+
+asdf_sequence_t *asdf_sequence_of_null(asdf_file_t *file, int size) {
+    struct fy_document *tree = NULL;
+    asdf_sequence_t *seq = sequence_of_begin(file, &tree);
+
+    if (!seq)
+        return NULL;
+
+    for (int idx = 0; idx < size; idx++) {
+        struct fy_node *node = asdf_node_of_null(tree);
+
+        if (!node || fy_node_sequence_append(seq->value.node, node) != 0) {
+            ASDF_ERROR_OOM(file);
+            asdf_sequence_destroy(seq);
+            return NULL;
+        }
+    }
+
+    return seq;
+}
+
+
+asdf_sequence_t *asdf_sequence_of_string(
+    asdf_file_t *file, const char *const *arr, const size_t *lens, int size) {
+    struct fy_document *tree = NULL;
+    asdf_sequence_t *seq = sequence_of_begin(file, &tree);
+
+    if (!seq)
+        return NULL;
+
+    for (int idx = 0; idx < size; idx++) {
+        struct fy_node *node = asdf_node_of_string(tree, arr[idx], lens[idx]);
+
+        if (!node || fy_node_sequence_append(seq->value.node, node) != 0) {
+            ASDF_ERROR_OOM(file);
+            asdf_sequence_destroy(seq);
+            return NULL;
+        }
+    }
+
+    return seq;
+}
+
+
+asdf_sequence_t *asdf_sequence_of_string0(asdf_file_t *file, const char *const *arr, int size) {
+    struct fy_document *tree = NULL;
+    asdf_sequence_t *seq = sequence_of_begin(file, &tree);
+
+    if (!seq)
+        return NULL;
+
+    for (int idx = 0; idx < size; idx++) {
+        struct fy_node *node = asdf_node_of_string0(tree, arr[idx]);
+
+        if (!node || fy_node_sequence_append(seq->value.node, node) != 0) {
+            ASDF_ERROR_OOM(file);
+            asdf_sequence_destroy(seq);
+            return NULL;
+        }
+    }
+
+    return seq;
+}
+
+
+/*
+ * Macro to generate asdf_sequence_of_<type> for scalar types whose C type
+ * matches the name (bool, float, double).
+ */
+#define ASDF_SEQUENCE_OF_TYPE(type, ctype) \
+    asdf_sequence_t *asdf_sequence_of_##type(asdf_file_t *file, const ctype *arr, int size) { \
+        struct fy_document *tree = NULL; \
+        asdf_sequence_t *seq = sequence_of_begin(file, &tree); \
+        if (!seq) \
+            return NULL; \
+        for (int idx = 0; idx < size; idx++) { \
+            struct fy_node *node = asdf_node_of_##type(tree, arr[idx]); \
+            if (!node || fy_node_sequence_append(seq->value.node, node) != 0) { \
+                ASDF_ERROR_OOM(file); \
+                asdf_sequence_destroy(seq); \
+                return NULL; \
+            } \
+        } \
+        return seq; \
+    }
+
+/*
+ * Variant for integer types whose C type has a _t suffix (int8_t, uint32_t...).
+ */
+#define ASDF_SEQUENCE_OF_INT_TYPE(type) ASDF_SEQUENCE_OF_TYPE(type, type##_t)
+
+
+ASDF_SEQUENCE_OF_TYPE(bool, bool)
+ASDF_SEQUENCE_OF_INT_TYPE(int8)
+ASDF_SEQUENCE_OF_INT_TYPE(int16)
+ASDF_SEQUENCE_OF_INT_TYPE(int32)
+ASDF_SEQUENCE_OF_INT_TYPE(int64)
+ASDF_SEQUENCE_OF_INT_TYPE(uint8)
+ASDF_SEQUENCE_OF_INT_TYPE(uint16)
+ASDF_SEQUENCE_OF_INT_TYPE(uint32)
+ASDF_SEQUENCE_OF_INT_TYPE(uint64)
+ASDF_SEQUENCE_OF_TYPE(float, float)
+ASDF_SEQUENCE_OF_TYPE(double, double)
+
+
 asdf_value_t *asdf_sequence_pop(asdf_sequence_t *sequence, int index) {
     if (UNLIKELY(!sequence))
         return NULL;

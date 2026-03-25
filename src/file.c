@@ -263,6 +263,35 @@ asdf_file_t *asdf_open_mem_ex(const void *buf, size_t size, asdf_config_t *confi
 }
 
 
+void asdf_file_write_cleanup_add(asdf_file_t *file, void (*callback)(void *), void *data) {
+    asdf_write_cleanup_t *node = calloc(1, sizeof(asdf_write_cleanup_t));
+
+    if (UNLIKELY(!node)) {
+        ASDF_ERROR_OOM(file);
+        return;
+    }
+
+    node->callback = callback;
+    node->data = data;
+    node->next = file->write_cleanups;
+    file->write_cleanups = node;
+}
+
+
+void asdf_file_run_write_cleanups(asdf_file_t *file) {
+    asdf_write_cleanup_t *node = file->write_cleanups;
+
+    while (node) {
+        asdf_write_cleanup_t *next = node->next;
+        node->callback(node->data);
+        free(node);
+        node = next;
+    }
+
+    file->write_cleanups = NULL;
+}
+
+
 int asdf_write_to_file(asdf_file_t *file, const char *filename) {
     if (UNLIKELY(!file))
         return -1;
@@ -284,6 +313,7 @@ int asdf_write_to_file(asdf_file_t *file, const char *filename) {
 
     ret = 0;
 cleanup:
+    asdf_file_run_write_cleanups(file);
     asdf_emitter_destroy(emitter);
     file->emitter = NULL;
     return ret;
@@ -311,6 +341,7 @@ int asdf_write_to_fp(asdf_file_t *file, FILE *fp) {
 
     ret = 0;
 cleanup:
+    asdf_file_run_write_cleanups(file);
     asdf_emitter_destroy(emitter);
     file->emitter = NULL;
     return ret;
@@ -434,6 +465,7 @@ int asdf_write_to_mem(asdf_file_t *file, void **buf, size_t *size) {
         *size = alloc_size;
     }
 cleanup:
+    asdf_file_run_write_cleanups(file);
     asdf_emitter_destroy(emitter);
     file->emitter = NULL;
     return ret;
@@ -444,6 +476,7 @@ void asdf_close(asdf_file_t *file) {
     if (!file)
         return;
 
+    asdf_file_run_write_cleanups(file);
     fy_document_destroy(file->tree);
     asdf_emitter_destroy(file->emitter);
     asdf_parser_destroy(file->parser);

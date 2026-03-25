@@ -631,6 +631,40 @@ void *asdf_ndarray_data_alloc(asdf_ndarray_t *ndarray) {
 }
 
 
+static void ndarray_write_data_cleanup(void *userdata) {
+    asdf_ndarray_internal_t *internal = userdata;
+    free(internal->data);
+    free(internal);
+}
+
+
+void *asdf_ndarray_data_alloc_temp(asdf_file_t *file, asdf_ndarray_t *ndarray) {
+    if (UNLIKELY(!file || !ndarray))
+        return NULL;
+
+    asdf_ndarray_internal_t *internal = calloc(1, sizeof(asdf_ndarray_internal_t));
+
+    if (UNLIKELY(!internal)) {
+        ASDF_ERROR_OOM(file);
+        return NULL;
+    }
+
+    uint64_t nbytes = asdf_ndarray_nbytes(ndarray);
+    void *data = calloc(1, (size_t)nbytes);
+
+    if (UNLIKELY(!data)) {
+        free(internal);
+        ASDF_ERROR_OOM(file);
+        return NULL;
+    }
+
+    internal->data = data;
+    ndarray->internal = internal;
+    asdf_file_write_cleanup_add(file, ndarray_write_data_cleanup, internal);
+    return data;
+}
+
+
 void asdf_ndarray_data_dealloc(asdf_ndarray_t *ndarray) {
     if (UNLIKELY(!ndarray))
         return;

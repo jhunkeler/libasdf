@@ -144,19 +144,19 @@ static asdf_file_t *asdf_open_mem(const void *buf, size_t size);
 
 
 #define ASDF__OPEN_1(source) \
-    _Generic((source), \
+    _Generic( \
+        (source), \
         FILE *: asdf_open_fp(source, NULL), \
         const char *: asdf_open_file(source, "r"), \
         char *: asdf_open_file(source, "r"), \
-        void *: asdf_open_mem(NULL, 0) \
-    )
+        void *: asdf_open_mem(NULL, 0))
 #define ASDF__OPEN_2(source, ...) \
-    _Generic((source), \
+    _Generic( \
+        (source), \
         FILE *: asdf_open_fp, \
         const char *: asdf_open_file, \
         char *: asdf_open_file, \
-        const void *: asdf_open_mem \
-    )(source, __VA_ARGS__)
+        const void *: asdf_open_mem)(source, __VA_ARGS__)
 
 
 /**
@@ -194,12 +194,12 @@ static asdf_file_t *asdf_open_mem(const void *buf, size_t size);
  * `asdf_open_mem_ex` depending on the argument types
  */
 #define asdf_open_ex(source, ...) /* NOLINT(readability-identifier-naming) */ \
-    _Generic((source), \
+    _Generic( \
+        (source), \
         const char *: asdf_open_file_ex, \
         char *: asdf_open_file_ex, \
         FILE *: asdf_open_fp_ex, \
-        void *: asdf_open_mem_ex \
-    )(source, __VA_ARGS__)
+        void *: asdf_open_mem_ex)(source, __VA_ARGS__)
 
 /**
  * Opens an ASDF file for reading
@@ -238,22 +238,43 @@ static inline asdf_file_t *asdf_open_mem(const void *buf, size_t size) {
 
 
 #define ASDF__WRITE_TO_1(source, dest) \
-    _Generic((dest), \
+    _Generic( \
+        (dest), \
         const char *: asdf_write_to_file, \
         char *: asdf_write_to_file, \
-        FILE *: asdf_write_to_fp \
-    )(file, dest)
+        FILE *: asdf_write_to_fp)(file, dest)
 
 
 #define ASDF__WRITE_TO_2(source, dest, ...) asdf_write_to_mem(source, dest, __VA_ARGS__)
 
 
+/**
+ * Write the contents of an ``asdf_file_t`` to a destination
+ *
+ * This is a type-generic macro that dispatches to one of the following based
+ * on the type and number of arguments after ``file``:
+ *
+ * * ``asdf_write_to(file, filename)`` -- where ``filename`` is a
+ *   ``const char *`` or ``char *``: calls `asdf_write_to_file`
+ * * ``asdf_write_to(file, fp)`` -- where ``fp`` is a ``FILE *``: calls
+ *   `asdf_write_to_fp`
+ * * ``asdf_write_to(file, buf, size)`` -- where ``buf`` is a ``void **`` and
+ *   ``size`` is a ``size_t *``: calls `asdf_write_to_mem`
+ *
+ * :param file: The `asdf_file_t *` to write
+ * :param ...: Destination argument(s) -- see above
+ * :return: 0 on success, non-zero on failure
+ */
 #define asdf_write_to(file, ...) /* NOLINT(readability-identifier-naming) */ \
     ASDF__PP_CAT(ASDF__WRITE_TO_, ASDF__PP_NARGS(__VA_ARGS__))(file, __VA_ARGS__)
 
 
 /**
  * Write the contents of the ``asdf_file_t`` to the given filesystem path
+ *
+ * :param file: The `asdf_file_t *` to write
+ * :param filename: Path to the output file; created or truncated as needed
+ * :return: 0 on success, non-zero on failure
  */
 ASDF_EXPORT int asdf_write_to_file(asdf_file_t *file, const char *filename);
 
@@ -261,6 +282,10 @@ ASDF_EXPORT int asdf_write_to_file(asdf_file_t *file, const char *filename);
 /**
  * Write the contents of the ``asdf_file_t`` to the given writeable ``FILE *``
  * stream
+ *
+ * :param file: The `asdf_file_t *` to write
+ * :param fp: An open, writeable ``FILE *`` stream
+ * :return: 0 on success, non-zero on failure
  */
 ASDF_EXPORT int asdf_write_to_fp(asdf_file_t *file, FILE *fp);
 
@@ -268,14 +293,18 @@ ASDF_EXPORT int asdf_write_to_fp(asdf_file_t *file, FILE *fp);
 /**
  * Write the contents of the ``asdf_file_t`` to a memory buffer
  *
- * If the value of ``*buf`` is non-NULL then a user-provided buffer is assumed
- * and its size is read from ``*size``.  If the size is not large enough to
- * hold the file, then it is simply truncated and a non-zero return value is
- * returned.
+ * If ``*buf`` is non-NULL, a user-provided buffer is assumed and its size is
+ * read from ``*size``.  If the buffer is not large enough to hold the file,
+ * the output is truncated and a non-zero value is returned.
  *
- * Otherwise, memory is allocated with `malloc()` and the size of the buffer is
- * returned into the ``size`` argument.  The user is responsible for freeing
- * the buffer with `free()`.
+ * If ``*buf`` is NULL, a buffer is allocated with `malloc()` and a pointer to
+ * it is stored in ``*buf``; the allocated size is written to ``*size``.  The
+ * caller is responsible for freeing the buffer with `free()`.
+ *
+ * :param file: The `asdf_file_t *` to write
+ * :param buf: Address of a ``void *`` buffer pointer (in/out)
+ * :param size: Address of a ``size_t`` holding the buffer size (in/out)
+ * :return: 0 on success, non-zero on failure
  */
 ASDF_EXPORT int asdf_write_to_mem(asdf_file_t *file, void **buf, size_t *size);
 

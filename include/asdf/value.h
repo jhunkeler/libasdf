@@ -406,38 +406,135 @@ ASDF_EXPORT void asdf_mapping_item_destroy(asdf_mapping_item_t *item);
  */
 typedef struct asdf_sequence asdf_sequence_t;
 
+/** Return true if ``value`` holds a YAML sequence */
 ASDF_EXPORT bool asdf_value_is_sequence(asdf_value_t *value);
+
+/**
+ * Return the number of items in ``sequence``
+ *
+ * :param sequence: The `asdf_sequence_t *` to query
+ * :return: The number of items currently in the sequence
+ */
 ASDF_EXPORT int asdf_sequence_size(asdf_sequence_t *sequence);
+
+/**
+ * Return the value at ``index`` in ``sequence``
+ *
+ * Negative indices are supported (e.g. ``-1`` for the last item).  Returns
+ * ``NULL`` if ``index`` is out of range.
+ *
+ * :param sequence: The `asdf_sequence_t *` to query
+ * :param index: Zero-based index; negative indices count from the end
+ * :return: The `asdf_value_t *` at that position, or ``NULL``
+ */
 ASDF_EXPORT asdf_value_t *asdf_sequence_get(asdf_sequence_t *sequence, int index);
+
+/**
+ * Obtain a typed `asdf_sequence_t *` view of a generic value
+ *
+ * On success writes the `asdf_sequence_t *` into ``*out`` and returns
+ * ``ASDF_VALUE_OK``.  Returns an error code and leaves ``*out`` unchanged if
+ * ``value`` is not a sequence.
+ *
+ * :param value: The generic `asdf_value_t *` to inspect
+ * :param out: Receives the `asdf_sequence_t *` on success
+ * :return: ``ASDF_VALUE_OK`` on success, otherwise an `asdf_value_err_t` error
+ */
 ASDF_EXPORT asdf_value_err_t asdf_value_as_sequence(asdf_value_t *value, asdf_sequence_t **out);
+
+/**
+ * Return the generic `asdf_value_t *` view of a sequence
+ *
+ * The returned pointer shares ownership with ``sequence``; the caller must
+ * not free it independently.
+ *
+ * :param sequence: The `asdf_sequence_t *` to wrap
+ * :return: The same object as a generic `asdf_value_t *`
+ */
 ASDF_EXPORT asdf_value_t *asdf_value_of_sequence(asdf_sequence_t *sequence);
+
+/**
+ * Create a new, empty sequence attached to ``file``
+ *
+ * The caller owns the returned sequence and must eventually release it with
+ * `asdf_sequence_destroy`, or transfer ownership by inserting it into a
+ * mapping or parent sequence.  Returns ``NULL`` on allocation failure.
+ *
+ * :param file: The `asdf_file_t *` that will own the sequence
+ * :return: A new `asdf_sequence_t *`, or ``NULL`` on failure
+ */
 ASDF_EXPORT asdf_sequence_t *asdf_sequence_create(asdf_file_t *file);
+
+/**
+ * Set the YAML node style used when serializing ``sequence``
+ *
+ * :param sequence: The `asdf_sequence_t *` to modify
+ * :param style: The desired `asdf_yaml_node_style_t` (e.g. block or flow)
+ */
 ASDF_EXPORT void asdf_sequence_set_style(asdf_sequence_t *sequence, asdf_yaml_node_style_t style);
+
+/**
+ * Free a sequence and all values it contains
+ *
+ * Must not be called on a sequence that has been inserted into a mapping or
+ * parent sequence -- ownership transfers at that point.
+ *
+ * :param sequence: The `asdf_sequence_t *` to free
+ */
 ASDF_EXPORT void asdf_sequence_destroy(asdf_sequence_t *sequence);
 
 
 /** Opaque struct holding sequence iterator state */
 typedef void *asdf_sequence_iter_t;
 
+/**
+ * Initialize an `asdf_sequence_iter_t` to its starting state
+ *
+ * Call this once before the first call to `asdf_sequence_iter`.
+ *
+ * :return: An initialized `asdf_sequence_iter_t`
+ */
 ASDF_EXPORT asdf_sequence_iter_t asdf_sequence_iter_init(void);
 
 
 /**
- * Iterate over a sequence value
+ * Advance a sequence iterator and return the next value
  *
- * .. todo::
+ * Typical usage::
  *
- *   Finish documenting me.
+ *   asdf_sequence_iter_t iter = asdf_sequence_iter_init();
+ *   asdf_value_t *val;
+ *   while ((val = asdf_sequence_iter(seq, &iter)) != NULL) {
+ *       // use val ...
+ *   }
+ *
+ * Returns ``NULL`` when iteration is exhausted.
+ *
+ * :param sequence: The `asdf_sequence_t *` to iterate over
+ * :param iter: Pointer to the iterator state; updated on each call
+ * :return: The next `asdf_value_t *` in the sequence, or ``NULL`` when done
  */
 ASDF_EXPORT asdf_value_t *asdf_sequence_iter(asdf_sequence_t *sequence, asdf_sequence_iter_t *iter);
 
 
 /**
- * Append values to sequences
+ * Append a value to a sequence
  *
- * .. todo::
+ * ``asdf_sequence_append`` appends an existing generic `asdf_value_t *`.
+ * Ownership of ``value`` transfers to ``sequence`` on success.
  *
- *   Document these.
+ * The ``asdf_sequence_append_<type>`` variants construct a new value from a C
+ * scalar and append it in one step.  ``asdf_sequence_append_string`` takes an
+ * explicit byte length; ``asdf_sequence_append_string0`` expects a
+ * NUL-terminated string.  ``asdf_sequence_append_null`` takes no value
+ * argument.  All other variants accept the corresponding C type directly.
+ *
+ * ``asdf_sequence_append_mapping`` and ``asdf_sequence_append_sequence``
+ * transfer ownership of the supplied container to the parent sequence on
+ * success.
+ *
+ * All functions return ``ASDF_VALUE_OK`` on success or an `asdf_value_err_t`
+ * error code on failure.
  */
 ASDF_EXPORT asdf_value_err_t asdf_sequence_append(asdf_sequence_t *sequence, asdf_value_t *value);
 ASDF_EXPORT asdf_value_err_t
@@ -465,6 +562,56 @@ ASDF_EXPORT asdf_value_err_t
 asdf_sequence_append_mapping(asdf_sequence_t *sequence, asdf_mapping_t *value);
 ASDF_EXPORT asdf_value_err_t
 asdf_sequence_append_sequence(asdf_sequence_t *sequence, asdf_sequence_t *value);
+
+
+/**
+ * Create a new sequence pre-populated from a C array in a single call
+ *
+ * Each ``asdf_sequence_of_<type>`` function allocates a new sequence attached
+ * to ``file`` and appends ``size`` elements from ``arr``.  On success the
+ * caller owns the returned sequence and must eventually release it with
+ * `asdf_sequence_destroy` (or transfer ownership by inserting it into a
+ * mapping or parent sequence).  Returns ``NULL`` on allocation failure.
+ *
+ * ``asdf_sequence_of_null`` creates a sequence of ``size`` null values; it
+ * takes no array argument.
+ *
+ * ``asdf_sequence_of_string`` accepts an array of ``(str, len)`` pairs via
+ * separate ``arr`` and ``lens`` pointer arguments.
+ * ``asdf_sequence_of_string0`` is the null-terminated-string variant.
+ *
+ * All other variants mirror the corresponding ``asdf_sequence_append_<type>``
+ * scalar types.
+ */
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_null(asdf_file_t *file, int size);
+
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_string(
+    asdf_file_t *file, const char *const *arr, const size_t *lens, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_string0(
+    asdf_file_t *file, const char *const *arr, int size);
+
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_bool(asdf_file_t *file, const bool *arr, int size);
+
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_int8(asdf_file_t *file, const int8_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_int16(
+    asdf_file_t *file, const int16_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_int32(
+    asdf_file_t *file, const int32_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_int64(
+    asdf_file_t *file, const int64_t *arr, int size);
+
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_uint8(
+    asdf_file_t *file, const uint8_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_uint16(
+    asdf_file_t *file, const uint16_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_uint32(
+    asdf_file_t *file, const uint32_t *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_uint64(
+    asdf_file_t *file, const uint64_t *arr, int size);
+
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_float(asdf_file_t *file, const float *arr, int size);
+ASDF_EXPORT asdf_sequence_t *asdf_sequence_of_double(
+    asdf_file_t *file, const double *arr, int size);
 
 
 /**

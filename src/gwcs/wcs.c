@@ -19,6 +19,63 @@ static asdf_gwcs_err_t asdf_gwcs_finalize_fitswcs_imaging(asdf_file_t *file, asd
 }
 
 
+static asdf_value_t *asdf_gwcs_serialize(
+    asdf_file_t *file, const void *obj, UNUSED(const void *userdata)) {
+    if (UNLIKELY(!file || !obj))
+        return NULL;
+
+    const asdf_gwcs_t *gwcs = obj;
+    asdf_mapping_t *map = NULL;
+    asdf_sequence_t *steps_seq = NULL;
+    asdf_value_t *value = NULL;
+    asdf_value_err_t err = ASDF_VALUE_ERR_EMIT_FAILURE;
+
+    map = asdf_mapping_create(file);
+
+    if (!map)
+        goto cleanup;
+
+    err = asdf_mapping_set_string0(map, "name", gwcs->name ? gwcs->name : "");
+
+    if (ASDF_IS_ERR(err))
+        goto cleanup;
+
+    steps_seq = asdf_sequence_create(file);
+
+    if (!steps_seq)
+        goto cleanup;
+
+    for (uint32_t idx = 0; idx < gwcs->n_steps; idx++) {
+        asdf_value_t *step_val = asdf_value_of_gwcs_step(file, &gwcs->steps[idx]);
+
+        if (!step_val)
+            goto cleanup;
+
+        err = asdf_sequence_append(steps_seq, step_val);
+
+        if (ASDF_IS_ERR(err)) {
+            asdf_value_destroy(step_val);
+            goto cleanup;
+        }
+    }
+
+    err = asdf_mapping_set_sequence(map, "steps", steps_seq);
+
+    if (ASDF_IS_ERR(err))
+        goto cleanup;
+
+    steps_seq = NULL; // owned by map
+
+    value = asdf_value_of_mapping(map);
+    map = NULL; // owned by value
+
+cleanup:
+    asdf_sequence_destroy(steps_seq);
+    asdf_mapping_destroy(map);
+    return value;
+}
+
+
 static asdf_value_err_t asdf_gwcs_deserialize(
     asdf_value_t *value, UNUSED(const void *userdata), void **out) {
     asdf_gwcs_t *gwcs = NULL;
@@ -132,7 +189,7 @@ ASDF_REGISTER_EXTENSION(
     ASDF_GWCS_TAG_PREFIX "wcs-1.4.0",
     asdf_gwcs_t,
     &libasdf_software,
-    NULL,
+    asdf_gwcs_serialize,
     asdf_gwcs_deserialize,
     NULL, /* TODO: copy */
     asdf_gwcs_dealloc,

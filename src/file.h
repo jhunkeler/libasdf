@@ -44,6 +44,13 @@ typedef enum {
 #define ASDF_FILE_TAG_MAP_DEFAULT_SIZE 20
 
 
+typedef struct asdf_write_cleanup {
+    void (*callback)(void *);
+    void *data;
+    struct asdf_write_cleanup *next;
+} asdf_write_cleanup_t;
+
+
 typedef struct asdf_file {
     asdf_base_t base;
     asdf_config_t *config;
@@ -80,11 +87,20 @@ typedef struct asdf_file {
      * metadata on output
      */
     asdf_history_entry_t **history_entries;
+    /** Linked list of cleanup callbacks to run after each write */
+    asdf_write_cleanup_t *write_cleanups;
 } asdf_file_t;
 
 
 /** Internal helper to get the `struct fy_document` for the tree, if any */
 ASDF_LOCAL struct fy_document *asdf_file_tree_document(asdf_file_t *file);
+
+/** Internal helper to register a cleanup callback to run after each write */
+ASDF_LOCAL void asdf_file_write_cleanup_add(
+    asdf_file_t *file, void (*callback)(void *), void *data);
+
+/** Internal helper to run and free all registered write cleanup callbacks */
+ASDF_LOCAL void asdf_file_run_write_cleanups(asdf_file_t *file);
 
 /** Internal helper to set and/or retrieve a normalized tag */
 ASDF_LOCAL const char *asdf_file_tag_normalize(asdf_file_t *file, const char *tag);

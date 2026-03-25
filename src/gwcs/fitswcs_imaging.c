@@ -183,6 +183,150 @@ cleanup:
 }
 
 
+/**
+ * Serialize a 1D float64 ndarray of 2 elements from a plain double[2] array.
+ *
+ * Returns the serialized value, or NULL on error.
+ */
+static asdf_value_t *serialize_double2_ndarray(asdf_file_t *file, const double src[2]) {
+    uint64_t shape[1] = {2};
+    asdf_ndarray_t ndarray = {
+        .ndim = 1,
+        .shape = shape,
+        .datatype = {.type = ASDF_DATATYPE_FLOAT64},
+        .byteorder = ASDF_BYTEORDER_LITTLE,
+    };
+
+    void *data = asdf_ndarray_data_alloc_temp(file, &ndarray);
+
+    if (!data)
+        return NULL;
+
+    memcpy(data, src, 2 * sizeof(double));
+    return asdf_value_of_ndarray(file, &ndarray);
+}
+
+
+static asdf_value_t *asdf_gwcs_fits_serialize(
+    asdf_file_t *file, const void *obj, UNUSED(const void *userdata)) {
+    if (UNLIKELY(!file || !obj))
+        return NULL;
+
+    const asdf_gwcs_fits_t *fits = obj;
+    asdf_mapping_t *map = NULL;
+    asdf_value_t *value = NULL;
+    asdf_value_t *val = NULL;
+    asdf_value_err_t err = ASDF_VALUE_ERR_EMIT_FAILURE;
+
+    map = asdf_mapping_create(file);
+
+    if (!map)
+        goto cleanup;
+
+    err = asdf_gwcs_transform_serialize_base(file, &fits->base, map);
+
+    if (ASDF_IS_ERR(err))
+        goto cleanup;
+
+    // crpix -- 1D float64 ndarray shape [2]
+    val = serialize_double2_ndarray(file, fits->crpix);
+
+    if (!val) {
+        err = ASDF_VALUE_ERR_OOM;
+        goto cleanup;
+    }
+
+    err = asdf_mapping_set(map, "crpix", val);
+
+    if (ASDF_IS_ERR(err)) {
+        asdf_value_destroy(val);
+        goto cleanup;
+    }
+
+    // crval -- 1D float64 ndarray shape [2]
+    val = serialize_double2_ndarray(file, fits->crval);
+
+    if (!val) {
+        err = ASDF_VALUE_ERR_OOM;
+        goto cleanup;
+    }
+
+    err = asdf_mapping_set(map, "crval", val);
+
+    if (ASDF_IS_ERR(err)) {
+        asdf_value_destroy(val);
+        goto cleanup;
+    }
+
+    // cdelt -- 1D float64 ndarray shape [2]
+    val = serialize_double2_ndarray(file, fits->cdelt);
+
+    if (!val) {
+        err = ASDF_VALUE_ERR_OOM;
+        goto cleanup;
+    }
+
+    err = asdf_mapping_set(map, "cdelt", val);
+
+    if (ASDF_IS_ERR(err)) {
+        asdf_value_destroy(val);
+        goto cleanup;
+    }
+
+    // pc -- 2D float64 ndarray shape [2, 2]
+    uint64_t pc_shape[2] = {2, 2};
+    asdf_ndarray_t pc_ndarray = {
+        .ndim = 2,
+        .shape = pc_shape,
+        .datatype = {.type = ASDF_DATATYPE_FLOAT64},
+        .byteorder = ASDF_BYTEORDER_LITTLE,
+    };
+    void *pc_data = asdf_ndarray_data_alloc_temp(file, &pc_ndarray);
+
+    if (!pc_data) {
+        err = ASDF_VALUE_ERR_OOM;
+        goto cleanup;
+    }
+
+    memcpy(pc_data, fits->pc, 4 * sizeof(double));
+    val = asdf_value_of_ndarray(file, &pc_ndarray);
+
+    if (!val) {
+        err = ASDF_VALUE_ERR_EMIT_FAILURE;
+        goto cleanup;
+    }
+
+    err = asdf_mapping_set(map, "pc", val);
+
+    if (ASDF_IS_ERR(err)) {
+        asdf_value_destroy(val);
+        goto cleanup;
+    }
+
+    // projection -- generic transform tagged with its projection type
+    val = asdf_gwcs_transform_value_of(file, &fits->projection);
+
+    if (!val) {
+        err = ASDF_VALUE_ERR_EMIT_FAILURE;
+        goto cleanup;
+    }
+
+    err = asdf_mapping_set(map, "projection", val);
+
+    if (ASDF_IS_ERR(err)) {
+        asdf_value_destroy(val);
+        goto cleanup;
+    }
+
+    value = asdf_value_of_mapping(map);
+    map = NULL; // owned by value
+
+cleanup:
+    asdf_mapping_destroy(map);
+    return value;
+}
+
+
 static void asdf_gwcs_fits_dealloc(void *value) {
     if (!value)
         return;
@@ -201,7 +345,7 @@ ASDF_REGISTER_EXTENSION(
     ASDF_GWCS_TAG_PREFIX "fitswcs_imaging-1.0.0",
     asdf_gwcs_fits_t,
     &libasdf_software,
-    NULL,
+    asdf_gwcs_fits_serialize,
     asdf_gwcs_fits_deserialize,
     NULL, /* TODO: copy */
     asdf_gwcs_fits_dealloc,
