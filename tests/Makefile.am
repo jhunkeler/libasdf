@@ -280,12 +280,24 @@ CLEANFILES = test-cpp-headers.cpp test-cpp-headers$(EXEEXT)
 # Check examples in the documentation
 if HAVE_PYTHON
 DOC_EXAMPLES_DIR = $(builddir)/doc_examples
+# Documentation files containing example programs
+DOC_EXAMPLE_FILES = \
+    $(top_srcdir)/README.rst \
+    $(top_srcdir)/docs/usage/writing.rst
+
+DOC_EXAMPLE_DEPS = \
+    $(DOC_EXAMPLE_FILES) \
+    $(srcdir)/scripts/extract_doc_examples.py \
+    $(top_builddir)/libasdf.la
+
 TESTS += $(DOC_EXAMPLES_DIR)/test-doc-examples.sh
 
 
-$(DOC_EXAMPLES_DIR)/test-doc-examples.sh: $(top_srcdir)/README.rst $(srcdir)/scripts/extract_doc_examples.py $(top_builddir)/libasdf.la
+$(DOC_EXAMPLES_DIR)/test-doc-examples.sh: $(DOC_EXAMPLE_DEPS)
 	$(AM_V_at)$(PYTHON3) $(srcdir)/scripts/extract_doc_examples.py \
-	  $(top_srcdir)/README.rst --out-dir $(DOC_EXAMPLES_DIR) \
+	  $(top_srcdir)/README.rst \
+	  $(top_srcdir)/docs/usage/writing.rst \
+	  --out-dir $(DOC_EXAMPLES_DIR) \
 	  --fixtures-dir $(srcdir)/fixtures $(QUIET_OUT)
 	$(AM_V_at)for f in $(DOC_EXAMPLES_DIR)/*.c; do \
 	    exe=$${f%.c}; \
@@ -363,7 +375,8 @@ EXTRA_DIST += \
     munit/munit.c \
     munit/munit.h \
     scripts/extract_doc_examples.py \
-    scripts/generate_test_cpp_headers.sh
+    scripts/generate_test_cpp_headers.sh \
+    $(top_srcdir)/docs/usage/writing.rst
 
 
 # Bit of a hack to make syncing the submodule a prerequisite to make check
