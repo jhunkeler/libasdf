@@ -100,6 +100,7 @@ nitpick_ignore = [
 
 # libasdf identifiers that should be documented but aren't yet
     ('c:identifier', 'asdf_emitter_cfg_t'),
+    ('c:identifier', 'asdf_event_t'),
     ('c:identifier', 'asdf_history_entry_t'),
     ('c:identifier', 'asdf_parser_cfg_t'),
 ]
