@@ -458,7 +458,7 @@ ASDF_EXPORT int asdf_error_errno(asdf_file_t *file);
  *
  * The one exception to the above is `asdf_get_value` which simply returns the
  * generic `asdf_value_t *` if the path exists, or `NULL` otherwise.  See
- * :ref:`asdf-value` for more details on generic values.
+ * :ref:`values` for more details on generic values.
  *
  * .. todo::
  *
