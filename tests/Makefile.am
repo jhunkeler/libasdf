@@ -375,6 +375,7 @@ EXTRA_DIST += \
     fixtures/scalars-out.asdf \
     fixtures/tagged-scalars.asdf \
     fixtures/tiles.asdf \
+    fixtures/time.asdf \
     fixtures/trivial-extension.asdf \
     fixtures/value-types.asdf \
     fixtures/verify-checksums/255-2-blocks.verify-checksums.txt \

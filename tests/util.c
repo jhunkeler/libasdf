@@ -245,11 +245,11 @@ static void pioneer_setup(int fd_create, const char *pgid_file) {
     /* Find and create the next sequential run directory. */
     for (int run_num = next_run_number(); run_num < TEST_SERIAL_MAX; run_num++) {
         int n = snprintf(run_dir_storage, sizeof(run_dir_storage),
-                         TEMP_DIR "/%06d", run_num);
+                         TEMP_DIR "/" TEST_SERIAL_FMT, run_num);
         if (n < 0 || n >= (int)sizeof(run_dir_storage))
             break;
         if (mkdir(run_dir_storage, 0777) == 0) {
-            snprintf(serial_str, sizeof(serial_str), "%06d", run_num);
+            snprintf(serial_str, sizeof(serial_str), TEST_SERIAL_FMT, run_num);
             (void)write(fd_create, serial_str, strlen(serial_str));
             close(fd_create);
             char latest[PATH_MAX];
