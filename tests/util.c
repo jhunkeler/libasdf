@@ -103,12 +103,12 @@ static char run_dir_storage[PATH_MAX];
 
 /* Remove coordination files whose process groups no longer exist. */
 static void clean_stale_pgid_files(void) {
-    DIR *d = opendir(TEMP_DIR);
-    if (!d)
+    DIR *dir = opendir(TEMP_DIR);
+    if (!dir)
         return;
 
     struct dirent *ent;
-    while ((ent = readdir(d)) != NULL) {
+    while ((ent = readdir(dir)) != NULL) {
         int pgid = 0;
         if (sscanf(ent->d_name, PGID_FILE_TEMPLATE, &pgid) != 1 || pgid <= 0)
             continue;
@@ -120,7 +120,152 @@ static void clean_stale_pgid_files(void) {
         }
     }
 
-    closedir(d);
+    closedir(dir);
+}
+
+
+#define TEST_SERIAL_LEN 6
+#define TEST_SERIAL_FMT "%6d"
+#define TEST_SERIAL_MAX 1000000
+
+
+/*
+ * Try to read the run serial from an existing PGID coordination file.
+ * Returns 1 and sets run_dir_storage on success, 0 otherwise.
+ */
+static int join_existing_run(const char *pgid_file) {
+    int fd = open(pgid_file, O_RDONLY);
+    if (fd < 0)
+        return 0;
+
+    char serial_str[TEST_SERIAL_LEN + 1] = {0};
+    ssize_t n = read(fd, serial_str, sizeof(serial_str) - 1);
+    close(fd);
+
+    if (n <= 0)
+        return 0;
+
+    snprintf(run_dir_storage, sizeof(run_dir_storage), TEMP_DIR "/%s", serial_str);
+    return 1;
+}
+
+
+#define WAIT_FOR_PIONEER_ATTEMPTS 200
+#define WAIT_FOR_PIONEER_DELAY 5000 // usec
+
+
+/*
+ * Retry joining a run after losing the O_EXCL race to the pioneer.
+ * Polls the coordination file with a short backoff until the pioneer
+ * writes the serial.
+ */
+static void wait_for_pioneer(const char *pgid_file) {
+    for (int attempt = 0; attempt < WAIT_FOR_PIONEER_ATTEMPTS; attempt++) {
+        usleep(WAIT_FOR_PIONEER_DELAY);
+        if (join_existing_run(pgid_file))
+            return;
+    }
+    /* Timed out; get_run_dir() falls back to TEMP_DIR. */
+}
+
+
+/*
+ * If the "latest" symlink points to an existing empty directory, set
+ * run_dir_storage to that directory and copy its serial into serial_out.
+ * Returns 1 on success (caller should reuse the directory), 0 otherwise.
+ */
+static int try_reuse_latest(char serial_out[TEST_SERIAL_LEN + 1]) {
+    char latest_link[PATH_MAX];
+    snprintf(latest_link, sizeof(latest_link), TEMP_DIR "/latest");
+
+    char serial_str[TEST_SERIAL_LEN + 1] = {0};
+    if (readlink(latest_link, serial_str, sizeof(serial_str) - 1) <= 0)
+        return 0;
+
+    char candidate[PATH_MAX];
+    snprintf(candidate, sizeof(candidate), TEMP_DIR "/%s", serial_str);
+
+    DIR *dir = opendir(candidate);
+    if (!dir)
+        return 0;
+
+    int is_empty = 1;
+    struct dirent *ent;
+    while ((ent = readdir(dir)) != NULL) {
+        if (strcmp(ent->d_name, ".") != 0 && strcmp(ent->d_name, "..") != 0) {
+            is_empty = 0;
+            break;
+        }
+    }
+    closedir(dir);
+
+    if (!is_empty)
+        return 0;
+
+    snprintf(run_dir_storage, sizeof(run_dir_storage), "%s", candidate);
+    snprintf(serial_out, TEST_SERIAL_LEN + 1, "%s", serial_str);
+    return 1;
+}
+
+
+/* Scan TEMP_DIR and return one past the highest existing numbered run dir. */
+static int next_run_number(void) {
+    int max_num = 0;
+    DIR *dir = opendir(TEMP_DIR);
+    if (!dir)
+        return 1;
+
+    struct dirent *ent;
+    while ((ent = readdir(dir)) != NULL) {
+        int num = 0;
+        if (strlen(ent->d_name) == TEST_SERIAL_LEN
+                && sscanf(ent->d_name, TEST_SERIAL_FMT, &num) == 1
+                && num > max_num)
+            max_num = num;
+    }
+    closedir(dir);
+    return max_num + 1;
+}
+
+
+/*
+ * Pioneer: create the run directory, write the serial to the coordination
+ * file, and update the "latest" symlink.  Cleans up pgid_file on failure.
+ */
+static void pioneer_setup(int fd_create, const char *pgid_file) {
+    char serial_str[TEST_SERIAL_LEN + 1] = {0};
+
+    /* Reuse the previous run directory if it is still empty. */
+    if (try_reuse_latest(serial_str)) {
+        (void)write(fd_create, serial_str, strlen(serial_str));
+        close(fd_create);
+        return;
+    }
+
+    /* Find and create the next sequential run directory. */
+    for (int run_num = next_run_number(); run_num < TEST_SERIAL_MAX; run_num++) {
+        int n = snprintf(run_dir_storage, sizeof(run_dir_storage),
+                         TEMP_DIR "/%06d", run_num);
+        if (n < 0 || n >= (int)sizeof(run_dir_storage))
+            break;
+        if (mkdir(run_dir_storage, 0777) == 0) {
+            snprintf(serial_str, sizeof(serial_str), "%06d", run_num);
+            (void)write(fd_create, serial_str, strlen(serial_str));
+            close(fd_create);
+            char latest[PATH_MAX];
+            snprintf(latest, sizeof(latest), TEMP_DIR "/latest");
+            unlink(latest);
+            symlink(serial_str, latest);  /* best-effort */
+            return;
+        }
+        if (errno != EEXIST)
+            break;
+    }
+
+    /* Failed to create a run directory; clean up and fall back. */
+    run_dir_storage[0] = '\0';
+    close(fd_create);
+    unlink(pgid_file);
 }
 
 
@@ -133,135 +278,19 @@ static void init_run_dir(void) {
     char pgid_file[PATH_MAX];
     snprintf(pgid_file, sizeof(pgid_file), TEMP_DIR "/" PGID_FILE_TEMPLATE, (int)pgid);
 
-    /*
-     * Follower path: if a coordination file already exists for this PGID,
-     * read the run serial from it and reuse the same directory.
-     */
-    {
-        int fd = open(pgid_file, O_RDONLY);
-        if (fd >= 0) {
-            char serial_str[7] = {0};
-            ssize_t n = read(fd, serial_str, sizeof(serial_str) - 1);
-            close(fd);
-            if (n > 0) {
-                snprintf(run_dir_storage, sizeof(run_dir_storage),
-                         TEMP_DIR "/%s", serial_str);
-                return;
-            }
-            /* File exists but is empty: pioneer hasn't written yet; fall through
-             * to a brief retry below rather than creating a competing directory. */
-        }
-    }
+    /* Follower: join an existing run for this PGID. */
+    if (join_existing_run(pgid_file))
+        return;
 
-    /*
-     * Pioneer path: atomically claim the coordination file.  If O_EXCL fails
-     * with EEXIST the pioneer beat us; retry reading with a short backoff.
-     */
+    /* Pioneer: atomically claim the coordination file. */
     int fd_create = open(pgid_file, O_WRONLY | O_CREAT | O_EXCL, 0600);
-
     if (fd_create < 0) {
-        if (errno != EEXIST)
-            return;  /* unexpected error; get_run_dir() will fall back to TEMP_DIR */
-
-        /* Lost the race to the pioneer; wait for it to write the serial. */
-        for (int attempt = 0; attempt < 200; attempt++) {
-            usleep(5000);
-            int fd = open(pgid_file, O_RDONLY);
-            if (fd < 0)
-                continue;
-            char serial_str[7] = {0};
-            ssize_t n = read(fd, serial_str, sizeof(serial_str) - 1);
-            close(fd);
-            if (n > 0) {
-                snprintf(run_dir_storage, sizeof(run_dir_storage),
-                         TEMP_DIR "/%s", serial_str);
-                return;
-            }
-        }
-        return;  /* timed out; get_run_dir() falls back to TEMP_DIR */
+        if (errno == EEXIST)
+            wait_for_pioneer(pgid_file);  /* lost the race; become a follower */
+        return;
     }
 
-    /*
-     * We are the pioneer.  Before creating a new numbered directory, check
-     * whether the "latest" run directory is empty.  If it is, reuse that
-     * serial so that clean runs do not accumulate empty directories.
-     */
-    {
-        char latest_link[PATH_MAX];
-        char serial_str[7] = {0};
-        snprintf(latest_link, sizeof(latest_link), TEMP_DIR "/latest");
-        if (readlink(latest_link, serial_str, sizeof(serial_str) - 1) > 0) {
-            char candidate[PATH_MAX];
-            snprintf(candidate, sizeof(candidate), TEMP_DIR "/%s", serial_str);
-            DIR *ld = opendir(candidate);
-            if (ld) {
-                int is_empty = 1;
-                struct dirent *lent;
-                while ((lent = readdir(ld)) != NULL) {
-                    if (strcmp(lent->d_name, ".") != 0
-                            && strcmp(lent->d_name, "..") != 0) {
-                        is_empty = 0;
-                        break;
-                    }
-                }
-                closedir(ld);
-                if (is_empty) {
-                    /* Reuse the existing empty directory. */
-                    snprintf(run_dir_storage, sizeof(run_dir_storage),
-                             "%s", candidate);
-                    (void)write(fd_create, serial_str, strlen(serial_str));
-                    close(fd_create);
-                    /* "latest" already points here; no need to update. */
-                    return;
-                }
-            }
-        }
-    }
-
-    /* Scan for the highest existing numbered run directory. */
-    int run_num = 0;
-    DIR *d = opendir(TEMP_DIR);
-    if (d) {
-        struct dirent *ent;
-        while ((ent = readdir(d)) != NULL) {
-            int num = 0;
-            if (strlen(ent->d_name) == 6
-                    && sscanf(ent->d_name, "%6d", &num) == 1
-                    && num > run_num)
-                run_num = num;
-        }
-        closedir(d);
-    }
-
-    /* Create the next sequential run directory (mkdir is atomic on POSIX). */
-    for (run_num++; run_num < 1000000; run_num++) {
-        if (snprintf(run_dir_storage, sizeof(run_dir_storage),
-                     TEMP_DIR "/%06d", run_num) >= (int)sizeof(run_dir_storage)) {
-            run_dir_storage[0] = '\0';
-            close(fd_create);
-            unlink(pgid_file);
-            return;
-        }
-        if (mkdir(run_dir_storage, 0777) == 0)
-            break;
-        if (errno != EEXIST) {
-            run_dir_storage[0] = '\0';
-            close(fd_create);
-            unlink(pgid_file);
-            return;
-        }
-    }
-
-    /* Write the serial into the coordination file and update "latest". */
-    char serial_str[7];
-    snprintf(serial_str, sizeof(serial_str), "%06d", run_num);
-    (void)write(fd_create, serial_str, strlen(serial_str));
-    close(fd_create);
-
-    char latest[PATH_MAX];
-    snprintf(latest, sizeof(latest), TEMP_DIR "/latest");
-    unlink(latest);
-    symlink(serial_str, latest);  /* best-effort */
+    pioneer_setup(fd_create, pgid_file);
 }
 
 
