@@ -4,6 +4,7 @@
 #include <asdf/core/extension_metadata.h>
 #include <asdf/core/history_entry.h>
 #include <asdf/core/software.h>
+#include <asdf/core/time.h>
 #include <asdf/extension.h>
 #include <asdf/util.h>
 

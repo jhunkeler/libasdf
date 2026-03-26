@@ -37,6 +37,7 @@ check_PROGRAMS = \
     test-parser.unit \
     test-stream.unit \
     test-tests.unit \
+    test-time.unit \
     test-value.unit \
     test-value-util.unit \
     test-yaml.unit
@@ -142,7 +143,7 @@ test_parse_util_unit_SOURCES = \
 test_parse_util_unit_CPPFLAGS = $(unit_test_cppflags)
 test_parse_util_unit_CFLAGS = $(unit_test_cflags)
 test_parse_util_unit_LDFLAGS = $(unit_test_ldflags)
-test_parse_util_unit_LDADD = libmunit.a $(FYAML_LIBS) $(MD5_LIBS)
+test_parse_util_unit_LDADD = libmunit.a $(FYAML_LIBS) $(STATGRAB_LIBS) $(MD5_LIBS)
 
 if HAVE_LINKER_WRAP
 # test-malloc-fail.unit
@@ -197,6 +198,13 @@ test_tests_unit_CFLAGS = $(unit_test_cflags)
 test_tests_unit_LDFLAGS = $(unit_test_ldflags)
 test_tests_unit_LDADD = libmunit.a $(STATGRAB_LIBS)
 
+# test-time.unit
+test_time_unit_SOURCES = test-time.c
+test_time_unit_CPPFLAGS = $(unit_test_cppflags)
+test_time_unit_CFLAGS = $(unit_test_cflags)
+test_time_unit_LDFLAGS = $(unit_test_ldflags)
+test_time_unit_LDADD = $(unit_test_ldadd)
+
 # test-value.unit
 test_value_unit_SOURCES = test-value.c
 test_value_unit_CPPFLAGS = $(unit_test_cppflags)
@@ -212,7 +220,7 @@ test_value_util_unit_SOURCES = \
 test_value_util_unit_CPPFLAGS = $(unit_test_cppflags)
 test_value_util_unit_CFLAGS = $(unit_test_cflags)
 test_value_util_unit_LDFLAGS = $(unit_test_ldflags)
-test_value_util_unit_LDADD = libmunit.a
+test_value_util_unit_LDADD = libmunit.a $(STATGRAB_LIBS)
 
 # test-yaml.unit
 test_yaml_unit_SOURCES = \
@@ -367,6 +375,7 @@ EXTRA_DIST += \
     fixtures/scalars-out.asdf \
     fixtures/tagged-scalars.asdf \
     fixtures/tiles.asdf \
+    fixtures/time.asdf \
     fixtures/trivial-extension.asdf \
     fixtures/value-types.asdf \
     fixtures/verify-checksums/255-2-blocks.verify-checksums.txt \
