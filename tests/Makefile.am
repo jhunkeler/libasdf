@@ -142,7 +142,7 @@ test_parse_util_unit_SOURCES = \
 test_parse_util_unit_CPPFLAGS = $(unit_test_cppflags)
 test_parse_util_unit_CFLAGS = $(unit_test_cflags)
 test_parse_util_unit_LDFLAGS = $(unit_test_ldflags)
-test_parse_util_unit_LDADD = libmunit.a $(FYAML_LIBS) $(MD5_LIBS)
+test_parse_util_unit_LDADD = libmunit.a $(FYAML_LIBS) $(STATGRAB_LIBS) $(MD5_LIBS)
 
 if HAVE_LINKER_WRAP
 # test-malloc-fail.unit
@@ -212,7 +212,7 @@ test_value_util_unit_SOURCES = \
 test_value_util_unit_CPPFLAGS = $(unit_test_cppflags)
 test_value_util_unit_CFLAGS = $(unit_test_cflags)
 test_value_util_unit_LDFLAGS = $(unit_test_ldflags)
-test_value_util_unit_LDADD = libmunit.a
+test_value_util_unit_LDADD = libmunit.a $(STATGRAB_LIBS)
 
 # test-yaml.unit
 test_yaml_unit_SOURCES = \

@@ -31,14 +31,19 @@ MU_TEST(test_test_name_2) {
 MU_TEST(test_get_temp_file_path) {
     const char *filename = get_temp_file_path(fixture->tempfile_prefix, ".asdf");
     assert_not_null(filename);
+    /* File should exist and live under the run directory */
     struct stat st;
-    assert_int(stat(TEMP_DIR, &st), !=, -1);
-    size_t temp_dir_len = strlen(TEMP_DIR);
+    assert_int(stat(filename, &st), ==, 0);
+    const char *run_dir = get_run_dir();
+    size_t run_dir_len = strlen(run_dir);
     size_t prefix_len = strlen(fixture->tempfile_prefix);
-    assert_int(strlen(filename), ==, temp_dir_len + 1 + prefix_len + 6 + 5);
-    assert_memory_equal(temp_dir_len, filename, TEMP_DIR);
-    assert_memory_equal(prefix_len, filename + 1 + temp_dir_len, fixture->tempfile_prefix);
-    assert_memory_equal(5, filename + 1 + temp_dir_len + prefix_len + 6, ".asdf");
+    /* get_temp_file_path strips the trailing '-' before a '.' suffix, so the
+     * filename is run_dir + "/" + prefix_without_trailing_dash + ".asdf" */
+    assert_int(strlen(filename), ==, run_dir_len + 1 + (prefix_len - 1) + 5);
+    assert_memory_equal(run_dir_len, filename, run_dir);
+    assert_char(filename[run_dir_len], ==, '/');
+    assert_memory_equal(prefix_len - 1, filename + run_dir_len + 1, fixture->tempfile_prefix);
+    assert_string_equal(filename + run_dir_len + 1 + prefix_len - 1, ".asdf");
     return MUNIT_OK;
 }
 

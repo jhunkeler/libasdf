@@ -120,18 +120,26 @@ static inline void mu_cleanup_tempfiles(const fixtures *fix) {
     if (getenv("ASDF_TEST_KEEP_TEMP"))
         return;
 
-    DIR *d = opendir(TEMP_DIR);
+    const char *run_dir = get_run_dir();
+    DIR *d = opendir(run_dir);
     if (!d)
         return;
 
     const char *prefix = fix->tempfile_prefix;
     size_t prefix_len = strlen(prefix);
+    /* Strip trailing '-': get_temp_file_path drops it before '.' suffixes,
+     * so filenames are "suite-test.asdf" not "suite-test-.asdf".
+     * Match on the base name, then confirm the next char is '-' or '.' */
+    size_t match_len = (prefix_len > 0 && prefix[prefix_len - 1] == '-')
+                           ? prefix_len - 1
+                           : prefix_len;
 
     struct dirent *ent;
     while ((ent = readdir(d)) != NULL) {
-        if (strncmp(ent->d_name, prefix, prefix_len) == 0) {
+        char c = ent->d_name[match_len];
+        if (strncmp(ent->d_name, prefix, match_len) == 0 && (c == '-' || c == '.')) {
             char fullpath[PATH_MAX];
-            snprintf(fullpath, sizeof(fullpath), "%s/%s", TEMP_DIR, ent->d_name);
+            snprintf(fullpath, sizeof(fullpath), "%s/%s", run_dir, ent->d_name);
             unlink(fullpath);  /* ignore errors */
         }
     }

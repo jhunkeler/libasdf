@@ -2,7 +2,11 @@
  * Utilities for unit tests
  */
 
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -31,7 +35,7 @@ size_t get_total_memory(void) {
 #ifndef HAVE_STATGRAB
     return 0;
 #else
-    sg_init(1); // TODO: Maybe move this to somewhere else like during library init
+    sg_init(1);
     size_t entries = 0;
     sg_mem_stats *mem_stats = sg_get_mem_stats(&entries);
     sg_shutdown();
@@ -66,38 +70,244 @@ static void ensure_tmp_dir(void) {
 }
 
 
-const char *get_temp_file_path(const char *prefix, const char *suffix) {
-    ensure_tmp_dir();
+/**
+ * Per-run directory: TEMP_DIR/{:06d}/
+ *
+ * All test binaries that share a process group (i.e. all binaries launched by
+ * a single `make check` invocation) land in the same numbered subdirectory.
+ * Sequential numbering makes it easy to compare between recent runs.  The
+ * "latest" symlink always points to the most recently started run.
+ *
+ * A PGID coordination file (TEMP_DIR/.pgid-<PGID>) records the run serial and
+ * persists for as long as the process group is alive.  When a test binary
+ * starts it checks whether a coordination file exists for its PGID:
+ *
+ *   - No file (pioneer): create the next numbered run directory, write the
+ *     serial to the coordination file, and update the "latest" symlink.
+ *   - File present (follower): read the serial and reuse the same directory.
+ *
+ * At startup each binary also lazily removes coordination files whose process
+ * groups are no longer alive (kill(-pgid, 0) == ESRCH).
+ *
+ * Note: in non-interactive shells without job control, `make` inherits the
+ * invoking shell's PGID rather than creating its own, so two sequential
+ * `make check` calls in the same shell session may share a PGID.  The stale
+ * check only fires once the shell exits, so the second run would reuse the
+ * first run's directory.  This edge case is uncommon enough in practice to
+ * leave unaddressed for now.
+ */
+static char run_dir_storage[PATH_MAX];
 
-    static char path[PATH_MAX];
-    static char fullpath[PATH_MAX];
-    int n = snprintf(path, sizeof(path), TEMP_DIR "/%sXXXXXX", prefix ? prefix : "");
+#define PGID_FILE_TEMPLATE ".pgid-%d"
 
-    if (n < 0 || n >= sizeof(path))
-        return NULL;
 
-    int fd = mkstemp(path);
+/* Remove coordination files whose process groups no longer exist. */
+static void clean_stale_pgid_files(void) {
+    DIR *d = opendir(TEMP_DIR);
+    if (!d)
+        return;
 
-    if (fd < 0)
-        return NULL;
+    struct dirent *ent;
+    while ((ent = readdir(d)) != NULL) {
+        int pgid = 0;
+        if (sscanf(ent->d_name, PGID_FILE_TEMPLATE, &pgid) != 1 || pgid <= 0)
+            continue;
 
-    close(fd);
-
-    if (suffix) {
-        n = snprintf(fullpath, sizeof(fullpath), "%s%s", path, suffix);
-
-        if (n < 0 || n >= sizeof(fullpath))
-            return NULL;
-
-        if (rename(path, fullpath) != 0) {
+        if (kill(-(pid_t)pgid, 0) == -1 && errno == ESRCH) {
+            char path[PATH_MAX];
+            snprintf(path, sizeof(path), TEMP_DIR "/%s", ent->d_name);
             unlink(path);
-            return NULL;
         }
-
-        return fullpath;
     }
 
-    return path;
+    closedir(d);
+}
+
+
+__attribute__((constructor))
+static void init_run_dir(void) {
+    ensure_tmp_dir();
+    clean_stale_pgid_files();
+
+    pid_t pgid = getpgrp();
+    char pgid_file[PATH_MAX];
+    snprintf(pgid_file, sizeof(pgid_file), TEMP_DIR "/" PGID_FILE_TEMPLATE, (int)pgid);
+
+    /*
+     * Follower path: if a coordination file already exists for this PGID,
+     * read the run serial from it and reuse the same directory.
+     */
+    {
+        int fd = open(pgid_file, O_RDONLY);
+        if (fd >= 0) {
+            char serial_str[7] = {0};
+            ssize_t n = read(fd, serial_str, sizeof(serial_str) - 1);
+            close(fd);
+            if (n > 0) {
+                snprintf(run_dir_storage, sizeof(run_dir_storage),
+                         TEMP_DIR "/%s", serial_str);
+                return;
+            }
+            /* File exists but is empty: pioneer hasn't written yet; fall through
+             * to a brief retry below rather than creating a competing directory. */
+        }
+    }
+
+    /*
+     * Pioneer path: atomically claim the coordination file.  If O_EXCL fails
+     * with EEXIST the pioneer beat us; retry reading with a short backoff.
+     */
+    int fd_create = open(pgid_file, O_WRONLY | O_CREAT | O_EXCL, 0600);
+
+    if (fd_create < 0) {
+        if (errno != EEXIST)
+            return;  /* unexpected error; get_run_dir() will fall back to TEMP_DIR */
+
+        /* Lost the race to the pioneer; wait for it to write the serial. */
+        for (int attempt = 0; attempt < 200; attempt++) {
+            usleep(5000);
+            int fd = open(pgid_file, O_RDONLY);
+            if (fd < 0)
+                continue;
+            char serial_str[7] = {0};
+            ssize_t n = read(fd, serial_str, sizeof(serial_str) - 1);
+            close(fd);
+            if (n > 0) {
+                snprintf(run_dir_storage, sizeof(run_dir_storage),
+                         TEMP_DIR "/%s", serial_str);
+                return;
+            }
+        }
+        return;  /* timed out; get_run_dir() falls back to TEMP_DIR */
+    }
+
+    /*
+     * We are the pioneer.  Before creating a new numbered directory, check
+     * whether the "latest" run directory is empty.  If it is, reuse that
+     * serial so that clean runs do not accumulate empty directories.
+     */
+    {
+        char latest_link[PATH_MAX];
+        char serial_str[7] = {0};
+        snprintf(latest_link, sizeof(latest_link), TEMP_DIR "/latest");
+        if (readlink(latest_link, serial_str, sizeof(serial_str) - 1) > 0) {
+            char candidate[PATH_MAX];
+            snprintf(candidate, sizeof(candidate), TEMP_DIR "/%s", serial_str);
+            DIR *ld = opendir(candidate);
+            if (ld) {
+                int is_empty = 1;
+                struct dirent *lent;
+                while ((lent = readdir(ld)) != NULL) {
+                    if (strcmp(lent->d_name, ".") != 0
+                            && strcmp(lent->d_name, "..") != 0) {
+                        is_empty = 0;
+                        break;
+                    }
+                }
+                closedir(ld);
+                if (is_empty) {
+                    /* Reuse the existing empty directory. */
+                    snprintf(run_dir_storage, sizeof(run_dir_storage),
+                             "%s", candidate);
+                    (void)write(fd_create, serial_str, strlen(serial_str));
+                    close(fd_create);
+                    /* "latest" already points here; no need to update. */
+                    return;
+                }
+            }
+        }
+    }
+
+    /* Scan for the highest existing numbered run directory. */
+    int run_num = 0;
+    DIR *d = opendir(TEMP_DIR);
+    if (d) {
+        struct dirent *ent;
+        while ((ent = readdir(d)) != NULL) {
+            int num = 0;
+            if (strlen(ent->d_name) == 6
+                    && sscanf(ent->d_name, "%6d", &num) == 1
+                    && num > run_num)
+                run_num = num;
+        }
+        closedir(d);
+    }
+
+    /* Create the next sequential run directory (mkdir is atomic on POSIX). */
+    for (run_num++; run_num < 1000000; run_num++) {
+        if (snprintf(run_dir_storage, sizeof(run_dir_storage),
+                     TEMP_DIR "/%06d", run_num) >= (int)sizeof(run_dir_storage)) {
+            run_dir_storage[0] = '\0';
+            close(fd_create);
+            unlink(pgid_file);
+            return;
+        }
+        if (mkdir(run_dir_storage, 0777) == 0)
+            break;
+        if (errno != EEXIST) {
+            run_dir_storage[0] = '\0';
+            close(fd_create);
+            unlink(pgid_file);
+            return;
+        }
+    }
+
+    /* Write the serial into the coordination file and update "latest". */
+    char serial_str[7];
+    snprintf(serial_str, sizeof(serial_str), "%06d", run_num);
+    (void)write(fd_create, serial_str, strlen(serial_str));
+    close(fd_create);
+
+    char latest[PATH_MAX];
+    snprintf(latest, sizeof(latest), TEMP_DIR "/latest");
+    unlink(latest);
+    symlink(serial_str, latest);  /* best-effort */
+}
+
+
+/* On exit, attempt to remove the run directory if it is empty.  This is
+ * best-effort: rmdir silently fails on a non-empty directory, and with
+ * parallel test execution (make -jN) multiple binaries share the directory,
+ * so only the last binary to exit will succeed if no files were left. */
+__attribute__((destructor))
+static void cleanup_run_dir(void) {
+    if (run_dir_storage[0])
+        rmdir(run_dir_storage);  /* no-op if non-empty */
+}
+
+
+const char *get_run_dir(void) {
+    /* Fallback to TEMP_DIR if the run directory could not be created. */
+    return run_dir_storage[0] ? run_dir_storage : TEMP_DIR;
+}
+
+
+const char *get_temp_file_path(const char *prefix, const char *suffix) {
+    static char fullpath[PATH_MAX];
+
+    /* When prefix ends with '-' and suffix starts with '.' (e.g. ".asdf"),
+     * strip the trailing '-' so we get "test-name.asdf" not "test-name-.asdf" */
+    size_t plen = prefix ? strlen(prefix) : 0;
+    if (plen > 0 && prefix[plen - 1] == '-' && suffix && suffix[0] == '.')
+        plen--;
+
+    int n = snprintf(fullpath, sizeof(fullpath), "%s/%.*s%s",
+                     get_run_dir(), (int)plen, prefix ? prefix : "",
+                     suffix ? suffix : "");
+
+    if (n < 0 || n >= (int)sizeof(fullpath))
+        return NULL;
+
+    /* Ensure the run directory exists: the destructor may have removed it if
+     * it was empty between the last test binary's exit and this call. */
+    mkdir(get_run_dir(), 0777);  /* no-op if it already exists */
+
+    /* Create the file so it exists (matching the old mkstemp-based behaviour). */
+    int fd = open(fullpath, O_CREAT | O_WRONLY, 0600);
+    if (fd >= 0)
+        close(fd);
+
+    return fullpath;
 }
 
 
