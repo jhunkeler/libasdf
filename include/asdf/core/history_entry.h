@@ -8,12 +8,14 @@
 #include <asdf/extension.h>
 #include <asdf/file.h>
 
+#include <asdf/core/time.h>
+
 
 ASDF_BEGIN_DECLS
 
 typedef struct {
     const char *description;
-    struct timespec time;
+    const asdf_time_t *time;
     const asdf_software_t **software;
 } asdf_history_entry_t;
 
@@ -28,8 +30,8 @@ ASDF_DECLARE_EXTENSION(history_entry, asdf_history_entry_t);
  *   Allow passing a timestamp for the history entry as well, or an extended
  *   version that accepts a timestamp.
  *
- * :params file: Open `asdf_file_t *` handle
- * :params description: The text to add to the history entry
+ * :param file: Open `asdf_file_t *` handle
+ * :param description: The text to add to the history entry
  * :return: Non-zero if adding the history entry failed
  */
 ASDF_EXPORT int asdf_history_entry_add(asdf_file_t *file, const char *description);

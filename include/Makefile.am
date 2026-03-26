@@ -6,6 +6,7 @@ nobase_include_HEADERS = \
     asdf/core/history_entry.h \
     asdf/core/ndarray.h \
     asdf/core/software.h \
+    asdf/core/time.h \
     asdf/emitter.h \
     asdf/error.h \
     asdf/event.h \
