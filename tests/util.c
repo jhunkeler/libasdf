@@ -237,7 +237,8 @@ static void pioneer_setup(int fd_create, const char *pgid_file) {
 
     /* Reuse the previous run directory if it is still empty. */
     if (try_reuse_latest(serial_str)) {
-        (void)write(fd_create, serial_str, strlen(serial_str));
+        if (write(fd_create, serial_str, strlen(serial_str)) < 0)
+            goto failure;
         close(fd_create);
         return;
     }
@@ -249,20 +250,28 @@ static void pioneer_setup(int fd_create, const char *pgid_file) {
         if (n < 0 || n >= (int)sizeof(run_dir_storage))
             break;
         if (mkdir(run_dir_storage, 0777) == 0) {
-            snprintf(serial_str, sizeof(serial_str), TEST_SERIAL_FMT, run_num);
-            (void)write(fd_create, serial_str, strlen(serial_str));
+            /* Use a larger buffer to avoid format-truncation: run_num is
+             * bounded by TEST_SERIAL_MAX (1000000) so the output is always
+             * TEST_SERIAL_LEN digits, but GCC sees the full int range. */
+            char serial_buf[32];
+            snprintf(serial_buf, sizeof(serial_buf), TEST_SERIAL_FMT, run_num);
+            memcpy(serial_str, serial_buf, TEST_SERIAL_LEN + 1);
+            if (write(fd_create, serial_str, strlen(serial_str)) < 0)
+                goto failure;
             close(fd_create);
             char latest[PATH_MAX];
             snprintf(latest, sizeof(latest), TEMP_DIR "/latest");
             unlink(latest);
-            symlink(serial_str, latest);  /* best-effort */
+            int rc = symlink(serial_str, latest);  /* best-effort */
+            (void)rc;
             return;
         }
         if (errno != EEXIST)
             break;
     }
 
-    /* Failed to create a run directory; clean up and fall back. */
+failure:
+    /* Failed to create a run directory or write the serial; clean up. */
     run_dir_storage[0] = '\0';
     close(fd_create);
     unlink(pgid_file);
