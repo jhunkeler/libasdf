@@ -11,6 +11,7 @@ nobase_include_HEADERS = \
     asdf/error.h \
     asdf/event.h \
     asdf/extension.h \
+    asdf/extension_util.h \
     asdf/file.h \
     asdf/log.h \
     asdf/parser.h \
@@ -18,20 +19,6 @@ nobase_include_HEADERS = \
     asdf/value.h \
     asdf/yaml.h
 
-
-if WITH_GWCS
-    nobase_include_HEADERS += \
-        asdf/gwcs/core.h \
-        asdf/gwcs/fitswcs_imaging.h \
-        asdf/gwcs/frame.h \
-        asdf/gwcs/frame_celestial.h \
-        asdf/gwcs/frame2d.h \
-        asdf/gwcs/gwcs.h \
-        asdf/gwcs/step.h \
-        asdf/gwcs/transform.h \
-        asdf/gwcs/transforms/property/bounding_box.h \
-        asdf/gwcs/wcs.h
-endif
 
 
 # CMake-related files to include in the distribution

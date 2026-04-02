@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include <asdf/util.h>
+
 typedef enum {
     ASDF_LOG_NONE = 0,
     ASDF_LOG_TRACE,
@@ -56,6 +58,36 @@ typedef struct {
     asdf_log_fields_t fields;
     bool no_color;
 } asdf_log_cfg_t;
+
+
+/* Forward declaration — full definition in <asdf/file.h> */
+typedef struct asdf_file asdf_file_t;
+
+
+ASDF_BEGIN_DECLS
+
+/**
+ * Public logging API for extension authors.
+ *
+ * Log a message associated with the given file's log configuration.
+ * Use asdf_value_file(value) to get the file pointer from a value.
+ */
+ASDF_EXPORT void asdf_file_log(
+    const asdf_file_t *file,
+    asdf_log_level_t level,
+    const char *src_file,
+    int lineno,
+    const char *fmt,
+    ...);
+
+#ifdef ASDF_LOG_ENABLED
+#define ASDF_LOG(file, level, ...) \
+    asdf_file_log((file), (level), __FILE__, __LINE__, __VA_ARGS__)
+#else
+#define ASDF_LOG(file, level, ...) ((void)0)
+#endif
+
+ASDF_END_DECLS
 
 
 #endif /* ASDF_LOG_H */

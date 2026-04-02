@@ -237,20 +237,6 @@ asdf_public_headers = \
     $(wildcard $(top_srcdir)/include/asdf/core/*.h)
 
 
-if WITH_GWCS
-    check_PROGRAMS += \
-        test-gwcs.unit
-
-    # test-gwcs.unit
-    test_gwcs_unit_SOURCES = test-gwcs.c
-    test_gwcs_unit_CPPFLAGS = $(unit_test_cppflags)
-    test_gwcs_unit_CFLAGS = $(unit_test_cflags)
-    test_gwcs_unit_LDFLAGS = $(unit_test_ldflags)
-    test_gwcs_unit_LDADD = $(unit_test_ldadd)
-
-    asdf_public_headers += $(wildcard $(top_srcdir)/include/asdf/gwcs/*.h)
-endif
-
 
 # Shell tests
 TOOL_TESTS = test-events.sh test-info.sh

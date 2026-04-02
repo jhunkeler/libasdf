@@ -15,9 +15,8 @@ if (NOT HAVE_MD5)
     list(REMOVE_ITEM shell_files "${CMAKE_CURRENT_SOURCE_DIR}/test-verify-checksums.sh")
 endif()
 
-if (NOT WITH_GWCS)
-    list(REMOVE_ITEM source_files "${CMAKE_CURRENT_SOURCE_DIR}/test-gwcs.c")
-endif()
+# test-gwcs.c has moved to libasdf-gwcs
+list(REMOVE_ITEM source_files "${CMAKE_CURRENT_SOURCE_DIR}/test-gwcs.c")
 
 # test-malloc-fail requires --wrap linker support (GNU/LLVM ld).
 # Apple ld does not support it, so exclude the test on those platforms.

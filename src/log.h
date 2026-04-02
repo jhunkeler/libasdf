@@ -24,23 +24,29 @@
 #endif
 
 
+/* Override the public ASDF_LOG macro with the internal polymorphic version.
+ * Internal libasdf code passes a variety of asdf_base_t-based objects (parser,
+ * emitter, stream, etc.) as the first argument, not just asdf_file_t *.
+ * The public macro in <asdf/log.h> is for extension authors who always have
+ * an asdf_file_t * (obtained via asdf_value_file()). */
 #ifdef ASDF_LOG_ENABLED
+#undef ASDF_LOG
 #define ASDF_LOG(obj, level, ...) \
     do { \
         if ((level) >= ASDF_LOG_MIN_LEVEL) { \
             ASDF_GET_CONTEXT(obj); \
-            asdf_log(__ctx, (level), __FILE__, __LINE__, __VA_ARGS__); \
+            asdf_context_log(__ctx, (level), __FILE__, __LINE__, __VA_ARGS__); \
         } \
     } while (0)
 
+/* Internal macro for logging with an explicit asdf_context_t */
 #define ASDF_LOG_CTX(ctx, level, ...) \
     do { \
         if ((level) >= ASDF_LOG_MIN_LEVEL) { \
-            asdf_log(ctx, (level), __FILE__, __LINE__, __VA_ARGS__); \
+            asdf_context_log(ctx, (level), __FILE__, __LINE__, __VA_ARGS__); \
         } \
     } while (0)
 #else
-#define ASDF_LOG(obj, level, ...) ((void)0)
 #define ASDF_LOG_CTX(obj, level, ...) ((void)0)
 #endif
 
@@ -52,7 +58,7 @@
 #endif
 
 
-ASDF_LOCAL void asdf_log(
+ASDF_LOCAL void asdf_context_log(
     asdf_context_t *ctx,
     asdf_log_level_t level,
     const char *file,

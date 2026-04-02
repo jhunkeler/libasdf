@@ -247,3 +247,10 @@ Notes
 - Run ``make clean`` to clean build artifacts.
 - Run ``make project_source`` to generate a source archive with CPack
 - Run ``ctest --output-on-failure`` to execute unit tests
+
+Official Extensions
+===================
+
+- `libasdf-gwcs <https://github.com/asdf-format/libasdf-gwcs>`__ — GWCS (Generalized
+  World Coordinate System) extension for reading ASDF files containing WCS transforms
+  and coordinate frames.

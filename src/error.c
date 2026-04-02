@@ -145,7 +145,7 @@ void asdf_context_error_set_common(
 
 #ifdef ASDF_LOG_ENABLED
     if (level >= ASDF_LOG_MIN_LEVEL && ctx->error)
-        asdf_log(ctx, level, src_file, lineno, "%s", ctx->error);
+        asdf_context_log(ctx, level, src_file, lineno, "%s", ctx->error);
 #else
     (void)level;
     (void)src_file;
@@ -162,7 +162,7 @@ void asdf_context_error_set_oom(asdf_context_t *ctx, const char *src_file, int l
 
 #ifdef ASDF_LOG_ENABLED
     if (ASDF_LOG_FATAL >= ASDF_LOG_MIN_LEVEL && ctx->error)
-        asdf_log(ctx, ASDF_LOG_FATAL, src_file, lineno, "%s", ctx->error);
+        asdf_context_log(ctx, ASDF_LOG_FATAL, src_file, lineno, "%s", ctx->error);
 #else
     (void)src_file;
     (void)lineno;
@@ -184,7 +184,7 @@ void asdf_context_error_set_system(
 
 #ifdef ASDF_LOG_ENABLED
     if (ASDF_LOG_ERROR >= ASDF_LOG_MIN_LEVEL && ctx->error)
-        asdf_log(ctx, ASDF_LOG_ERROR, src_file, lineno, "%s", ctx->error);
+        asdf_context_log(ctx, ASDF_LOG_ERROR, src_file, lineno, "%s", ctx->error);
 #else
     (void)src_file;
     (void)lineno;

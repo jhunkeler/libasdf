@@ -286,20 +286,6 @@ AC_SUBST([ASDF_LIBS])
 
 # ------ Optional features ---------------------------------------------------
 
-AC_ARG_WITH([gwcs],
-  [AS_HELP_STRING([--with-gwcs],
-                  [Build with gwcs extension support--will later be moved to an external plugin])],
-  [with_gwcs=$withval],
-  [with_gwcs=no])
-
-
-AS_IF([test "x$with_gwcs" = "xyes"], [
-  AC_DEFINE([WITH_GWCS], [1], [Defined if building with gwcs enabled])
-  ASDF_OPTIONAL="${ASDF_OPTIONAL}gwcs "
-])
-AM_CONDITIONAL([WITH_GWCS], [test "x$with_gwcs" = "xyes"])
-
-
 # Enable/check doc build requirements
 ASDF_CHECK_SPHINX
 
@@ -311,7 +297,7 @@ AC_SUBST([PYTHON3])
 AC_SUBST([ASDF_CFLAGS])
 AC_SUBST([ASDF_LDFLAGS])
 AC_CONFIG_HEADERS([config.h]) # use config.h instead of passing -D in the command line
-AC_CONFIG_FILES([Makefile include/Makefile tests/Makefile third_party/Makefile docs/Makefile])
+AC_CONFIG_FILES([Makefile include/Makefile tests/Makefile third_party/Makefile docs/Makefile libasdf.pc])
 
 AC_OUTPUT
 
