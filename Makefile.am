@@ -115,6 +115,11 @@ asdf_LDADD =  third_party/libstc.la libasdf.la $(ARGP_LIBS) $(ASDF_LIBS)
 endif # ASDF_BUILD_TOOL
 
 
+pkgconfigdir = $(libdir)/pkgconfig
+pkgconfig_DATA = libasdf.pc
+CLEANFILES = libasdf.pc
+
+
 # Misc make targets
 format:
 	clang-format -i $(addprefix $(srcdir)/,$(src_files)) $(addprefix $(srcdir)/,$(src_headers))
