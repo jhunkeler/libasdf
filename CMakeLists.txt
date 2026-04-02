@@ -63,4 +63,13 @@ install(
 	DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
 )
 
+# Generate and install pkg-config file
+set(prefix ${CMAKE_INSTALL_PREFIX})
+set(exec_prefix ${CMAKE_INSTALL_PREFIX})
+set(libdir ${CMAKE_INSTALL_FULL_LIBDIR})
+set(includedir ${CMAKE_INSTALL_FULL_INCLUDEDIR})
+configure_file(${CMAKE_SOURCE_DIR}/libasdf.pc.in ${CMAKE_CURRENT_BINARY_DIR}/libasdf.pc @ONLY)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libasdf.pc
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
+
 
