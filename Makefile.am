@@ -68,26 +68,6 @@ src_headers = \
     src/value_util.h \
     src/yaml.h
 
-if WITH_GWCS
-    src_files += \
-        src/gwcs/fitswcs_imaging.c \
-        src/gwcs/frame.c \
-        src/gwcs/frame_celestial.c \
-        src/gwcs/frame2d.c \
-        src/gwcs/step.c \
-        src/gwcs/transform.c \
-        src/gwcs/transforms/property/bounding_box.c \
-        src/gwcs/wcs.c
-
-    src_headers += \
-        src/gwcs/fitswcs_imaging.h \
-        src/gwcs/frame.h \
-        src/gwcs/gwcs.h \
-        src/gwcs/step.h \
-        src/gwcs/transform.h \
-        src/gwcs/types/asdf_gwcs_transform_map.h
-endif
-
 include_dir = $(top_srcdir)/include
 
 AM_CFLAGS = $(ASDF_CFLAGS) -fvisibility=hidden -fmacro-prefix-map=$(top_srcdir)/=
@@ -143,12 +123,6 @@ endif
 .PHONY: docs distcheck-docs
 
 
-if WITH_GWCS
-CMAKE_WITH_GWCS=YES
-else
-CMAKE_WITH_GWCS=NO
-endif
-
 CMAKE_EXTRA_FLAGS=
 
 # Try building and running tests with cmake to ensure the cmake build works
@@ -163,7 +137,6 @@ distcheck-cmake:
 	mkdir $(distdir)/_build/cmake
 	cd $(distdir)/_build/cmake && \
 	    cmake ../.. \
-                -DWITH_GWCS=$(CMAKE_WITH_GWCS) \
                 -DENABLE_TESTING_ALL=YES \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DBZIP2_LIBRARIES=$(BZIP2_LIBS) \

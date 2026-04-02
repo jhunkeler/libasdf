@@ -34,21 +34,6 @@ set(libasdf_sources
     yaml.c
 )
 
-# Add optional gwcs extension sources
-if (WITH_GWCS)
-    set(libasdf_sources
-	${libasdf_sources}
-        gwcs/fitswcs_imaging.c
-        gwcs/frame2d.c
-        gwcs/frame.c
-        gwcs/frame_celestial.c
-        gwcs/step.c
-        gwcs/transform.c
-        gwcs/transforms/property/bounding_box.c
-        gwcs/wcs.c
-    )
-endif()
-
 # Generate an object library
 # i.e. build the source code once, and reuse it elsewhere
 add_library(libasdf_objs OBJECT ${libasdf_sources})
