@@ -103,6 +103,7 @@ nitpick_ignore = [
     ('c:identifier', 'asdf_event_t'),
     ('c:identifier', 'asdf_history_entry_t'),
     ('c:identifier', 'asdf_parser_cfg_t'),
+    ('c:identifier', 'asdf_tag_t'),
 ]
 
 # Add intersphinx mappings
