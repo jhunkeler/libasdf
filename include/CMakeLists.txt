@@ -11,6 +11,7 @@ install(
         asdf/error.h
         asdf/event.h
         asdf/extension.h
+        asdf/extension_util.h
         asdf/file.h
         asdf/log.h
         asdf/parser.h

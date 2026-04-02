@@ -7,6 +7,7 @@
 #endif
 
 #include "context.h"
+#include "file.h"
 #include "log.h"
 #include "util.h"
 
@@ -128,7 +129,7 @@ static void asdf_log_impl(
 }
 
 
-void asdf_log(
+void asdf_context_log(
     asdf_context_t *ctx,
     asdf_log_level_t level,
     const char *file,
@@ -150,6 +151,31 @@ void asdf_log(
     va_start(args, fmt);
     asdf_log_impl(
         ctx->log.stream, level, ctx->log.fields, ctx->log.no_color, file, lineno, fmt, args);
+    va_end(args);
+}
+
+
+void asdf_file_log(
+    const asdf_file_t *file,
+    asdf_log_level_t level,
+    const char *src_file,
+    int lineno,
+    const char *fmt,
+    ...) {
+    asdf_context_t *ctx = asdf_get_context_helper((void *)file);
+    va_list args;
+    va_start(args, fmt);
+    if (!ctx || !ctx->log.stream) {
+        asdf_log_fallback(ASDF_LOG_FATAL, src_file, lineno, "logging context not initialized");
+        va_end(args);
+        return;
+    }
+    if (ctx->log.level > level) {
+        va_end(args);
+        return;
+    }
+    asdf_log_impl(
+        ctx->log.stream, level, ctx->log.fields, ctx->log.no_color, src_file, lineno, fmt, args);
     va_end(args);
 }
 
