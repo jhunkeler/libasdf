@@ -81,7 +81,7 @@ jobs:
 
       - name: Configure
         run: |
-          CONFIGURE_FLAGS="--with-gwcs"
+          CONFIGURE_FLAGS=
           if [ "${{ matrix.asan }}" = "yes" ]; then
             CONFIGURE_FLAGS="--with-asan"
           fi
