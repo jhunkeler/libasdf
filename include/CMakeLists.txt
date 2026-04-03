@@ -24,11 +24,12 @@ install(
 
 install(
     FILES
-        asdf/core/history_entry.h
         asdf/core/asdf.h
+        asdf/core/datatype.h
         asdf/core/extension_metadata.h
-        asdf/core/software.h
+        asdf/core/history_entry.h
         asdf/core/ndarray.h
+        asdf/core/software.h
         asdf/core/time.h
 
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/asdf/core"
