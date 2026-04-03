@@ -33,13 +33,15 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED TRUE)
 set(PACKAGE_NAME "${PROJECT_NAME}")
 
-# Update git submodules
-list(APPEND submodules
-    asdf-standard
-    third_party/STC
-    tests/munit
-)
-submodule_init("${submodules}")
+# Update git submodules (only if in the git repo)
+if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
+    list(APPEND submodules
+        asdf-standard
+        third_party/STC
+        tests/munit
+    )
+    submodule_init("${submodules}")
+endif()
 
 include(ASDFOptions)
 include(ASDFDependencies)
@@ -49,18 +51,18 @@ add_subdirectory(third_party)
 add_subdirectory(src)
 add_subdirectory(include)
 if(ENABLE_DOCS)
-	add_subdirectory(docs)
+    add_subdirectory(docs)
 endif()
 if(ENABLE_TESTING)
-	enable_testing()
-	add_subdirectory(tests)
+    enable_testing()
+    add_subdirectory(tests)
 endif()
 
 install(
     FILES
         LICENSE
-	CHANGES.rst
-	DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
+        CHANGES.rst
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/${PROJECT_NAME}
 )
 
 # Generate and install pkg-config file
