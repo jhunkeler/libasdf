@@ -3,8 +3,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include <asdf/core/ndarray.h>
-#include <asdf/file.h>
+#include "asdf/core/ndarray.h"
+#include "asdf/file.h"
 
 #include "munit.h"
 #include "util.h"
@@ -551,6 +551,63 @@ MU_TEST(ndarray_structured_datatype) {
 }
 
 
+MU_TEST(ndarray_read_inline_data) {
+    const char *path = get_fixture_file_path("ndarray-inline.asdf");
+    asdf_file_t *file = asdf_open(path, "r");
+    assert_not_null(file);
+    asdf_ndarray_t *ndarray = NULL;
+    asdf_value_err_t err = asdf_get_ndarray(file, "implicit", &ndarray);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_not_null(ndarray);
+
+    uint64_t expected_shape[2] = {3, 3};
+    assert_int(ndarray->ndim, ==, 2);
+
+    for (uint32_t idx = 0; idx < ndarray->ndim; idx++)
+        assert_int(ndarray->shape[idx], ==, expected_shape[idx]);
+
+    asdf_datatype_t *datatype = &ndarray->datatype;
+    assert_int(datatype->type, ==, ASDF_DATATYPE_UINT8);
+    size_t size = 0;
+    const void *data = asdf_ndarray_data_raw(ndarray, &size);
+    assert_not_null(data);
+    assert_int(size, ==, 3 * 3 * (int)sizeof(uint8_t));
+
+    // Expected array data ; just 0 to 8
+    for (int idx = 0; idx < 3 * 3; idx++)
+        assert_int(((uint8_t *)data)[idx], ==, idx);
+
+    asdf_ndarray_destroy(ndarray);
+    ndarray = NULL;
+
+    // Test the ndarray with explicit datatype -- this should convert the raw
+    // values in the inline data that are formatted as ints to doubles
+    err = asdf_get_ndarray(file, "explicit", &ndarray);
+    assert_int(err, ==, ASDF_VALUE_OK);
+    assert_not_null(ndarray);
+
+    assert_int(ndarray->ndim, ==, 2);
+
+    for (uint32_t idx = 0; idx < ndarray->ndim; idx++)
+        assert_int(ndarray->shape[idx], ==, expected_shape[idx]);
+
+    datatype = &ndarray->datatype;
+    assert_int(datatype->type, ==, ASDF_DATATYPE_FLOAT64);
+    size = 0;
+    data = asdf_ndarray_data_raw(ndarray, &size);
+    assert_not_null(data);
+    assert_int(size, ==, 3 * 3 * (int)sizeof(double));
+
+    // Expected array data ; just 0 to 8
+    for (int idx = 0; idx < 3 * 3; idx++)
+        assert_double(((double *)data)[idx], ==, (double)idx);
+
+    asdf_ndarray_destroy(ndarray);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST(heap_use_after_free_issue_63) {
     const char *path = get_fixture_file_path("multiple_hdu.asdf");
     asdf_file_t *file = asdf_open(path, "r");
@@ -607,6 +664,7 @@ MU_TEST_SUITE(
     MU_RUN_TEST(ndarray_read_tile_byteswap),
     MU_RUN_TEST(ndarray_numeric_conversion, test_numeric_conversion_params),
     MU_RUN_TEST(ndarray_structured_datatype),
+    MU_RUN_TEST(ndarray_read_inline_data),
     MU_RUN_TEST(heap_use_after_free_issue_63)
 );
 
