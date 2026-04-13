@@ -28,7 +28,6 @@
  * * Reading structured datatypes (the datatypes are parsed but there is are
  *   no APIs yet for interpreted structured array data
  * * Reading arbitrarily strided data
- * * Reading inline array ``data``
  * * Masks are not parsed or used at all, whether simple mask values or mask
  *   arrays (though if present a warning is logged indicating lack of support)
  *
@@ -44,6 +43,7 @@
 #ifndef ASDF_CORE_NDARRAY_H
 #define ASDF_CORE_NDARRAY_H
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -240,6 +240,34 @@ ASDF_EXPORT void asdf_ndarray_data_dealloc(asdf_ndarray_t *ndarray);
  *   compressor; use `asdf_error` to check the error code
  */
 ASDF_EXPORT int asdf_ndarray_compression_set(asdf_ndarray_t *ndarray, const char *compression);
+
+
+/**
+ * Test if the ndarray is serialized inline
+ *
+ * If the ndarray was read from a file this will indicate whether or not it
+ * was serialized inline originally, otherwise indicates if it has been
+ * explicitly set inline with `asdf_ndarray_inline_set`
+ *
+ * :param ndarray: An `asdf_ndarray_t *`
+ * :return: True if the ndarray was or will be serialized inline
+ */
+ASDF_EXPORT bool asdf_ndarray_inline(asdf_ndarray_t *ndarray);
+
+
+/**
+ * Mark the ndarray for inline YAML storage when written
+ *
+ * When set to ``true``, the ndarray's data will be serialized as a nested
+ * YAML sequence under the ``data`` key rather than in a binary block.  A
+ * warning is logged if the number of elements exceeds the configured
+ * threshold (see ``asdf_emitter_cfg_t.inline_ndarray_warning_thresh``).
+ *
+ * :param ndarray: An `asdf_ndarray_t *`
+ * :param is_inline: Pass ``true`` to enable inline writing, ``false`` to
+ *   revert to binary block storage
+ */
+ASDF_EXPORT void asdf_ndarray_inline_set(asdf_ndarray_t *ndarray, bool is_inline);
 
 
 /**

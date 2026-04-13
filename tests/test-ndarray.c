@@ -2,6 +2,9 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "asdf/core/ndarray.h"
 #include "asdf/file.h"
@@ -608,6 +611,179 @@ MU_TEST(ndarray_read_inline_data) {
 }
 
 
+MU_TEST(ndarray_write_empty_inline_data) {
+    const char *out_path = get_temp_file_path(fixture->tempfile_prefix, ".asdf");
+    asdf_ndarray_t ndarray = {
+        .datatype = {.type = ASDF_DATATYPE_UINT8},
+        .byteorder = ASDF_BYTEORDER_LITTLE,
+        .ndim = 0,
+        .shape = NULL,
+    };
+    // For now it's still necessary to do a data_alloc even for empty ndarrays;
+    // although not strictly the case it's particlarly needed for use with a
+    // parallel data_dealloc or will result in memory leaks;
+    (void)asdf_ndarray_data_alloc(&ndarray);
+    asdf_ndarray_inline_set(&ndarray, true);
+
+    asdf_file_t *file = asdf_open(NULL);
+    assert_not_null(file);
+
+    assert_int(asdf_set_ndarray(file, "empty", &ndarray), ==, ASDF_VALUE_OK);
+    assert_int(asdf_write_to(file, out_path), ==, 0);
+    asdf_ndarray_data_dealloc(&ndarray);
+    asdf_close(file);
+
+    asdf_ndarray_t *ndarray_in = NULL;
+    file = asdf_open(out_path, "r");
+    assert_not_null(file);
+    assert_int(asdf_get_ndarray(file, "empty", &ndarray_in), ==, ASDF_VALUE_OK);
+    assert_not_null(ndarray_in);
+    assert_int(ndarray_in->ndim, ==, 0);
+    assert_true(asdf_ndarray_inline(ndarray_in));
+    asdf_ndarray_destroy(ndarray_in);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(ndarray_write_inline_data) {
+    const char *out_path = get_temp_file_path(fixture->tempfile_prefix, ".asdf");
+    uint64_t shape[2] = {3, 3};
+
+    /* Build uint8 3x3 ndarray with values 0-8 for the "implicit" key */
+    asdf_ndarray_t implicit_nd = {
+        .datatype = {.type = ASDF_DATATYPE_UINT8, .size = 1},
+        .byteorder = ASDF_BYTEORDER_LITTLE,
+        .ndim = 2,
+        .shape = shape,
+    };
+    uint8_t *impl_data = asdf_ndarray_data_alloc(&implicit_nd);
+    assert_not_null(impl_data);
+    for (int idx = 0; idx < 9; idx++)
+        impl_data[idx] = (uint8_t)idx;
+    asdf_ndarray_inline_set(&implicit_nd, true);
+
+    /* Build float64 3x3 ndarray with values 0.0-8.0 for the "explicit" key */
+    asdf_ndarray_t explicit_nd = {
+        .datatype = {.type = ASDF_DATATYPE_FLOAT64, .size = sizeof(double)},
+        .byteorder = ASDF_BYTEORDER_LITTLE,
+        .ndim = 2,
+        .shape = shape,
+    };
+    double *expl_data = asdf_ndarray_data_alloc(&explicit_nd);
+    assert_not_null(expl_data);
+    for (int idx = 0; idx < 9; idx++)
+        expl_data[idx] = (double)idx;
+    asdf_ndarray_inline_set(&explicit_nd, true);
+
+    /* Write both ndarrays to a temp file */
+    asdf_file_t *file = asdf_open(NULL);
+    assert_not_null(file);
+
+    asdf_value_t *implicit_val = asdf_value_of_ndarray(file, &implicit_nd);
+    assert_not_null(implicit_val);
+    assert_int(asdf_set_value(file, "implicit", implicit_val), ==, ASDF_VALUE_OK);
+
+    asdf_value_t *explicit_val = asdf_value_of_ndarray(file, &explicit_nd);
+    assert_not_null(explicit_val);
+    assert_int(asdf_set_value(file, "explicit", explicit_val), ==, ASDF_VALUE_OK);
+
+    assert_int(asdf_write_to(file, out_path), ==, 0);
+    asdf_close(file);
+    asdf_ndarray_data_dealloc(&implicit_nd);
+    asdf_ndarray_data_dealloc(&explicit_nd);
+
+    /* Read back and verify both ndarrays */
+    file = asdf_open(out_path, "r");
+    assert_not_null(file);
+
+    asdf_ndarray_t *ndarray = NULL;
+    assert_int(asdf_get_ndarray(file, "implicit", &ndarray), ==, ASDF_VALUE_OK);
+    assert_not_null(ndarray);
+    assert_int(ndarray->ndim, ==, 2);
+    assert_int((int)ndarray->shape[0], ==, 3);
+    assert_int((int)ndarray->shape[1], ==, 3);
+    assert_int(ndarray->datatype.type, ==, ASDF_DATATYPE_UINT8);
+    assert_true(asdf_ndarray_inline(ndarray));
+
+    size_t size = 0;
+    const void *data = asdf_ndarray_data_raw(ndarray, &size);
+    assert_not_null(data);
+    assert_int((int)size, ==, 9 * (int)sizeof(uint8_t));
+    for (int idx = 0; idx < 9; idx++)
+        assert_int(((const uint8_t *)data)[idx], ==, idx);
+    asdf_ndarray_destroy(ndarray);
+    ndarray = NULL;
+
+    assert_int(asdf_get_ndarray(file, "explicit", &ndarray), ==, ASDF_VALUE_OK);
+    assert_not_null(ndarray);
+    assert_int(ndarray->ndim, ==, 2);
+    assert_int((int)ndarray->shape[0], ==, 3);
+    assert_int((int)ndarray->shape[1], ==, 3);
+    assert_int(ndarray->datatype.type, ==, ASDF_DATATYPE_FLOAT64);
+    assert_true(asdf_ndarray_inline(ndarray));
+
+    size = 0;
+    data = asdf_ndarray_data_raw(ndarray, &size);
+    assert_not_null(data);
+    assert_int((int)size, ==, 9 * (int)sizeof(double));
+    for (int idx = 0; idx < 9; idx++)
+        assert_double(((const double *)data)[idx], ==, (double)idx);
+    asdf_ndarray_destroy(ndarray);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
+MU_TEST(ndarray_inline_warning_thresh) {
+    uint64_t shape[1] = {100};
+    asdf_ndarray_t ndarray = {
+        .datatype = {.type = ASDF_DATATYPE_UINT8},
+        .byteorder = ASDF_BYTEORDER_LITTLE,
+        .ndim = 1,
+        .shape = shape,
+    };
+    uint8_t *data = asdf_ndarray_data_alloc(&ndarray);
+    assert_not_null(data);
+    memset(data, 0, (size_t)shape[0]);
+    asdf_ndarray_inline_set(&ndarray, true);
+
+    /* Redirect warnings to a temp log file.  get_temp_file_path returns a
+     * static buffer, so duplicate the path before calling it again. */
+    const char *log_path_tmp = get_temp_file_path(fixture->tempfile_prefix, ".log");
+    char *log_path = strdup(log_path_tmp);
+    assert_not_null(log_path);
+    FILE *log_stream = fopen(log_path, "w");
+    assert_not_null(log_stream);
+
+    asdf_config_t config = {
+        .log = {.stream = log_stream, .level = ASDF_LOG_WARN, .no_color = true},
+        .emitter = {.inline_ndarray_warning_thresh = 99}
+    };
+    asdf_file_t *file = asdf_open_mem_ex(NULL, 0, &config);
+    assert_not_null(file);
+
+    asdf_value_t *val = asdf_value_of_ndarray(file, &ndarray);
+    assert_not_null(val);
+    assert_int(asdf_set_value(file, "data", val), ==, ASDF_VALUE_OK);
+
+    const char *out_path = get_temp_file_path(fixture->tempfile_prefix, "-thresh.asdf");
+    assert_int(asdf_write_to(file, out_path), ==, 0);
+    asdf_close(file);
+    fclose(log_stream);
+    asdf_ndarray_data_dealloc(&ndarray);
+
+    /* Verify that the warning was written to the log */
+    size_t log_len = 0;
+    char *log_content = read_file(log_path, &log_len);
+    free(log_path);
+    assert_not_null(log_content);
+    assert_not_null(strstr(log_content, "exceeding the threshold of 99"));
+    free(log_content);
+    return MUNIT_OK;
+}
+
+
 MU_TEST(heap_use_after_free_issue_63) {
     const char *path = get_fixture_file_path("multiple_hdu.asdf");
     asdf_file_t *file = asdf_open(path, "r");
@@ -665,6 +841,9 @@ MU_TEST_SUITE(
     MU_RUN_TEST(ndarray_numeric_conversion, test_numeric_conversion_params),
     MU_RUN_TEST(ndarray_structured_datatype),
     MU_RUN_TEST(ndarray_read_inline_data),
+    MU_RUN_TEST(ndarray_write_empty_inline_data),
+    MU_RUN_TEST(ndarray_write_inline_data),
+    MU_RUN_TEST(ndarray_inline_warning_thresh),
     MU_RUN_TEST(heap_use_after_free_issue_63)
 );
 

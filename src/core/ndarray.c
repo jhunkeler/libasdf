@@ -300,8 +300,12 @@ static asdf_value_err_t infer_inline_array_datatype(
     asdf_value_err_t err = ASDF_VALUE_OK;
 
     int size = asdf_sequence_size(seq);
-    if (size < 0)
+
+    if (UNLIKELY(size < 0))
         return ASDF_VALUE_ERR_PARSE_FAILURE;
+
+    if (size == 0)
+        return ASDF_VALUE_OK;
 
     if (depth >= *ndim) {
         /* First time we visit this depth: record shape */
@@ -319,9 +323,6 @@ static asdf_value_err_t infer_inline_array_datatype(
             return ASDF_VALUE_ERR_PARSE_FAILURE;
         }
     }
-
-    if (size == 0)
-        return ASDF_VALUE_OK;
 
     /* Peek at the first element to decide if this level holds sequences or
      * scalars; all elements must be of the same kind */
@@ -583,7 +584,7 @@ static asdf_value_err_t asdf_ndarray_deserialize_inline(
         goto cleanup;
 
     /* Validate against the documented shape if provided */
-    if (has_shape_hint) {
+    if (has_shape_hint && shape) {
         bool shape_ok = (ndim == shape_hint.ndim);
         for (uint32_t idx = 0; shape_ok && idx < ndim; idx++)
             shape_ok = (shape[idx] == shape_hint.shape[idx]);
@@ -618,10 +619,15 @@ static asdf_value_err_t asdf_ndarray_deserialize_inline(
 
     /* Clone and stash the YAML sequence for lazy conversion in data_raw */
     internal->inline_data = (asdf_sequence_t *)asdf_value_clone(&ndarray_seq->value);
+
     if (UNLIKELY(!internal->inline_data)) {
         err = ASDF_VALUE_ERR_OOM;
         goto cleanup;
     }
+
+    /* Set the write_inline flag implicitly so the same ndarray is
+     * re-serialized inline unless otherwise specified later */
+    ndarray->internal->write_inline = true;
 
     *out = ndarray;
     err = ASDF_VALUE_OK;
@@ -782,6 +788,141 @@ static void asdf_ndarray_dealloc(void *value) {
 }
 
 
+bool asdf_ndarray_inline(asdf_ndarray_t *ndarray) {
+    if (UNLIKELY(!ndarray))
+        return false;
+
+    asdf_ndarray_internal_t *internal = asdf_ndarray_internal(ndarray, false);
+    return internal && internal->write_inline;
+}
+
+
+void asdf_ndarray_inline_set(asdf_ndarray_t *ndarray, bool is_inline) {
+    if (UNLIKELY(!ndarray))
+        return;
+
+    asdf_ndarray_internal_t *internal = asdf_ndarray_internal(ndarray, is_inline);
+
+    if (internal)
+        internal->write_inline = is_inline;
+}
+
+
+/**
+ * Recursively build a nested YAML flow sequence from ndarray data.
+ *
+ * At the leaf dimension (depth == ndim-1) the appropriate
+ * ``asdf_sequence_of_*`` bulk constructor is called.  At all other depths
+ * an outer sequence is built by appending the inner sequences returned by
+ * recursive calls.  Every sequence is styled as flow (compact inline YAML).
+ *
+ * .. todo::
+ *
+ *   Currently only supports basic numeric scalar types.  Should be extended
+ *   to support record types and other compound datatypes (e.g. complex) but
+ *   these are not yet fully supported by the library in general.
+ */
+static asdf_sequence_t *asdf_ndarray_serialize_seq_level(
+    asdf_file_t *file,
+    const asdf_ndarray_t *ndarray,
+    const void *data,
+    uint32_t depth,
+    size_t *elem_offset) {
+
+    uint32_t ndim = ndarray->ndim;
+    uint64_t dim_size = ndim ? ndarray->shape[depth] : 0;
+    asdf_scalar_datatype_t dtype = ndarray->datatype.type;
+    asdf_sequence_t *seq = NULL;
+
+    if (ndim && (depth == ndim - 1)) {
+        /* Leaf level: create sequence from the slice of the flat data buffer */
+        const void *start = (const uint8_t *)data + (*elem_offset * ndarray->datatype.size);
+
+        switch (dtype) {
+        case ASDF_DATATYPE_BOOL8:
+            seq = asdf_sequence_of_bool(file, (const bool *)start, (int)dim_size);
+            break;
+        case ASDF_DATATYPE_INT8:
+            seq = asdf_sequence_of_int8(file, (const int8_t *)start, (int)dim_size);
+            break;
+        case ASDF_DATATYPE_INT16:
+            seq = asdf_sequence_of_int16(file, (const int16_t *)start, (int)dim_size);
+            break;
+        case ASDF_DATATYPE_INT32:
+            seq = asdf_sequence_of_int32(file, (const int32_t *)start, (int)dim_size);
+            break;
+        case ASDF_DATATYPE_INT64:
+            seq = asdf_sequence_of_int64(file, (const int64_t *)start, (int)dim_size);
+            break;
+        case ASDF_DATATYPE_UINT8:
+            seq = asdf_sequence_of_uint8(file, (const uint8_t *)start, (int)dim_size);
+            break;
+        case ASDF_DATATYPE_UINT16:
+            seq = asdf_sequence_of_uint16(file, (const uint16_t *)start, (int)dim_size);
+            break;
+        case ASDF_DATATYPE_UINT32:
+            seq = asdf_sequence_of_uint32(file, (const uint32_t *)start, (int)dim_size);
+            break;
+        case ASDF_DATATYPE_UINT64:
+            seq = asdf_sequence_of_uint64(file, (const uint64_t *)start, (int)dim_size);
+            break;
+        case ASDF_DATATYPE_FLOAT32:
+            seq = asdf_sequence_of_float(file, (const float *)start, (int)dim_size);
+            break;
+        case ASDF_DATATYPE_FLOAT64:
+            seq = asdf_sequence_of_double(file, (const double *)start, (int)dim_size);
+            break;
+        default:
+            ASDF_LOG(file, ASDF_LOG_ERROR, "unsupported datatype for inline ndarray serialization");
+            return NULL;
+        }
+
+        if (seq)
+            *elem_offset += dim_size;
+    } else {
+        /* Non-leaf: build outer sequence by appending inner sequences;
+         * in the corner-case of ndim == 0 this will still create an empty
+         * sequence */
+        seq = asdf_sequence_create(file);
+
+        if (!seq)
+            return NULL;
+
+        for (uint64_t idx = 0; idx < dim_size; idx++) {
+            asdf_sequence_t *inner = asdf_ndarray_serialize_seq_level(
+                file, ndarray, data, depth + 1, elem_offset);
+
+            if (!inner) {
+                asdf_sequence_destroy(seq);
+                return NULL;
+            }
+
+            asdf_value_err_t err = asdf_sequence_append_sequence(seq, inner);
+
+            if (ASDF_IS_ERR(err)) {
+                asdf_sequence_destroy(inner);
+                asdf_sequence_destroy(seq);
+                return NULL;
+            }
+        }
+    }
+
+    if (seq)
+        asdf_sequence_set_style(seq, ASDF_YAML_NODE_STYLE_FLOW);
+
+    return seq;
+}
+
+
+static asdf_sequence_t *asdf_ndarray_serialize_inline_data(
+    asdf_file_t *file, const asdf_ndarray_t *ndarray) {
+    size_t elem_offset = 0;
+
+    return asdf_ndarray_serialize_seq_level(
+        file, ndarray, ndarray->internal->data, 0, &elem_offset);
+}
+
+
 /**
  * Helpers to asdf_ndarray_serialize to set fields only relevant when using
  * binary block data
@@ -893,6 +1034,106 @@ static asdf_value_err_t asdf_ndarray_serialize_block_data(
 }
 
 
+/** Helper to `asdf_ndarray_serialize` for handling inline data */
+static asdf_value_err_t asdf_ndarray_serialize_inline(
+    asdf_file_t *file, const asdf_ndarray_t *ndarray, asdf_mapping_t *ndarray_map) {
+
+    assert(file);
+    assert(ndarray);
+    assert(ndarray_map);
+
+    asdf_sequence_t *inline_data = NULL;
+    asdf_sequence_t *shape_seq = NULL;
+    asdf_value_err_t err = ASDF_VALUE_OK;
+
+    if (ndarray->internal->write_compression) {
+        ASDF_LOG(
+            file,
+            ASDF_LOG_WARN,
+            "ndarray has compression set but is marked for inline writing; "
+            "compression will be ignored");
+    }
+
+    size_t thresh = file->config ? file->config->emitter.inline_ndarray_warning_thresh : 0;
+
+    if (thresh > 0 && asdf_ndarray_size(ndarray) > thresh) {
+        ASDF_LOG(
+            file,
+            ASDF_LOG_WARN,
+            "inline ndarray has %llu elements, exceeding the threshold of %zu; "
+            "consider using binary block storage instead",
+            (unsigned long long)asdf_ndarray_size(ndarray),
+            thresh);
+    }
+
+    inline_data = asdf_ndarray_serialize_inline_data(file, ndarray);
+
+    if (!inline_data) {
+        err = ASDF_VALUE_ERR_EMIT_FAILURE;
+        goto cleanup;
+    }
+
+    err = asdf_mapping_set_sequence(ndarray_map, "data", inline_data);
+
+    if (ASDF_IS_ERR(err))
+        goto cleanup;
+
+    /* Special case -- specify the shape as empty if an empty ndarray
+     * was serialized */
+    if (UNLIKELY(ndarray->ndim == 0)) {
+        shape_seq = asdf_sequence_create(file);
+
+        if (UNLIKELY(!shape_seq)) {
+            ASDF_ERROR_OOM(file);
+            err = ASDF_VALUE_ERR_OOM;
+            goto cleanup;
+        }
+
+        err = asdf_mapping_set_sequence(ndarray_map, "shape", shape_seq);
+    }
+cleanup:
+    if (err != ASDF_VALUE_OK) {
+        asdf_sequence_destroy(inline_data);
+        asdf_sequence_destroy(shape_seq);
+    }
+    return err;
+}
+
+
+/** Helper to `asdf_ndarray_serialize` for handling binary block data */
+static asdf_value_err_t asdf_ndarray_serialize_block(
+    asdf_file_t *file, const asdf_ndarray_t *ndarray, asdf_mapping_t *ndarray_map) {
+
+    assert(file);
+    assert(ndarray);
+    assert(ndarray_map);
+
+    asdf_value_err_t err = ASDF_VALUE_OK;
+    uint64_t nbytes = asdf_ndarray_nbytes(ndarray);
+    ssize_t block_idx = asdf_block_append(file, ndarray->internal->data, nbytes);
+
+    if (block_idx < 0) {
+        ASDF_ERROR_OOM(file);
+        err = ASDF_VALUE_ERR_OOM;
+        goto cleanup;
+    }
+
+    if (ndarray->internal && ndarray->internal->write_compression) {
+        asdf_block_info_t *info = asdf_block_info_vec_at_mut(&file->blocks, (isize)block_idx);
+        const char *compression = ndarray->internal->write_compression;
+
+        if (asdf_block_info_compression_set(file, info, compression) != 0) {
+            err = ASDF_VALUE_ERR_EMIT_FAILURE;
+            goto cleanup;
+        }
+    }
+
+    err = asdf_mapping_set_int64(ndarray_map, "source", (int64_t)block_idx);
+cleanup:
+    return err;
+}
+
+
 static asdf_value_t *asdf_ndarray_serialize(
     asdf_file_t *file,
     // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
@@ -916,7 +1157,10 @@ static asdf_value_t *asdf_ndarray_serialize(
         goto cleanup;
     }
 
-    if (!ndarray->internal || !ndarray->internal->data) {
+    bool has_data = ndarray->internal && ndarray->internal->data;
+    bool write_inline_flag = ndarray->internal && ndarray->internal->write_inline;
+
+    if (!has_data) {
         ASDF_LOG(
             file,
             ASDF_LOG_WARN,
@@ -937,26 +1181,14 @@ static asdf_value_t *asdf_ndarray_serialize(
             asdf_sequence_destroy(inline_data);
             goto cleanup;
         }
-    } else {
-        uint64_t nbytes = asdf_ndarray_nbytes(ndarray);
-        ssize_t block_idx = asdf_block_append(file, ndarray->internal->data, nbytes);
-
-        if (block_idx < 0) {
-            err = ASDF_VALUE_ERR_OOM;
+    } else if (write_inline_flag) {
+        err = asdf_ndarray_serialize_inline(file, ndarray, ndarray_map);
+        if (err != ASDF_VALUE_OK)
             goto cleanup;
-        }
 
-        if (ndarray->internal && ndarray->internal->write_compression) {
-            asdf_block_info_t *info = asdf_block_info_vec_at_mut(&file->blocks, (isize)block_idx);
-            const char *compression = ndarray->internal->write_compression;
-
-            if (asdf_block_info_compression_set(file, info, compression) != 0) {
-                err = ASDF_VALUE_ERR_EMIT_FAILURE;
-                goto cleanup;
-            }
-        }
-
-        err = asdf_mapping_set_int64(ndarray_map, "source", (int64_t)block_idx);
+        is_inline = true;
+    } else {
+        err = asdf_ndarray_serialize_block(file, ndarray, ndarray_map);
     }
 
     if (ASDF_IS_ERR(err))
@@ -1102,6 +1334,14 @@ void *asdf_ndarray_data_alloc(asdf_ndarray_t *ndarray) {
     }
 
     uint64_t size = asdf_ndarray_nbytes(ndarray);
+
+    if (UNLIKELY(size == 0)) {
+        /* Special case for empty array; just return NULL, but don't free
+         * internal structures */
+        internal->data_is_empty = true;
+        return NULL;
+    }
+
     void *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     if (data == MAP_FAILED || !data) {
@@ -1160,7 +1400,7 @@ void asdf_ndarray_data_dealloc(asdf_ndarray_t *ndarray) {
     if (internal && internal->data_is_inline)
         return;
 
-    if (UNLIKELY(!internal || !internal->data)) {
+    if (UNLIKELY(!internal || (!internal->data && !internal->data_is_empty))) {
         asdf_context_t *ctx = NULL;
         if (ndarray->internal)
             ctx = asdf_get_context_helper(ndarray->internal->file);
