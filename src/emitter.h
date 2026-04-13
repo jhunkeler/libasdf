@@ -75,6 +75,10 @@ ASDF_LOCAL int asdf_emitter_set_output_malloc(
     asdf_emitter_t *emitter, const void *buf, size_t size);
 
 
+// Mouthful but coherent...
+#define ASDF_EMITTER_CFG_INLINE_NDARRAY_WARNING_THRESH_DEFAULT 1024
+
+
 static inline bool asdf_emitter_has_opt(asdf_emitter_t *emitter, asdf_emitter_opt_t opt) {
     assert(emitter);
     return ((emitter->config.flags & opt) == opt);

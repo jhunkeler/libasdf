@@ -47,6 +47,12 @@ typedef uint64_t asdf_emitter_optflags_t;
 typedef struct asdf_emitter_cfg {
     asdf_emitter_optflags_t flags;
     asdf_yaml_tag_handle_t *tag_handles;
+    /**
+     * Number of elements above which a warning is logged when writing an
+     * ndarray with inline data.  Set to 0 to use the library default (1024).
+     * Set to SIZE_MAX to suppress the warning entirely.
+     */
+    size_t inline_ndarray_warning_thresh;
 } asdf_emitter_cfg_t;
 
 ASDF_END_DECLS

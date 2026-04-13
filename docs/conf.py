@@ -89,6 +89,7 @@ nitpick_ignore = [
     ('c:identifier', 'int64_t'),
     ('c:identifier', 'int8_t'),
     ('c:identifier', 'malloc'),
+    ('c:identifier', 'ndarray'),
     ('c:identifier', 'open'),
     ('c:identifier', 'size_t'),
     ('c:identifier', 'ssize_t'),

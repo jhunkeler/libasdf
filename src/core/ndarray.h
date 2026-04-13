@@ -14,6 +14,14 @@ typedef struct {
     const char *write_compression;
     /* User-provided data array for new ndarrays not written to a file */
     void *data;
+    bool data_is_empty;
+    /* Cloned YAML sequence for inline ndarrays; non-NULL iff this is an
+     * inline ndarray whose data has not yet been parsed into a C array */
+    asdf_sequence_t *inline_data;
+    /* True iff data was malloc'd during lazy inline parsing (not mmap'd) */
+    bool data_is_inline;
+    /* True iff this ndarray should be written as inline YAML data */
+    bool write_inline;
 } asdf_ndarray_internal_t;
 
 

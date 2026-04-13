@@ -185,7 +185,8 @@ test_stream_unit_SOURCES = \
     $(top_srcdir)/src/context.c \
     $(top_srcdir)/src/error.c \
     $(top_srcdir)/src/log.c \
-    $(top_srcdir)/src/stream.c
+    $(top_srcdir)/src/stream.c \
+    $(top_srcdir)/third_party/STC/src/cstr_core.c
 test_stream_unit_CPPFLAGS = $(unit_test_cppflags)
 test_stream_unit_CFLAGS = $(unit_test_cflags)
 test_stream_unit_LDFLAGS = $(unit_test_ldflags)
@@ -351,6 +352,7 @@ EXTRA_DIST += \
     fixtures/multi-block.asdf \
     fixtures/multiple_hdu.asdf \
     fixtures/nested.asdf \
+    fixtures/ndarray-inline.asdf \
     fixtures/ndarray-out.asdf \
     fixtures/numeric.asdf \
     fixtures/parse-minimal.asdf \

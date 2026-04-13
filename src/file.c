@@ -59,6 +59,8 @@ static asdf_config_t *asdf_config_build(asdf_config_t *user_config) {
 
     memcpy(config, &asdf_config_default, sizeof(asdf_config_t));
     config->log.stream = stderr;
+    config->emitter
+        .inline_ndarray_warning_thresh = ASDF_EMITTER_CFG_INLINE_NDARRAY_WARNING_THRESH_DEFAULT;
 
     if (user_config) {
         ASDF_CONFIG_OVERRIDE(config, user_config, log.stream, stderr);
@@ -68,6 +70,7 @@ static asdf_config_t *asdf_config_build(asdf_config_t *user_config) {
         ASDF_CONFIG_OVERRIDE(config, user_config, parser.flags, 0);
         ASDF_CONFIG_OVERRIDE(config, user_config, emitter.flags, 0);
         ASDF_CONFIG_OVERRIDE(config, user_config, emitter.tag_handles, NULL);
+        ASDF_CONFIG_OVERRIDE(config, user_config, emitter.inline_ndarray_warning_thresh, 0);
         ASDF_CONFIG_OVERRIDE(config, user_config, decomp.mode, ASDF_BLOCK_DECOMP_MODE_AUTO);
         ASDF_CONFIG_OVERRIDE(config, user_config, decomp.max_memory_bytes, 0);
         ASDF_CONFIG_OVERRIDE(config, user_config, decomp.max_memory_threshold, 0.0);
