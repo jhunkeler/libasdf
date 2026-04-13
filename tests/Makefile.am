@@ -352,6 +352,7 @@ EXTRA_DIST += \
     fixtures/multi-block.asdf \
     fixtures/multiple_hdu.asdf \
     fixtures/nested.asdf \
+    fixtures/ndarray-inline.asdf \
     fixtures/ndarray-out.asdf \
     fixtures/numeric.asdf \
     fixtures/parse-minimal.asdf \
