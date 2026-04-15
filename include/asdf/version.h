@@ -50,6 +50,15 @@ typedef struct {
  */
 ASDF_EXPORT asdf_version_t *asdf_version_parse(const char *version);
 
+
+/**
+ * Deep copy of an `asdf_version_t *`
+ *
+ * :param version: The `asdf_version_t *` to copy -- all fields are deep-copied
+ *   as well
+ */
+ASDF_EXPORT asdf_version_t *asdf_version_copy(const asdf_version_t *version);
+
 /**
  * Free memory allocated for an `asdf_version_t` by `asdf_version_parse`
  *

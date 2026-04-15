@@ -18,7 +18,7 @@ asdf_version_t *asdf_version_parse(const char *version) {
     ver->version = strdup(version);
 
     if (UNLIKELY(!ver->version))
-        goto fail;
+        goto failure;
 
     const char *chr = version;
     char *end = NULL;
@@ -34,7 +34,7 @@ asdf_version_t *asdf_version_parse(const char *version) {
             ver->extra = strdup(end);
 
             if (UNLIKELY(!ver->extra))
-                goto fail;
+                goto failure;
         }
 
         return ver;
@@ -45,7 +45,7 @@ asdf_version_t *asdf_version_parse(const char *version) {
         ver->extra = strdup(chr);
 
         if (UNLIKELY(!ver->extra))
-            goto fail;
+            goto failure;
 
         return ver;
     }
@@ -58,7 +58,7 @@ asdf_version_t *asdf_version_parse(const char *version) {
             ver->extra = strdup(end);
 
             if (UNLIKELY(!ver->extra))
-                goto fail;
+                goto failure;
         }
 
         return ver;
@@ -69,7 +69,7 @@ asdf_version_t *asdf_version_parse(const char *version) {
         ver->extra = strdup(chr);
 
         if (UNLIKELY(!ver->extra))
-            goto fail;
+            goto failure;
 
         return ver;
     }
@@ -86,13 +86,42 @@ asdf_version_t *asdf_version_parse(const char *version) {
             ver->extra = strdup(chr);
 
             if (UNLIKELY(!ver->extra))
-                goto fail;
+                goto failure;
         }
     }
 
     return ver;
-fail:
+failure:
     asdf_version_destroy(ver);
+    return NULL;
+}
+
+
+asdf_version_t *asdf_version_copy(const asdf_version_t *version) {
+    asdf_version_t *new_version = calloc(1, sizeof(asdf_version_t));
+
+    if (UNLIKELY(!new_version))
+        return NULL;
+
+    new_version->version = strdup(version->version);
+
+    if (UNLIKELY(!new_version->version))
+        goto failure;
+
+    new_version->major = version->major;
+    new_version->minor = version->minor;
+    new_version->patch = version->patch;
+
+    if (version->extra) {
+        new_version->extra = strdup(version->extra);
+
+        if (UNLIKELY(!new_version->extra))
+            goto failure;
+    }
+
+    return new_version;
+failure:
+    asdf_version_destroy(new_version);
     return NULL;
 }
 
