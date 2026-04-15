@@ -1,5 +1,6 @@
 #include <limits.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +14,7 @@
 #include "compression/compression.h"
 #include "context.h"
 #include "core/asdf.h"
+#include "core/software.h"
 #include "emitter.h"
 #include "error.h"
 #include "event.h"
@@ -1115,7 +1117,7 @@ size_t asdf_block_data_size(asdf_block_t *block) {
 }
 
 
-const void *asdf_block_data(asdf_block_t *block, size_t *size) {
+const void *asdf_block_data_impl(asdf_block_t *block, size_t *size, bool decompress) {
     if (!block)
         return NULL;
 
@@ -1144,17 +1146,19 @@ const void *asdf_block_data(asdf_block_t *block, size_t *size) {
     block->avail_size = avail;
 
     // Open compressed data if applicable
-    if (asdf_block_comp_open(block) != 0) {
-        ASDF_LOG(block->file, ASDF_LOG_ERROR, "failed to open compressed block data");
-        return NULL;
-    }
+    if (decompress) {
+        if (asdf_block_comp_open(block) != 0) {
+            ASDF_LOG(block->file, ASDF_LOG_ERROR, "failed to open compressed block data");
+            return NULL;
+        }
 
-    if (block->comp_state) {
-        // Return the destination of the compressed data
-        if (size)
-            *size = block->comp_state->dest_size;
+        if (block->comp_state) {
+            // Return the destination of the compressed data
+            if (size)
+                *size = block->comp_state->dest_size;
 
-        return block->comp_state->dest;
+            return block->comp_state->dest;
+        } // else was not compressed to begin with
     }
 
     if (size)
@@ -1162,6 +1166,16 @@ const void *asdf_block_data(asdf_block_t *block, size_t *size) {
 
     // Just the raw data
     return block->data;
+}
+
+
+const void *asdf_block_data(asdf_block_t *block, size_t *size) {
+    return asdf_block_data_impl(block, size, true);
+}
+
+
+const void *asdf_block_data_raw(asdf_block_t *block, size_t *size) {
+    return asdf_block_data_impl(block, size, false);
 }
 
 
@@ -1224,6 +1238,16 @@ const unsigned char *asdf_block_checksum(asdf_block_t *block) {
 }
 
 
+#define ASDF_PYTHON_CHECKSUM_BUG_MAJOR_VERSION 5
+
+
+static inline bool asdf_library_has_checksum_bug(asdf_software_t *software) {
+    return (
+        strcmp(software->name, "asdf") == 0 &&
+        software->version->major <= ASDF_PYTHON_CHECKSUM_BUG_MAJOR_VERSION);
+}
+
+
 bool asdf_block_checksum_verify(
     asdf_block_t *block, unsigned char computed[ASDF_BLOCK_CHECKSUM_DIGEST_SIZE]) {
     if (!block)
@@ -1237,7 +1261,36 @@ bool asdf_block_checksum_verify(
     size_t size = 0;
     asdf_md5_ctx_t md5_ctx = {0};
     unsigned char digest[ASDF_BLOCK_CHECKSUM_DIGEST_SIZE] = {0};
-    const void *data = asdf_block_data(block, &size);
+    const void *data = NULL;
+    asdf_meta_t *meta = NULL;
+    asdf_file_t *file = block->file;
+
+    /* Python asdf has a bug that when it writes binary blocks it computes
+     * the checksum based on the uncompressed data, not the compressed data.
+     * In this case then we must use the decompresed data to compute the
+     * checksum.  This is slated to be fixed in a later version; for now
+     * the problem exists in all versions at least 5.x and below.
+     * See https://github.com/asdf-format/asdf/issues/2015 */
+    const char *comp = asdf_block_compression_orig(block);
+    if (comp && *comp != '\0') {
+        asdf_value_err_t err = asdf_get_meta(file, "", &meta);
+
+        if (ASDF_VALUE_OK == err && meta && asdf_library_has_checksum_bug(meta->asdf_library)) {
+            ASDF_LOG(
+                file,
+                ASDF_LOG_WARN,
+                "%s version %s has compressed data checksum bug; "
+                "the checksum will be verified against the uncompressed data",
+                meta->asdf_library->name,
+                meta->asdf_library->version->version);
+            data = asdf_block_data(block, &size);
+            asdf_meta_destroy(meta);
+        } else {
+            data = asdf_block_data_raw(block, &size);
+        }
+    } else {
+        data = asdf_block_data_raw(block, &size);
+    }
 
     if (!data)
         return false;

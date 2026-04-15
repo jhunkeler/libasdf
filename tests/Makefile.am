@@ -377,6 +377,7 @@ EXTRA_DIST += \
     fixtures/value-types.asdf \
     fixtures/verify-checksums/255-2-blocks.verify-checksums.txt \
     fixtures/verify-checksums/255-invalid-checksum.verify-checksums.txt \
+    fixtures/verify-checksums/compressed.verify-checksums.txt \
     munit/COPYING \
     munit/munit.c \
     munit/munit.h \

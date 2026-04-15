@@ -788,6 +788,50 @@ MU_TEST(access_then_write) {
 }
 
 
+MU_TEST(verify_checksum) {
+    const char *comp = munit_parameters_get(params, "comp");
+    const size_t n = 4096;
+
+    uint8_t *data = malloc(n);
+
+    if (!data)
+        return MUNIT_ERROR;
+
+    for (size_t idx = 0; idx < n; idx++)
+        data[idx] = (uint8_t)(idx % 4);
+
+    const char *path = write_compressed_ndarray_to_file(
+        comp, fixture->tempfile_prefix, data, n);
+
+    if (!path) {
+        free(data);
+        return MUNIT_ERROR;
+    }
+
+    /* re-open, verify checksum, close block */
+    asdf_file_t *file = asdf_open_file(path, "r");
+    assert_not_null(file);
+    asdf_block_t *block = asdf_block_open(file, 0);
+    assert_not_null(block);
+    const unsigned char *checksum = asdf_block_checksum(block);
+    assert_not_null(checksum);
+    unsigned char *empty = calloc(ASDF_BLOCK_CHECKSUM_DIGEST_SIZE, sizeof(unsigned char));
+    
+    if (!empty)
+        return MUNIT_ERROR;
+
+    assert_memory_not_equal(ASDF_BLOCK_CHECKSUM_DIGEST_SIZE, checksum, empty);
+    free(empty);
+    assert_true(asdf_block_checksum_verify(block, NULL));
+    asdf_block_close(block);
+    asdf_close(file);
+
+    free(data);
+    free((void *)path);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     compression,
     MU_RUN_TEST(write_compressed_ndarray, comp_test_params),
