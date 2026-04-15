@@ -17,6 +17,7 @@ install(
         asdf/parser.h
         asdf/util.h
         asdf/value.h
+        asdf/version.h
         asdf/yaml.h
 
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/asdf"

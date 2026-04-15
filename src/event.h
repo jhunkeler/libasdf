@@ -8,6 +8,7 @@
 #endif
 
 #include "asdf/event.h" // IWYU pragma: export
+#include "asdf/version.h"
 
 #include "types/asdf_block_index.h"
 #include "util.h"
@@ -18,11 +19,6 @@ static const char *const asdf_event_type_names[] = {
     ASDF_EVENT_TYPES(X)
 #undef X
 };
-
-
-typedef struct {
-    char *version;
-} asdf_version_t;
 
 
 typedef struct asdf_tree_info {

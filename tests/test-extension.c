@@ -8,6 +8,7 @@
 #include <asdf/extension.h>
 #include <asdf/file.h>
 #include <asdf/util.h>
+#include <asdf/version.h>
 
 
 /* Struct that represents the "foo" type extension */
@@ -16,11 +17,17 @@ typedef struct {
 } asdf_foo_t;
 
 
+static asdf_version_t asdf_foo_version = {
+    .version = "1.0.0",
+    .minor = 1
+};
+
+
 static asdf_software_t asdf_foo_software = {
     .name = "foo",
     .author = "STScI",
     .homepage = "https://stsci.edu",
-    .version = "1.0.0"
+    .version = &asdf_foo_version
 };
 
 

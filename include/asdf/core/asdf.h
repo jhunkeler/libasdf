@@ -7,10 +7,12 @@
 #include <asdf/core/time.h>
 #include <asdf/extension.h>
 #include <asdf/util.h>
+#include <asdf/version.h>
 
 
 ASDF_BEGIN_DECLS
 
+ASDF_EXPORT extern asdf_version_t libasdf_version;
 ASDF_EXPORT extern asdf_software_t libasdf_software;
 
 

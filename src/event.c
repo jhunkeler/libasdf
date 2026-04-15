@@ -9,6 +9,8 @@
 
 #include <libfyaml.h>
 
+#include "asdf/version.h"
+
 #include "block.h"
 #include "event.h"
 #include "parse_util.h"
@@ -66,11 +68,6 @@ void asdf_event_cleanup(asdf_parser_t *parser, asdf_event_t *event) {
         break;
     case ASDF_ASDF_VERSION_EVENT:
     case ASDF_STANDARD_VERSION_EVENT:
-        if (event->payload.version)
-            free(event->payload.version->version);
-
-        free(event->payload.version);
-        break;
     case ASDF_BLOCK_EVENT:
         break;
     case ASDF_COMMENT_EVENT:

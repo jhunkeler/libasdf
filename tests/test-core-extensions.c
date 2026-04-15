@@ -49,7 +49,7 @@ MU_TEST(extension_metadata) {
     assert_int(asdf_value_as_software(prop, &software), ==, ASDF_VALUE_OK);
     assert_not_null(software);
     assert_string_equal(software->name, "asdf_standard");
-    assert_string_equal(software->version, "1.1.1");
+    assert_string_equal(software->version->version, "1.1.1");
     asdf_software_destroy(software);
     asdf_value_destroy(prop);
 
@@ -60,7 +60,7 @@ MU_TEST(extension_metadata) {
     assert_int(asdf_value_as_software(prop, &software), ==, ASDF_VALUE_OK);
     assert_not_null(software);
     assert_string_equal(software->name, "asdf");
-    assert_string_equal(software->version, "4.1.0");
+    assert_string_equal(software->version->version, "4.1.0");
     asdf_software_destroy(software);
     asdf_value_destroy(prop);
 
@@ -75,7 +75,7 @@ MU_TEST(extension_metadata) {
 // of the extension API?
 static void assert_software_equal(const asdf_software_t *software0, const asdf_software_t *software1) {
     assert_string_equal(software0->name, software1->name);
-    assert_string_equal(software0->version, software1->version);
+    assert_string_equal(software0->version->version, software1->version->version);
     assert_string_equal(software0->author, software1->author);
     assert_string_equal(software0->homepage, software1->homepage);
 }
@@ -138,8 +138,9 @@ MU_TEST(extension_metadata_serialize) {
     const char *path = get_temp_file_path(fixture->tempfile_prefix, ".asdf");
     asdf_file_t *file = asdf_open(NULL);
     assert_not_null(file);
+    asdf_version_t manifest_version = {.version = "1.1.1"};
     asdf_software_t manifest_software = {
-        .name = "asdf_standard", .version = "1.1.1"};
+        .name = "asdf_standard", .version = &manifest_version};
     asdf_mapping_t *extra_meta = make_extra_meta(file, &manifest_software);
     asdf_extension_metadata_t extension = {
         .metadata = extra_meta, .extension_class = "asdf.extension._manifest.ManifestExtension",
@@ -327,8 +328,9 @@ MU_TEST(meta_serialize) {
     asdf_file_t *file = asdf_open(NULL);
 
     assert_not_null(file);
+    asdf_version_t manifest_version = {.version = "1.1.1"};
     asdf_software_t manifest_software = {
-        .name = "asdf_standard", .version = "1.1.1"};
+        .name = "asdf_standard", .version = &manifest_version};
     asdf_mapping_t *extra_meta = make_extra_meta(file, &manifest_software);
     assert_not_null(extra_meta);
     asdf_extension_metadata_t extension = {
@@ -650,7 +652,7 @@ MU_TEST(software) {
     assert_int(asdf_get_software(file, "asdf_library", &software), ==, ASDF_VALUE_OK);
     assert_not_null(software);
     assert_string_equal(software->name, "asdf");
-    assert_string_equal(software->version, "4.1.0");
+    assert_string_equal(software->version->version, "4.1.0");
     assert_string_equal(software->homepage, "http://github.com/asdf-format/asdf");
     assert_string_equal(software->author, "The ASDF Developers");
     asdf_software_destroy(software);

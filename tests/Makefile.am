@@ -40,6 +40,7 @@ check_PROGRAMS = \
     test-time.unit \
     test-value.unit \
     test-value-util.unit \
+    test-version.unit \
     test-yaml.unit
 
 TESTS_ENVIRONMENT = top_builddir=$(top_builddir) top_srcdir=$(top_srcdir)
@@ -169,6 +170,7 @@ test_malloc_fail_unit_SOURCES = \
     $(top_srcdir)/src/parser.c \
     $(top_srcdir)/src/stream.c \
     $(top_srcdir)/src/util.c \
+    $(top_srcdir)/src/version.c \
     $(top_srcdir)/src/yaml.c \
     $(top_srcdir)/third_party/STC/src/cstr_core.c
 test_malloc_fail_unit_CPPFLAGS = $(unit_test_cppflags)
@@ -222,6 +224,13 @@ test_value_util_unit_CPPFLAGS = $(unit_test_cppflags)
 test_value_util_unit_CFLAGS = $(unit_test_cflags)
 test_value_util_unit_LDFLAGS = $(unit_test_ldflags)
 test_value_util_unit_LDADD = libmunit.a $(STATGRAB_LIBS)
+
+# test-version.unit
+test_version_unit_SOURCES = test-version.c
+test_version_unit_CPPFLAGS = $(unit_test_cppflags)
+test_version_unit_CFLAGS = $(unit_test_cflags)
+test_version_unit_LDFLAGS = $(unit_test_ldflags)
+test_version_unit_LDADD = $(unit_test_ldadd)
 
 # test-yaml.unit
 test_yaml_unit_SOURCES = \
@@ -368,6 +377,7 @@ EXTRA_DIST += \
     fixtures/value-types.asdf \
     fixtures/verify-checksums/255-2-blocks.verify-checksums.txt \
     fixtures/verify-checksums/255-invalid-checksum.verify-checksums.txt \
+    fixtures/verify-checksums/compressed.verify-checksums.txt \
     munit/COPYING \
     munit/munit.c \
     munit/munit.h \

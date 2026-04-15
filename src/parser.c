@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+#include "asdf/version.h"
+
 #include "block.h"
 #include "context.h"
 #include "error.h"
@@ -65,7 +67,7 @@ typedef enum {
 
 
 static int parse_version_comment(
-    asdf_parser_t *parser, const char *expected, char *out_buf, size_t out_size) {
+    asdf_parser_t *parser, const char *expected, asdf_version_t **version) {
     size_t expected_len;
     size_t line_len = 0;
     const uint8_t *line = asdf_stream_readline(parser->stream, &line_len);
@@ -83,12 +85,21 @@ static int parse_version_comment(
     }
 
     size_t to_copy = line_len - expected_len - 1;
+    char *version_str = strndup((char *)line + expected_len, to_copy);
 
-    if (to_copy >= out_size)
-        to_copy = out_size - 1;
+    if (!version_str) {
+        ASDF_ERROR_OOM(parser);
+        return 1;
+    }
 
-    memcpy(out_buf, line + expected_len, to_copy);
-    out_buf[to_copy] = '\0';
+    asdf_version_t *parsed = asdf_version_parse(version_str);
+    free(version_str);
+
+    if (!parsed) {
+        ASDF_ERROR_OOM(parser);
+        return 1;
+    }
+    *version = parsed;
     return 0;
 }
 
@@ -96,55 +107,22 @@ static int parse_version_comment(
 // TODO: These need to be more flexible for acccepting different ASDF versions
 // TODO: Depending on strictness level we can resume even if this fails
 static parse_result_t parse_asdf_version(asdf_parser_t *parser, asdf_event_t *event) {
-    if (parse_version_comment(
-            parser, asdf_version_comment, parser->asdf_version, ASDF_ASDF_VERSION_BUFFER_SIZE) != 0)
+    if (parse_version_comment(parser, asdf_version_comment, &parser->asdf_version))
         return ASDF_PARSE_ERROR;
 
     event->type = ASDF_ASDF_VERSION_EVENT;
-    event->payload.version = malloc(sizeof(asdf_version_t));
-
-    if (!event->payload.version) {
-        ASDF_ERROR_OOM(parser);
-        return ASDF_PARSE_ERROR;
-    }
-
-    event->payload.version->version = strdup(parser->asdf_version);
-
-    if (!event->payload.version->version) {
-        free(event->payload.version);
-        ASDF_ERROR_OOM(parser);
-        return ASDF_PARSE_ERROR;
-    }
-
+    event->payload.version = parser->asdf_version;
     parser->state = ASDF_PARSER_STATE_STANDARD_VERSION;
     return ASDF_PARSE_EVENT;
 }
 
 
 static parse_result_t parse_standard_version(asdf_parser_t *parser, asdf_event_t *event) {
-    if (parse_version_comment(
-            parser,
-            asdf_standard_comment,
-            parser->standard_version,
-            ASDF_STANDARD_VERSION_BUFFER_SIZE) != 0)
+    if (parse_version_comment(parser, asdf_standard_comment, &parser->standard_version))
         return ASDF_PARSE_ERROR;
 
     event->type = ASDF_STANDARD_VERSION_EVENT;
-    event->payload.version = malloc(sizeof(asdf_version_t));
-
-    if (!event->payload.version) {
-        ASDF_ERROR_OOM(parser);
-        return ASDF_PARSE_ERROR;
-    }
-
-    event->payload.version->version = strdup(parser->standard_version);
-
-    if (!event->payload.version->version) {
-        free(event->payload.version);
-        ASDF_ERROR_OOM(parser);
-        return ASDF_PARSE_ERROR;
-    }
-
+    event->payload.version = parser->standard_version;
     parser->state = ASDF_PARSER_STATE_COMMENT;
     return ASDF_PARSE_EVENT;
 }
@@ -1123,8 +1101,6 @@ asdf_parser_t *asdf_parser_create_ctx(asdf_context_t *ctx, const asdf_parser_cfg
     parser->state = ASDF_PARSER_STATE_INITIAL;
     parser->done = false;
     parser->tree.has_tree = -1;
-    ZERO_MEMORY(parser->asdf_version, sizeof(parser->asdf_version));
-    ZERO_MEMORY(parser->standard_version, sizeof(parser->standard_version));
     ASDF_LOG(parser, ASDF_LOG_DEBUG, "parser config flags: 0x%x", parser->config.flags);
     return parser;
 }
@@ -1230,6 +1206,8 @@ void asdf_parser_destroy(asdf_parser_t *parser) {
     asdf_parse_event_freelist_free(parser);
     asdf_block_index_drop(&parser->block.index);
     asdf_block_info_vec_drop(&parser->block.infos);
+    asdf_version_destroy(parser->asdf_version);
+    asdf_version_destroy(parser->standard_version);
     asdf_context_release(parser->base.ctx);
     free(parser);
 }

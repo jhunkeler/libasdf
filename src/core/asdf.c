@@ -2,6 +2,8 @@
 #include "config.h"
 #endif
 
+#include "asdf/version.h"
+
 #include "../error.h"
 #include "../log.h"
 #include "../util.h"
@@ -13,9 +15,12 @@
 #include "software.h"
 
 
+asdf_version_t libasdf_version = {0};
+
+
 asdf_software_t libasdf_software = {
     .name = PACKAGE_NAME,
-    .version = PACKAGE_VERSION,
+    .version = &libasdf_version,
     .homepage = PACKAGE_URL,
     .author = "The libasdf Developers"};
 
@@ -449,3 +454,20 @@ ASDF_REGISTER_EXTENSION(
     asdf_meta_copy,
     asdf_meta_dealloc,
     NULL);
+
+
+ASDF_CONSTRUCTOR static void asdf_libasdf_version_init() {
+    asdf_version_t *version = asdf_version_parse(PACKAGE_VERSION);
+    libasdf_version.version = version->version;
+    libasdf_version.major = version->major;
+    libasdf_version.minor = version->minor;
+    libasdf_version.patch = version->patch;
+    libasdf_version.extra = version->extra;
+    free(version);
+}
+
+
+ASDF_DESTRUCTOR static void asdf_libasdf_version_destroy() {
+    free((void *)libasdf_version.version);
+    free((void *)libasdf_version.extra);
+}

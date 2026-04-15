@@ -1009,17 +1009,29 @@ ASDF_EXPORT bool asdf_block_checksum_verify(
 /**
  * Returns a `void *` to the beginning of the block data, and optionally its size
  *
- * .. note::
- *
- *   Compressed blocks are not yet supported, or rather, are not automatically
- *   decompressed.  This is a TODO.
- *
  * :param block: The `asdf_block_t *` handle
  * :param size: Optional `size_t *` into which the size of the block data is
  *   is returned
  * :return: A `void *` to the block data
  */
 ASDF_EXPORT const void *asdf_block_data(asdf_block_t *block, size_t *size);
+
+
+/**
+ * Returns a `void *` to the beginning of the block data, and optionally its size
+ *
+ * For uncompressed block data this is equivalent to `asdf_block_data`; for
+ * compressed blocks, however, this returns the raw compressed data without
+ * decompression, and the size returned is the size of the compressed data.
+ *
+ * Use `asdf_block_data` for access to the uncompressed data.
+ *
+ * :param block: The `asdf_block_t *` handle
+ * :param size: Optional `size_t *` into which the size of the block data is
+ *   is returned
+ * :return: A `void *` to the block data
+ */
+ASDF_EXPORT const void *asdf_block_data_raw(asdf_block_t *block, size_t *size);
 
 ASDF_END_DECLS
 

@@ -136,12 +136,16 @@ For this example we need to write a few pieces of code:
        const char *foo;
    } asdf_foo_t;
 
+   static asdf_version_t asdf_foo_version = {
+       .version = "1.0.0",
+       .major = 1
+   }
 
    static asdf_software_t asdf_foo_software = {
        .name = "foo",
        .author = "STScI",
        .homepage = "https://stsci.edu",
-       .version = "1.0.0"
+       .version = &asdf_foo_version
    };
 
 The ``asdf_foo_deserialize`` function will be passed the raw value (as an

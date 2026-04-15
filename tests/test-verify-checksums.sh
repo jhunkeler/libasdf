@@ -10,4 +10,5 @@ fi
 
 "${srcdir}"/shell-test.sh verify-checksums --verbose $@ \
   "${srcdir}"/fixtures/255-2-blocks.asdf \
-  "${srcdir}"/fixtures/255-invalid-checksum.asdf
+  "${srcdir}"/fixtures/255-invalid-checksum.asdf \
+  "${srcdir}"/fixtures/compressed.asdf

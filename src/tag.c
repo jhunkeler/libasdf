@@ -9,7 +9,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "asdf/version.h"
 #include "tag.h"
+#include "util.h"
 
 
 asdf_tag_t *asdf_tag_parse(const char *tag) {
@@ -38,7 +40,6 @@ asdf_tag_t *asdf_tag_parse(const char *tag) {
     }
 
     size_t name_len = sep - tag;
-    const char *version = sep + 1;
     res->name = strndup(tag, name_len);
 
     if (!res->name) {
@@ -46,7 +47,8 @@ asdf_tag_t *asdf_tag_parse(const char *tag) {
         return NULL;
     }
 
-    res->version = strdup(version);
+    const char *version = strdup(sep + 1);
+    res->version = asdf_version_parse(version);
 
     if (!res->version) {
         free((char *)res->name);
@@ -58,11 +60,12 @@ asdf_tag_t *asdf_tag_parse(const char *tag) {
 }
 
 
-void asdf_tag_free(asdf_tag_t *tag) {
+void asdf_tag_destroy(asdf_tag_t *tag) {
     if (!tag)
         return;
 
     free((char *)tag->name);
-    free((char *)tag->version);
+    asdf_version_destroy((asdf_version_t *)tag->version);
+    ZERO_MEMORY(tag, sizeof(asdf_tag_t));
     free(tag);
 }

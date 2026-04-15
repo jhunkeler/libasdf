@@ -3,24 +3,24 @@
 #define ASDF_EXTENSION_H
 
 #include <stdbool.h>
-#include <stdlib.h>
 
 #include <asdf/file.h>
 #include <asdf/util.h>
 #include <asdf/value.h>
+#include <asdf/version.h>
 
 
 ASDF_BEGIN_DECLS
 
 typedef struct {
     const char *name;
-    const char *version;
+    const asdf_version_t *version;
 } asdf_tag_t;
 
 
 typedef struct {
     const char *name;
-    const char *version;
+    const asdf_version_t *version;
     const char *author;
     const char *homepage;
 } asdf_software_t;
@@ -63,12 +63,12 @@ ASDF_EXPORT const asdf_extension_t *asdf_extension_get(asdf_file_t *file, const 
 /**
  * Parse a tag string of the form "name" or "name-version" into an
  * asdf_tag_t.  Returns NULL on OOM.  The caller owns the result
- * and must free it with asdf_tag_free.
+ * and must free it with asdf_tag_destroy.
  */
 ASDF_EXPORT asdf_tag_t *asdf_tag_parse(const char *tag);
 
 /** Free a tag returned by asdf_tag_parse. */
-ASDF_EXPORT void asdf_tag_free(asdf_tag_t *tag);
+ASDF_EXPORT void asdf_tag_destroy(asdf_tag_t *tag);
 
 
 #define ASDF_EXT_PREFIX asdf

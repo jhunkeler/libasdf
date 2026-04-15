@@ -45,7 +45,7 @@ static asdf_value_t *asdf_software_serialize(
     if (err != ASDF_VALUE_OK)
         goto cleanup;
 
-    err = asdf_mapping_set_string0(software_map, "version", software->version);
+    err = asdf_mapping_set_string0(software_map, "version", software->version->version);
 
     if (err != ASDF_VALUE_OK)
         goto cleanup;
@@ -125,7 +125,7 @@ static asdf_value_err_t asdf_software_deserialize(
     }
 
     software->name = name ? strdup(name) : name;
-    software->version = version ? strdup(version) : version;
+    software->version = (const asdf_version_t *)asdf_version_parse(version);
     software->homepage = homepage ? strdup(homepage) : homepage;
     software->author = author ? strdup(author) : author;
     *out = software;
@@ -142,7 +142,7 @@ static void asdf_software_dealloc(void *value) {
 
     asdf_software_t *software = value;
     free((void *)software->name);
-    free((void *)software->version);
+    asdf_version_destroy((asdf_version_t *)software->version);
     free((void *)software->homepage);
     free((void *)software->author);
     free(value);
@@ -167,7 +167,7 @@ static void *asdf_software_copy(const void *value) {
     }
 
     if (software->version) {
-        copy->version = strdup(software->version);
+        copy->version = asdf_version_copy(software->version);
 
         if (!copy->version)
             goto failure;
@@ -222,8 +222,8 @@ void asdf_library_set_version(asdf_file_t *file, const char *version) {
     }
 
     if (software->version)
-        free((void *)software->version);
+        asdf_version_destroy((asdf_version_t *)software->version);
 
-    software->version = version ? strdup(version) : strdup("");
+    software->version = asdf_version_parse(version);
     file->asdf_library = software;
 }
