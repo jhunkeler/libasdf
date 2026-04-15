@@ -31,6 +31,7 @@ set(libasdf_sources
     util.c
     value.c
     value_util.c
+    version.c
     yaml.c
 )
 

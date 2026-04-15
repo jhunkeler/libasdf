@@ -17,6 +17,7 @@ nobase_include_HEADERS = \
     asdf/parser.h \
     asdf/util.h \
     asdf/value.h \
+    asdf/version.h \
     asdf/yaml.h
 
 

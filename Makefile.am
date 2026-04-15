@@ -29,6 +29,7 @@ src_files = \
     src/util.c \
     src/value.c \
     src/value_util.c \
+    src/version.c \
     src/yaml.c
 
 src_headers = \

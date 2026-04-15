@@ -10,6 +10,7 @@
 #include <libfyaml.h>
 
 #include "asdf/parser.h" // IWYU pragma: export
+#include "asdf/version.h"
 
 #include "context.h"
 #include "event.h"
@@ -18,8 +19,6 @@
 
 
 #define ASDF_COMMENT_CHAR '#'
-#define ASDF_ASDF_VERSION_BUFFER_SIZE 16
-#define ASDF_STANDARD_VERSION_BUFFER_SIZE 16
 #define ASDF_PARSER_READ_BUFFER_INIT_SIZE 512
 
 
@@ -91,8 +90,8 @@ typedef struct asdf_parser {
     bool should_close;
     struct asdf_event_p *event_freelist;
     struct asdf_event_p *current_event_p;
-    char asdf_version[ASDF_ASDF_VERSION_BUFFER_SIZE];
-    char standard_version[ASDF_STANDARD_VERSION_BUFFER_SIZE];
+    asdf_version_t *asdf_version;
+    asdf_version_t *standard_version;
     struct fy_parser *yaml_parser;
     asdf_parser_tree_info_t tree;
     asdf_parser_block_info_t block;
