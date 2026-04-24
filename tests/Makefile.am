@@ -36,6 +36,7 @@ check_PROGRAMS = \
     test-parse-util.unit \
     test-parser.unit \
     test-stream.unit \
+    test-tag.unit \
     test-tests.unit \
     test-time.unit \
     test-value.unit \
@@ -193,6 +194,13 @@ test_stream_unit_CPPFLAGS = $(unit_test_cppflags)
 test_stream_unit_CFLAGS = $(unit_test_cflags)
 test_stream_unit_LDFLAGS = $(unit_test_ldflags)
 test_stream_unit_LDADD = $(FYAML_LIBS) libmunit.a $(STATGRAB_LIBS)
+
+# test-tag.unit
+test_tag_unit_SOURCES = test-tag.c
+test_tag_unit_CPPFLAGS = $(unit_test_cppflags)
+test_tag_unit_CFLAGS = $(unit_test_cflags)
+test_tag_unit_LDFLAGS = $(unit_test_ldflags)
+test_tag_unit_LDADD = $(unit_test_ldadd)
 
 # test-tests.unit
 test_tests_unit_SOURCES = test-tests.c
