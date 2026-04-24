@@ -47,8 +47,9 @@ asdf_tag_t *asdf_tag_parse(const char *tag) {
         return NULL;
     }
 
-    const char *version = strdup(sep + 1);
+    char *version = strdup(sep + 1);
     res->version = asdf_version_parse(version);
+    free(version);
 
     if (!res->version) {
         free((char *)res->name);
