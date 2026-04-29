@@ -17,4 +17,5 @@
 [2m│       └─[0m[1mversion[0m (scalar): 4.1.0
 [2m├─[0m[1ma[0m (mapping)
 [2m│ └─[0m[1mabc[0m (scalar): 123
-[2m└─[0m[1mb[0m (scalar): id001
+[2m└─[0m[1mb[0m (mapping)
+[2m  └─[0m[1mabc[0m (scalar): 123

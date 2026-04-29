@@ -1912,6 +1912,36 @@ MU_TEST(test_raw_value_type_preserved_after_type_resolution) {
     return MUNIT_OK;
 }
 
+
+/** Test alias/anchor resolution -- for asdf_value_t it should be transparent */
+MU_TEST(anchors) {
+    const char *filename = get_fixture_file_path("anchors.asdf");
+    asdf_file_t *file = asdf_open(filename, "r");
+    assert_not_null(file);
+
+    asdf_value_t *value = asdf_get_value(file, "string_alias");
+    const char *string = NULL;
+    assert_not_null(value);
+    assert_true(asdf_value_is_string(value));
+    assert_int(asdf_value_as_string0(value, &string), ==, ASDF_VALUE_OK);
+    assert_string_equal(string, "string");
+    asdf_value_destroy(value);
+
+    // Test for an extension type
+    value = asdf_get_value(file, "software_alias");
+    asdf_software_t *software = NULL;
+    assert_not_null(value);
+    assert_true(asdf_value_is_software(value));
+    assert_int(asdf_value_as_software(value, &software), ==, ASDF_VALUE_OK);
+    assert_string_equal(software->name, "libasdf");
+    assert_string_equal(software->version->version, "1.0.0");
+    asdf_value_destroy(value);
+    asdf_software_destroy(software);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 /** Regression test for double-free bug on cloned extension values */
 MU_TEST(regression_clone_extension_value) {
     const char *path = get_reference_file_path("1.6.0/basic.asdf");
@@ -2019,6 +2049,7 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_value_parent),
     MU_RUN_TEST(test_asdf_value_type_string),
     MU_RUN_TEST(test_raw_value_type_preserved_after_type_resolution),
+    MU_RUN_TEST(anchors),
     // TODO: Maybe set up a separate test suite for regression tests
     MU_RUN_TEST(regression_clone_extension_value),
     MU_RUN_TEST(regression_read_min_int),
