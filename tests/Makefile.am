@@ -339,6 +339,7 @@ EXTRA_DIST += \
     fixtures/255-out.asdf \
     fixtures/255-padding-after-header.asdf \
     fixtures/255-padding-after-tree.asdf \
+    fixtures/anchors.asdf \
     fixtures/byteorder.asdf \
     fixtures/compressed.asdf \
     fixtures/cube.asdf \

@@ -49,11 +49,48 @@ static asdf_value_type_t asdf_value_type_from_node(struct fy_node *node) {
  */
 static asdf_value_t *asdf_value_create_ex(
     asdf_file_t *file, struct fy_node *node, asdf_value_t *parent, const char *key, int index) {
+    assert(node);
     asdf_value_t *value = calloc(1, sizeof(asdf_value_t));
+    char *path = NULL;
 
     if (!value) {
         ASDF_ERROR_OOM(file);
         return NULL;
+    }
+
+    if (parent && parent->path) {
+        if (key) {
+            if (asprintf(&path, "%s/%s", parent->path, key) == -1) {
+                ASDF_LOG(file, ASDF_LOG_WARN, "failure to build value path for %s (OOM?)", key);
+            }
+        } else if (index >= 0) {
+            if (asprintf(&path, "%s/%d", parent->path, index) == -1) {
+                ASDF_LOG(file, ASDF_LOG_WARN, "failure to build value path for %d (OOM?)", index);
+            }
+        }
+    }
+
+    // Check if the node is an alias -- if so resolve it immediately
+    // More fine-grained control over aliases isn't supported yet so for now
+    // we just treat them transparently
+    if (fy_node_is_alias(node)) {
+#ifdef ASDF_LOG_ENABLED
+        const char *anchor = fy_node_get_scalar0(node);
+        char *value_path = path ? path : fy_node_get_path(node);
+        ASDF_LOG(file, ASDF_LOG_DEBUG, "value at %s is an alias for %s", value_path, anchor);
+
+        if (!path)
+            free(value_path);
+#endif
+        node = fy_node_resolve_alias(node);
+
+        if (!node) {
+            // May be null if the node led to a graph cycle, but not clear if we
+            // can distinguish that case from a genuine OOM
+            ASDF_ERROR_OOM(file);
+            free(value);
+            return NULL;
+        }
     }
 
     value->file = file;
@@ -65,25 +102,7 @@ static asdf_value_t *asdf_value_create_ex(
     value->shallow = false;
     value->explicit_tag_checked = false;
     value->extension_checked = false;
-    value->path = NULL;
-
-    if (parent && parent->path) {
-        char *path = NULL;
-        if (key) {
-            if (asprintf(&path, "%s/%s", parent->path, key) == -1) {
-                ASDF_LOG(file, ASDF_LOG_WARN, "failure to build value path for %s (OOM?)", key);
-            } else {
-                value->path = path;
-            }
-        } else if (index >= 0) {
-            if (asprintf(&path, "%s/%d", parent->path, index) == -1) {
-                ASDF_LOG(file, ASDF_LOG_WARN, "failure to build value path for %d (OOM?)", index);
-            } else {
-                value->path = path;
-            }
-        }
-    }
-
+    value->path = path;
     return value;
 }
 

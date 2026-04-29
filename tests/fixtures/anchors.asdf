@@ -1,0 +1,12 @@
+#ASDF 1.0.0
+#ASDF_STANDARD 1.6.0
+%YAML 1.1
+%TAG ! tag:stsci.edu:asdf/
+--- !core/asdf-1.1.0
+string: &id001 string
+string_alias: *id001
+software: &id002 !core/software-1.0.0
+  name: libasdf
+  version: 1.0.0
+software_alias: *id002
+...
