@@ -76,8 +76,11 @@ static asdf_value_t *asdf_value_create_ex(
     if (fy_node_is_alias(node)) {
 #ifdef ASDF_LOG_ENABLED
         const char *anchor = fy_node_get_scalar0(node);
-        const char *value_path = path ? path : fy_node_get_path(node);
+        char *value_path = path ? path : fy_node_get_path(node);
         ASDF_LOG(file, ASDF_LOG_DEBUG, "value at %s is an alias for %s", value_path, anchor);
+
+        if (!path)
+            free(value_path);
 #endif
         node = fy_node_resolve_alias(node);
 
