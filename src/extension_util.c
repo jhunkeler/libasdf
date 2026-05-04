@@ -93,6 +93,14 @@ static bool is_equivalent_type(asdf_value_type_t type, asdf_value_type_t expecte
         switch (type) {
         case ASDF_VALUE_DOUBLE:
         case ASDF_VALUE_FLOAT:
+        case ASDF_VALUE_INT64:
+        case ASDF_VALUE_INT32:
+        case ASDF_VALUE_INT16:
+        case ASDF_VALUE_INT8:
+        case ASDF_VALUE_UINT64:
+        case ASDF_VALUE_UINT32:
+        case ASDF_VALUE_UINT16:
+        case ASDF_VALUE_UINT8:
             return true;
         default:
             return false;

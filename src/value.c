@@ -215,7 +215,81 @@ static asdf_value_t *asdf_value_clone_impl(asdf_value_t *value, bool raw_shallow
 }
 
 
+/* Shallow clone that preserves all type information from the source value
+ *
+ * Only valid for nodes that are attached to a document (where the document owns
+ * the fy_node); fy_node_free() is a no-op on attached nodes so the shallow
+ * reference is always safe.
+ *
+ * Unlike asdf_value_clone_impl(value, true) ("raw shallow"), this preserves the
+ * computed type, extension type information, and scalar cache so the clone is
+ * immediately usable without re-inferring anything.  Extension values get a new
+ * ext wrapper struct that shares the already-deserialized object pointer; only
+ * the wrapper is freed on destroy, not the object itself (consistent with the
+ * normal ownership rules for extension objects).
+ *
+ * .. todo::
+ *
+ *   Merge this into asdf_value_clone_impl
+ */
+static asdf_value_t *asdf_value_clone_shallow(asdf_value_t *value) {
+    if (!value)
+        return NULL;
+
+    asdf_value_t *new_value = malloc(sizeof(asdf_value_t));
+    if (!new_value) {
+        ASDF_ERROR_OOM(value->file);
+        return NULL;
+    }
+
+    new_value->file = value->file;
+    new_value->node = value->node;
+    new_value->type = value->type;
+    new_value->raw_type = value->raw_type;
+    new_value->err = value->err;
+    new_value->shallow = true;
+    new_value->explicit_tag_checked = value->explicit_tag_checked;
+    new_value->extension_checked = value->extension_checked;
+    new_value->tag = value->tag ? strdup(value->tag) : NULL;
+    new_value->path = value->path ? strdup(value->path) : fy_node_get_path(value->node);
+
+    if (value->type == ASDF_VALUE_EXTENSION && value->scalar.ext) {
+        asdf_extension_value_t *new_ext = malloc(sizeof(asdf_extension_value_t));
+        if (!new_ext) {
+            free((char *)new_value->path);
+            free((char *)new_value->tag);
+            free(new_value);
+            ASDF_ERROR_OOM(value->file);
+            return NULL;
+        }
+        *new_ext = *value->scalar.ext;
+        new_value->scalar.ext = new_ext;
+    } else {
+        new_value->scalar = value->scalar;
+    }
+
+    return new_value;
+}
+
+
 asdf_value_t *asdf_value_clone(asdf_value_t *value) {
+    if (!value)
+        return NULL;
+
+    // For nodes owned by a document (attached or document root), use a shallow
+    // clone: the document manages the fy_node lifetime, fy_node_free() is a
+    // no-op, and avoiding a full deep copy prevents failures on deeply nested
+    // structures (libfyaml has a hard limit on recursive copy depth).
+    if (value->node && (fy_node_is_attached(value->node) || is_root_node(value->node)))
+        return asdf_value_clone_shallow(value);
+
+    return asdf_value_clone_impl(value, false);
+}
+
+
+// Deep-clone variant for when an independent (detached) copy is truly needed,
+// e.g. when moving a value from one document/container into another.
+asdf_value_t *asdf_value_clone_deep(asdf_value_t *value) {
     return asdf_value_clone_impl(value, false);
 }
 
@@ -265,8 +339,8 @@ const char *asdf_value_tag(asdf_value_t *value) {
 }
 
 
-const asdf_file_t *asdf_value_file(asdf_value_t *value) {
-    return (const asdf_file_t *)value->file;
+asdf_file_t *asdf_value_file(asdf_value_t *value) {
+    return value->file;
 }
 
 
@@ -410,7 +484,7 @@ void asdf_mapping_set_style(asdf_mapping_t *mapping, asdf_yaml_node_style_t styl
 
 
 asdf_mapping_t *asdf_mapping_clone(asdf_mapping_t *mapping) {
-    asdf_value_t *clone = asdf_value_clone(&mapping->value);
+    asdf_value_t *clone = asdf_value_clone_deep(&mapping->value);
     return (asdf_mapping_t *)clone;
 }
 
@@ -439,11 +513,13 @@ static inline asdf_value_err_t asdf_mapping_set_node(
 
     // If the key already exists in the mapping, replace its value
     if (pair) {
+        fy_node_free(key_node);
+
         if (fy_node_pair_set_value(pair, value) != 0) {
             return ASDF_VALUE_ERR_OOM;
         }
-        fy_node_free(key_node);
     } else if (fy_node_mapping_append(mapping->value.node, key_node, value) != 0) {
+        fy_node_free(key_node);
         return ASDF_VALUE_ERR_OOM;
     }
 
@@ -633,7 +709,12 @@ asdf_value_err_t asdf_mapping_update(asdf_mapping_t *mapping, asdf_mapping_t *up
     asdf_value_err_t err = ASDF_VALUE_OK;
 
     while (asdf_mapping_iter_next(&iter)) {
-        err = asdf_mapping_set(mapping, iter->key, asdf_value_clone(iter->value));
+        asdf_value_t *clone = asdf_value_clone_deep(iter->value);
+        if (!clone) {
+            asdf_mapping_iter_destroy(iter);
+            return ASDF_VALUE_ERR_OOM;
+        }
+        err = asdf_mapping_set(mapping, iter->key, clone);
         if (err) {
             asdf_mapping_iter_destroy(iter);
             break;
@@ -1349,8 +1430,10 @@ asdf_value_t *asdf_value_of_extension_type(
 
     // TODO: Might be better if serialize also returned an asdf_value_t so we
     // can report serialization errors better
-    if (!value)
+    if (!value) {
+        free(new_ext);
         return NULL;
+    }
 
     // serialize *may* return NULL if an error occurred in the serializer
     // in this case the serializer should the serializer be responsible for setting an error?
@@ -2499,6 +2582,20 @@ asdf_value_err_t asdf_value_as_double(asdf_value_t *value, double *out) {
     case ASDF_VALUE_FLOAT:
         if (LIKELY(out))
             *out = value->scalar.d;
+        return ASDF_VALUE_OK;
+    case ASDF_VALUE_INT64:
+    case ASDF_VALUE_INT32:
+    case ASDF_VALUE_INT16:
+    case ASDF_VALUE_INT8:
+        if (LIKELY(out))
+            *out = (double)value->scalar.i;
+        return ASDF_VALUE_OK;
+    case ASDF_VALUE_UINT64:
+    case ASDF_VALUE_UINT32:
+    case ASDF_VALUE_UINT16:
+    case ASDF_VALUE_UINT8:
+        if (LIKELY(out))
+            *out = (double)value->scalar.u;
         return ASDF_VALUE_OK;
     default:
         return ASDF_VALUE_ERR_TYPE_MISMATCH;

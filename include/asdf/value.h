@@ -230,7 +230,7 @@ ASDF_EXPORT const char *asdf_value_tag(asdf_value_t *value);
 typedef struct asdf_file asdf_file_t;
 
 /** Get the `asdf_file_t *` handle to the file to which a value belongs */
-ASDF_EXPORT const asdf_file_t *asdf_value_file(asdf_value_t *value);
+ASDF_EXPORT asdf_file_t *asdf_value_file(asdf_value_t *value);
 
 /** Mappings */
 
