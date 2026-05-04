@@ -26,6 +26,7 @@ const asdf_extension_t *asdf_extension_get(asdf_file_t *file, const char *tag) {
 
     if (!ext) {
         ASDF_LOG(file, ASDF_LOG_TRACE, "no extension registered for tag %s", full_tag);
+        free(full_tag);
         return NULL;
     }
 
