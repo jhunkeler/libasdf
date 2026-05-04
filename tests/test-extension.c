@@ -146,6 +146,17 @@ MU_TEST(extension_registered) {
 }
 
 
+MU_TEST(extension_get_unregistered) {
+    const char *path = get_fixture_file_path("trivial-extension.asdf");
+    asdf_file_t *file = asdf_open(path, "r");
+    assert_not_null(file);
+    const asdf_extension_t *ext = asdf_extension_get(file, "unregistered-tag");
+    assert_null(ext);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST(test_asdf_value_is_foo) {
     const char *path = get_fixture_file_path("trivial-extension.asdf");
     asdf_file_t *file = asdf_open(path, "r");
@@ -255,6 +266,7 @@ MU_TEST(test_asdf_foo_array_clone) {
 MU_TEST_SUITE(
     extension,
     MU_RUN_TEST(extension_registered),
+    MU_RUN_TEST(extension_get_unregistered),
     MU_RUN_TEST(test_asdf_value_is_foo),
     MU_RUN_TEST(test_asdf_value_as_foo),
     MU_RUN_TEST(test_asdf_value_of_foo),
