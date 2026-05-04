@@ -795,6 +795,59 @@ MU_TEST(test_asdf_value_as_double) {
 }
 
 
+MU_TEST(test_asdf_value_as_double_from_int) {
+    /* Integer-typed values should be coercible to double */
+    asdf_file_t *file = asdf_open(NULL);
+    assert_not_null(file);
+
+    double out = 0.0;
+    asdf_value_t *v;
+
+    v = asdf_value_of_int8(file, 42);
+    assert_int(asdf_value_as_double(v, &out), ==, ASDF_VALUE_OK);
+    assert_double(out, ==, 42.0);
+    asdf_value_destroy(v);
+
+    v = asdf_value_of_int16(file, -1000);
+    assert_int(asdf_value_as_double(v, &out), ==, ASDF_VALUE_OK);
+    assert_double(out, ==, -1000.0);
+    asdf_value_destroy(v);
+
+    v = asdf_value_of_int32(file, 100000);
+    assert_int(asdf_value_as_double(v, &out), ==, ASDF_VALUE_OK);
+    assert_double(out, ==, 100000.0);
+    asdf_value_destroy(v);
+
+    v = asdf_value_of_int64(file, -1);
+    assert_int(asdf_value_as_double(v, &out), ==, ASDF_VALUE_OK);
+    assert_double(out, ==, -1.0);
+    asdf_value_destroy(v);
+
+    v = asdf_value_of_uint8(file, 255);
+    assert_int(asdf_value_as_double(v, &out), ==, ASDF_VALUE_OK);
+    assert_double(out, ==, 255.0);
+    asdf_value_destroy(v);
+
+    v = asdf_value_of_uint16(file, 1000);
+    assert_int(asdf_value_as_double(v, &out), ==, ASDF_VALUE_OK);
+    assert_double(out, ==, 1000.0);
+    asdf_value_destroy(v);
+
+    v = asdf_value_of_uint32(file, 1);
+    assert_int(asdf_value_as_double(v, &out), ==, ASDF_VALUE_OK);
+    assert_double(out, ==, 1.0);
+    asdf_value_destroy(v);
+
+    v = asdf_value_of_uint64(file, 0);
+    assert_int(asdf_value_as_double(v, &out), ==, ASDF_VALUE_OK);
+    assert_double(out, ==, 0.0);
+    asdf_value_destroy(v);
+
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST(test_asdf_value_as_type) {
     const char *path = get_fixture_file_path("scalars.asdf");
     asdf_file_t *file = asdf_open(path, "r");
@@ -1985,6 +2038,40 @@ MU_TEST(regression_read_flt_max) {
 }
 
 
+// asdf_value_clone on an attached node should use a shallow reference rather
+// than a full deep copy.  This is important for deeply nested structures (e.g.
+// GWCS pipeline transform trees) which would otherwise exceed libfyaml's
+// hard-coded recursive copy depth limit.
+MU_TEST(test_asdf_value_clone_attached_shallow) {
+    asdf_file_t *file = asdf_open(NULL);
+    assert_not_null(file);
+
+    // Create a 20-level deep nested mapping by setting a value at a long path.
+    // Each slash-separated component materialises an intermediate mapping node.
+    assert_int(asdf_set_int32(
+        file,
+        "a0/a1/a2/a3/a4/a5/a6/a7/a8/a9/a10/a11/a12/a13/a14/a15/a16/a17/a18/a19",
+        42), ==, ASDF_VALUE_OK);
+
+    // Retrieve the root-level mapping -- it is now attached to the document and
+    // has a subtree 20 levels deep.
+    asdf_value_t *root = asdf_get_value(file, "a0");
+    assert_not_null(root);
+    assert_true(asdf_value_is_mapping(root));
+
+    // Clone should succeed even though the subtree exceeds the libfyaml deep-copy
+    // depth limit; for attached nodes we take a shallow reference instead.
+    asdf_value_t *clone = asdf_value_clone(root);
+    assert_not_null(clone);
+    assert_true(asdf_value_is_mapping(clone));
+
+    asdf_value_destroy(clone);
+    asdf_value_destroy(root);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     value,
     MU_RUN_TEST(test_asdf_value_get_type),
@@ -2016,6 +2103,7 @@ MU_TEST_SUITE(
     MU_RUN_TEST(test_asdf_value_as_float),
     MU_RUN_TEST(test_asdf_value_is_float),
     MU_RUN_TEST(test_asdf_value_as_double),
+    MU_RUN_TEST(test_asdf_value_as_double_from_int),
     MU_RUN_TEST(test_asdf_value_as_type),
     MU_RUN_TEST(test_asdf_value_is_type),
     MU_RUN_TEST(test_asdf_value_of_mapping),
@@ -2053,7 +2141,8 @@ MU_TEST_SUITE(
     // TODO: Maybe set up a separate test suite for regression tests
     MU_RUN_TEST(regression_clone_extension_value),
     MU_RUN_TEST(regression_read_min_int),
-    MU_RUN_TEST(regression_read_flt_max)
+    MU_RUN_TEST(regression_read_flt_max),
+    MU_RUN_TEST(test_asdf_value_clone_attached_shallow)
 );
 
 

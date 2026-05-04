@@ -176,5 +176,9 @@ ASDF_NODE_OF_FLOAT_VALUE_TYPE(double, double, "%.17g")
  */
 ASDF_LOCAL struct fy_node *asdf_value_normalize_node(asdf_value_t *value);
 
+/**
+ * Additional internal functions not yet exposed in the public API
+ */
+ASDF_LOCAL asdf_value_t *asdf_value_clone_deep(asdf_value_t *value);
 ASDF_LOCAL asdf_value_err_t asdf_node_insert_at(
     struct fy_document *doc, const char *path, struct fy_node *node, bool materialize);

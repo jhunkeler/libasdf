@@ -64,7 +64,15 @@ static asdf_value_t *asdf_extension_metadata_serialize(
             if (strcmp(iter->key, "package") == 0)
                 continue;
 
-            err = asdf_mapping_set(extension_map, iter->key, asdf_value_clone(iter->value));
+            // Make a deep copy of the metadata mapping's value since inserting
+            // it into a new mapping steals ownership of the value
+            asdf_value_t *val = asdf_value_clone_deep(iter->value);
+
+            if (iter->value && !val) {
+                err = ASDF_VALUE_ERR_OOM;
+            } else {
+                err = asdf_mapping_set(extension_map, iter->key, val);
+            }
 
             if (err != ASDF_VALUE_OK) {
                 asdf_mapping_iter_destroy(iter);
