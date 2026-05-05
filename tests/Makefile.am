@@ -333,6 +333,7 @@ EXTRA_DIST += \
     fixtures/events/complex.events.txt \
     fixtures/events/compressed.events.txt \
     fixtures/events/int.events.txt \
+    fixtures/extension-metadata-with-package.asdf \
     fixtures/info/anchor.info.txt \
     fixtures/info/ascii.info.txt \
     fixtures/info/basic.info.txt \
