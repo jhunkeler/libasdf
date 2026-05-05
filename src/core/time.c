@@ -434,12 +434,16 @@ static asdf_value_err_t asdf_time_deserialize(
         if (asdf_value_as_mapping(value, &mapping) != ASDF_VALUE_OK)
             goto failure;
         prop = asdf_mapping_get(mapping, "value");
+        if (!prop)
+            goto failure;
     } else {
         prop = value;
     }
 
     time->value = calloc(ASDF_TIME_TIMESTR_MAXLEN, sizeof(*time->value));
     if (!time->value) {
+        if (prop && prop != value)
+            asdf_value_destroy(prop);
         free(time);
         return ASDF_VALUE_ERR_OOM;
     }
@@ -500,12 +504,23 @@ static asdf_value_err_t asdf_time_deserialize(
         /* jyear */
         "J[0-9]+(.[0-9]+)?",
         /* yday */
+        /** FIXME: This regexp actually fails to compile due to surpassing the
+         * built-in character class limit; need to find workaround to this */
         "[0-9]{4}:(00[1-9])|(0[1-9][0-9])|([1-2][0-9][0-9])|(3[0-5][0-9])|(36[0-5]):([0-1][0-9])|"
         "([0-1][0-9])|(2[0-4]):[0-5][0-9]:[0-5][0-9](.[0-9]+)?"};
 
     time->format.is_base_format = true;
     for (size_t idx = 0; idx < sizeof(time_auto_patterns) / sizeof(time_auto_patterns[0]); idx++) {
         cregex re = cregex_make(time_auto_patterns[idx], CREG_DEFAULT);
+
+        if (UNLIKELY(re.error == CREG_OUTOFMEMORY)) {
+            err = ASDF_VALUE_ERR_OOM;
+            goto failure;
+        } else if (UNLIKELY(re.error != CREG_OK)) {
+            err = ASDF_VALUE_ERR_PARSE_FAILURE;
+            goto failure;
+        }
+
         if (cregex_is_match(&re, time->value) == true) {
             const char *fmt_have = format_s ? format_s : time_auto_keys[idx];
             if (!strcmp(fmt_have, "iso_time")) {

@@ -22,6 +22,7 @@
 #include "util.h"
 
 #include "asdf/core/extension_metadata.h"
+#include "asdf/core/time.h"
 
 #include "event.h"
 #include "file.h"
@@ -313,6 +314,48 @@ MU_TEST(oom_extension_metadata_deserialize) {
 }
 
 
+/**
+ * ``asdf_time_deserialize`` -- ``asdf_value_destroy(prop)`` missing on
+ * ``calloc(time->value)`` failure when the input is a mapping.
+ *
+ * Same sweep strategy: iterate OOM injection points with a fresh file+value
+ * each time.  Uses a time value that is a flow mapping (``{format: ...,
+ * value: ...}``) so that ``asdf_mapping_get(mapping, "value")`` allocates
+ * ``prop`` before the ``time->value`` calloc is attempted.  Without the fix
+ * that iteration leaks ``prop``; LSAN catches it.
+ */
+MU_TEST(oom_time_deserialize) {
+    for (int idx = 0; idx < 200; idx++) {
+        const char *path = get_fixture_file_path("time.asdf");
+        asdf_file_t *file = asdf_open(path, "r");
+        if (!file)
+            munit_error("failed to open fixture");
+        /* t_byear is a flow mapping: {format: byear, value: '...'} */
+        asdf_value_t *value = asdf_get_value(file, "t_byear");
+        if (!value) {
+            asdf_close(file);
+            munit_error("failed to get value at t_byear");
+        }
+
+        asdf_time_t *out = NULL;
+        malloc_fail_after(idx);
+        asdf_value_err_t err = asdf_value_as_time(value, &out);
+        malloc_fail_reset();
+
+        if (err == ASDF_VALUE_OK) {
+            asdf_time_destroy(out);
+            asdf_value_destroy(value);
+            asdf_close(file);
+            break;
+        }
+
+        asdf_value_destroy(value);
+        asdf_close(file);
+    }
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     malloc_fail,
     MU_RUN_TEST(oom_parse_asdf_version),
@@ -322,7 +365,8 @@ MU_TEST_SUITE(
     MU_RUN_TEST(oom_tag_parse_name_only),
     MU_RUN_TEST(oom_tag_parse_name_strndup),
     MU_RUN_TEST(oom_tag_parse_version_strdup),
-    MU_RUN_TEST(oom_extension_metadata_deserialize)
+    MU_RUN_TEST(oom_extension_metadata_deserialize),
+    MU_RUN_TEST(oom_time_deserialize)
 );
 
 
