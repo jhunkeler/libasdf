@@ -42,15 +42,17 @@ including ``asdf.h``.  This in turn includes the following headers:
 Additional less commonly used APIs can be used by including the relevant
 headers.
 
-.. todo::
-
-   Document lower-level APIs.
-
 .. toctree::
   :maxdepth: 2
 
+  api/asdf/emitter.h
   api/asdf/extension.h
   api/asdf/yaml.h
+
+
+.. todo::
+
+   Document lower-level APIs.
 
 
 Resources

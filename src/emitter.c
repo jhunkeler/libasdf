@@ -35,6 +35,7 @@ asdf_emitter_t *asdf_emitter_create(asdf_file_t *file, asdf_emitter_cfg_t *confi
     emitter->config = config ? *config : asdf_emitter_cfg_default;
     emitter->state = ASDF_EMITTER_STATE_INITIAL;
     emitter->done = false;
+    file->emitter = emitter;
     return emitter;
 }
 
@@ -751,6 +752,9 @@ asdf_emitter_state_t asdf_emitter_emit(asdf_emitter_t *emitter) {
 void asdf_emitter_destroy(asdf_emitter_t *emitter) {
     if (!emitter)
         return;
+
+    if (emitter->file && emitter->file->emitter == emitter)
+        emitter->file->emitter = NULL;
 
     if (emitter->stream)
         asdf_stream_close(emitter->stream);

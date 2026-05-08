@@ -43,11 +43,11 @@
 #ifndef ASDF_CORE_NDARRAY_H
 #define ASDF_CORE_NDARRAY_H
 
-#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #include <asdf/core/datatype.h>
+#include <asdf/emitter.h>
 #include <asdf/extension.h>
 #include <asdf/util.h>
 
@@ -243,31 +243,37 @@ ASDF_EXPORT int asdf_ndarray_compression_set(asdf_ndarray_t *ndarray, const char
 
 
 /**
- * Test if the ndarray is serialized inline
+ * Return the storage mode that will be used when the ndarray is written.
  *
- * If the ndarray was read from a file this will indicate whether or not it
- * was serialized inline originally, otherwise indicates if it has been
- * explicitly set inline with `asdf_ndarray_inline_set`
+ * If the ndarray was read from a file this reflects how it was originally
+ * stored.  For a newly constructed ndarray this reflects whatever was last
+ * passed to `asdf_ndarray_storage_set`, or ``ASDF_ARRAY_STORAGE_INTERNAL``
+ * if the storage was never explicitly set.
  *
  * :param ndarray: An `asdf_ndarray_t *`
- * :return: True if the ndarray was or will be serialized inline
+ * :return: The `asdf_array_storage_t` for this ndarray.
  */
-ASDF_EXPORT bool asdf_ndarray_inline(asdf_ndarray_t *ndarray);
+ASDF_EXPORT asdf_array_storage_t asdf_ndarray_storage(asdf_ndarray_t *ndarray);
 
 
 /**
- * Mark the ndarray for inline YAML storage when written
+ * Set the storage mode used when the ndarray is written.
  *
- * When set to ``true``, the ndarray's data will be serialized as a nested
- * YAML sequence under the ``data`` key rather than in a binary block.  A
- * warning is logged if the number of elements exceeds the configured
- * threshold (see ``asdf_emitter_cfg_t.inline_ndarray_warning_thresh``).
+ * ``ASDF_ARRAY_STORAGE_INLINE`` serializes the data as a nested YAML
+ * sequence under the ``data`` key.  A warning is logged if the number of
+ * elements exceeds the configured threshold (see
+ * ``asdf_emitter_cfg_t.inline_ndarray_warning_thresh``).
+ *
+ * ``ASDF_ARRAY_STORAGE_INTERNAL`` writes the data in a binary block (the
+ * default when no storage mode is set).
+ *
+ * ``ASDF_ARRAY_STORAGE_EXTERNAL`` is not yet supported; calling this function
+ * with that value logs an error and leaves the storage mode unchanged.
  *
  * :param ndarray: An `asdf_ndarray_t *`
- * :param is_inline: Pass ``true`` to enable inline writing, ``false`` to
- *   revert to binary block storage
+ * :param storage: The desired `asdf_array_storage_t`
  */
-ASDF_EXPORT void asdf_ndarray_inline_set(asdf_ndarray_t *ndarray, bool is_inline);
+ASDF_EXPORT void asdf_ndarray_storage_set(asdf_ndarray_t *ndarray, asdf_array_storage_t storage);
 
 
 /**

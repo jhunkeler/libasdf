@@ -73,6 +73,7 @@ static asdf_config_t *asdf_config_build(asdf_config_t *user_config) {
         ASDF_CONFIG_OVERRIDE(config, user_config, emitter.flags, 0);
         ASDF_CONFIG_OVERRIDE(config, user_config, emitter.tag_handles, NULL);
         ASDF_CONFIG_OVERRIDE(config, user_config, emitter.inline_ndarray_warning_thresh, 0);
+        ASDF_CONFIG_OVERRIDE(config, user_config, emitter.array_storage, 0);
         ASDF_CONFIG_OVERRIDE(config, user_config, decomp.mode, ASDF_BLOCK_DECOMP_MODE_AUTO);
         ASDF_CONFIG_OVERRIDE(config, user_config, decomp.max_memory_bytes, 0);
         ASDF_CONFIG_OVERRIDE(config, user_config, decomp.max_memory_threshold, 0.0);
