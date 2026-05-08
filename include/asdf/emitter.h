@@ -39,6 +39,24 @@ typedef uint64_t asdf_emitter_optflags_t;
 
 
 /**
+ * Controls where an ndarray's data is stored when written.
+ *
+ * Used both as a per-array setting (see `asdf_ndarray_storage_set`) and as a
+ * file-level override in `asdf_emitter_cfg_t`.
+ */
+typedef enum {
+    /** Use the file-level ``array_storage`` emitter setting (default). */
+    ASDF_ARRAY_STORAGE_DEFAULT = 0,
+    /** Store the array as inline YAML data under the ``data`` key. */
+    ASDF_ARRAY_STORAGE_INLINE = 1,
+    /** Store the array in an internal binary block. */
+    ASDF_ARRAY_STORAGE_INTERNAL = 2,
+    /** Store the array in an external file (reserved; not yet supported). */
+    ASDF_ARRAY_STORAGE_EXTERNAL = 3,
+} asdf_array_storage_t;
+
+
+/**
  * Low-level emitter configuration
  *
  * Currently just consists of a bitset of flags that are used internally by
@@ -53,6 +71,12 @@ typedef struct asdf_emitter_cfg {
      * Set to SIZE_MAX to suppress the warning entirely.
      */
     size_t inline_ndarray_warning_thresh;
+    /**
+     * Override where all ndarray data is written; see `asdf_array_storage_t`.
+     * Defaults to ``ASDF_ARRAY_STORAGE_DEFAULT`` (0), which respects the
+     * per-array storage mode set via `asdf_ndarray_storage_set`.
+     */
+    asdf_array_storage_t array_storage;
 } asdf_emitter_cfg_t;
 
 ASDF_END_DECLS

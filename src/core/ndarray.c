@@ -620,9 +620,8 @@ static asdf_value_err_t asdf_ndarray_deserialize_inline(
         goto cleanup;
     }
 
-    /* Set the write_inline flag implicitly so the same ndarray is
-     * re-serialized inline unless otherwise specified later */
-    ndarray->internal->write_inline = true;
+    /* Mark as inline so the same ndarray re-serializes inline by default */
+    ndarray->internal->array_storage = ASDF_ARRAY_STORAGE_INLINE;
 
     *out = ndarray;
     err = ASDF_VALUE_OK;
@@ -743,6 +742,7 @@ static asdf_value_err_t asdf_ndarray_deserialize(
 
     ndarray->source = source;
     internal->file = value->file;
+    internal->array_storage = ASDF_ARRAY_STORAGE_INTERNAL;
     *out = ndarray;
     err = ASDF_VALUE_OK;
 cleanup:
@@ -783,23 +783,30 @@ static void asdf_ndarray_dealloc(void *value) {
 }
 
 
-bool asdf_ndarray_inline(asdf_ndarray_t *ndarray) {
+asdf_array_storage_t asdf_ndarray_storage(asdf_ndarray_t *ndarray) {
     if (UNLIKELY(!ndarray))
-        return false;
+        return ASDF_ARRAY_STORAGE_INTERNAL;
 
     asdf_ndarray_internal_t *internal = asdf_ndarray_internal(ndarray, false);
-    return internal && internal->write_inline;
+    return internal ? internal->array_storage : ASDF_ARRAY_STORAGE_INTERNAL;
 }
 
 
-void asdf_ndarray_inline_set(asdf_ndarray_t *ndarray, bool is_inline) {
+void asdf_ndarray_storage_set(asdf_ndarray_t *ndarray, asdf_array_storage_t storage) {
     if (UNLIKELY(!ndarray))
         return;
 
-    asdf_ndarray_internal_t *internal = asdf_ndarray_internal(ndarray, is_inline);
+    if (storage == ASDF_ARRAY_STORAGE_EXTERNAL) {
+        void *log_ctx = ndarray->internal ? (void *)ndarray->internal->file : NULL;
+        ASDF_LOG(log_ctx, ASDF_LOG_ERROR, "ASDF_ARRAY_STORAGE_EXTERNAL is not yet supported");
+        return;
+    }
+
+    bool create = (storage == ASDF_ARRAY_STORAGE_INLINE);
+    asdf_ndarray_internal_t *internal = asdf_ndarray_internal(ndarray, create);
 
     if (internal)
-        internal->write_inline = is_inline;
+        internal->array_storage = storage;
 }
 
 
@@ -1153,7 +1160,14 @@ static asdf_value_t *asdf_ndarray_serialize(
     }
 
     bool has_data = ndarray->internal && ndarray->internal->data;
-    bool write_inline_flag = ndarray->internal && ndarray->internal->write_inline;
+
+    asdf_array_storage_t per_array = ndarray->internal ? ndarray->internal->array_storage
+                                                       : ASDF_ARRAY_STORAGE_DEFAULT;
+    asdf_array_storage_t file_level = file->config ? file->config->emitter.array_storage
+                                                   : ASDF_ARRAY_STORAGE_DEFAULT;
+    asdf_array_storage_t effective = (file_level != ASDF_ARRAY_STORAGE_DEFAULT) ? file_level
+                                                                                : per_array;
+    bool write_inline_flag = (effective == ASDF_ARRAY_STORAGE_INLINE);
 
     if (!has_data) {
         ASDF_LOG(

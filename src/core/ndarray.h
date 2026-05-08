@@ -20,8 +20,8 @@ typedef struct {
     asdf_sequence_t *inline_data;
     /* True iff data was malloc'd during lazy inline parsing (not mmap'd) */
     bool data_is_inline;
-    /* True iff this ndarray should be written as inline YAML data */
-    bool write_inline;
+    /* Storage mode to use when writing this ndarray */
+    asdf_array_storage_t array_storage;
 } asdf_ndarray_internal_t;
 
 

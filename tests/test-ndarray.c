@@ -623,7 +623,7 @@ MU_TEST(ndarray_write_empty_inline_data) {
     // although not strictly the case it's particlarly needed for use with a
     // parallel data_dealloc or will result in memory leaks;
     (void)asdf_ndarray_data_alloc(&ndarray);
-    asdf_ndarray_inline_set(&ndarray, true);
+    asdf_ndarray_storage_set(&ndarray, ASDF_ARRAY_STORAGE_INLINE);
 
     asdf_file_t *file = asdf_open(NULL);
     assert_not_null(file);
@@ -639,7 +639,7 @@ MU_TEST(ndarray_write_empty_inline_data) {
     assert_int(asdf_get_ndarray(file, "empty", &ndarray_in), ==, ASDF_VALUE_OK);
     assert_not_null(ndarray_in);
     assert_int(ndarray_in->ndim, ==, 0);
-    assert_true(asdf_ndarray_inline(ndarray_in));
+    assert_int(asdf_ndarray_storage(ndarray_in), ==, ASDF_ARRAY_STORAGE_INLINE);
     asdf_ndarray_destroy(ndarray_in);
     asdf_close(file);
     return MUNIT_OK;
@@ -661,7 +661,7 @@ MU_TEST(ndarray_write_inline_data) {
     assert_not_null(impl_data);
     for (int idx = 0; idx < 9; idx++)
         impl_data[idx] = (uint8_t)idx;
-    asdf_ndarray_inline_set(&implicit_nd, true);
+    asdf_ndarray_storage_set(&implicit_nd, ASDF_ARRAY_STORAGE_INLINE);
 
     /* Build float64 3x3 ndarray with values 0.0-8.0 for the "explicit" key */
     asdf_ndarray_t explicit_nd = {
@@ -674,7 +674,7 @@ MU_TEST(ndarray_write_inline_data) {
     assert_not_null(expl_data);
     for (int idx = 0; idx < 9; idx++)
         expl_data[idx] = (double)idx;
-    asdf_ndarray_inline_set(&explicit_nd, true);
+    asdf_ndarray_storage_set(&explicit_nd, ASDF_ARRAY_STORAGE_INLINE);
 
     /* Write both ndarrays to a temp file */
     asdf_file_t *file = asdf_open(NULL);
@@ -704,7 +704,7 @@ MU_TEST(ndarray_write_inline_data) {
     assert_int((int)ndarray->shape[0], ==, 3);
     assert_int((int)ndarray->shape[1], ==, 3);
     assert_int(ndarray->datatype.type, ==, ASDF_DATATYPE_UINT8);
-    assert_true(asdf_ndarray_inline(ndarray));
+    assert_int(asdf_ndarray_storage(ndarray), ==, ASDF_ARRAY_STORAGE_INLINE);
 
     size_t size = 0;
     const void *data = asdf_ndarray_data_raw(ndarray, &size);
@@ -721,7 +721,7 @@ MU_TEST(ndarray_write_inline_data) {
     assert_int((int)ndarray->shape[0], ==, 3);
     assert_int((int)ndarray->shape[1], ==, 3);
     assert_int(ndarray->datatype.type, ==, ASDF_DATATYPE_FLOAT64);
-    assert_true(asdf_ndarray_inline(ndarray));
+    assert_int(asdf_ndarray_storage(ndarray), ==, ASDF_ARRAY_STORAGE_INLINE);
 
     size = 0;
     data = asdf_ndarray_data_raw(ndarray, &size);
@@ -746,7 +746,7 @@ MU_TEST(ndarray_inline_warning_thresh) {
     uint8_t *data = asdf_ndarray_data_alloc(&ndarray);
     assert_not_null(data);
     memset(data, 0, (size_t)shape[0]);
-    asdf_ndarray_inline_set(&ndarray, true);
+    asdf_ndarray_storage_set(&ndarray, ASDF_ARRAY_STORAGE_INLINE);
 
     /* Redirect warnings to a temp log file.  get_temp_file_path returns a
      * static buffer, so duplicate the path before calling it again. */
@@ -832,6 +832,73 @@ MU_TEST(heap_use_after_free_issue_63) {
 }
 
 
+static char *array_storage_param_values[] = {"inline", "internal", NULL};
+static MunitParameterEnum ndarray_array_storage_params[] = {
+    {"storage", array_storage_param_values},
+    {NULL, NULL}
+};
+
+
+/* Round-trip test for the file-level array_storage emitter override.
+ *
+ * Sets the per-array storage to the opposite of the file-level setting to
+ * verify that the file-level config wins in both directions. */
+MU_TEST(ndarray_array_storage_override) {
+    const char *storage_str = munit_parameters_get(params, "storage");
+    bool is_inline = strcmp(storage_str, "inline") == 0;
+    asdf_array_storage_t storage =
+        is_inline ? ASDF_ARRAY_STORAGE_INLINE : ASDF_ARRAY_STORAGE_INTERNAL;
+    asdf_array_storage_t opposite =
+        is_inline ? ASDF_ARRAY_STORAGE_INTERNAL : ASDF_ARRAY_STORAGE_INLINE;
+
+    const char *out_path = get_temp_file_path(fixture->tempfile_prefix, ".asdf");
+    uint64_t shape[1] = {4};
+
+    asdf_ndarray_t nd = {
+        .datatype = {.type = ASDF_DATATYPE_UINT8, .size = 1},
+        .byteorder = ASDF_BYTEORDER_LITTLE,
+        .ndim = 1,
+        .shape = shape,
+    };
+    uint8_t *data = asdf_ndarray_data_alloc(&nd);
+    assert_not_null(data);
+    for (int idx = 0; idx < 4; idx++)
+        data[idx] = (uint8_t)(idx + 1);
+    asdf_ndarray_storage_set(&nd, opposite);
+
+    asdf_config_t cfg = {.emitter = {.array_storage = storage}};
+    asdf_file_t *file = asdf_open_mem_ex(NULL, 0, &cfg);
+    assert_not_null(file);
+
+    asdf_value_t *val = asdf_value_of_ndarray(file, &nd);
+    assert_not_null(val);
+    assert_int(asdf_set_value(file, "arr", val), ==, ASDF_VALUE_OK);
+    assert_int(asdf_write_to(file, out_path), ==, 0);
+    asdf_close(file);
+    asdf_ndarray_data_dealloc(&nd);
+
+    file = asdf_open(out_path, "r");
+    assert_not_null(file);
+    assert_size(asdf_block_count(file), ==, is_inline ? 0 : 1);
+
+    asdf_ndarray_t *ndarray_in = NULL;
+    assert_int(asdf_get_ndarray(file, "arr", &ndarray_in), ==, ASDF_VALUE_OK);
+    assert_not_null(ndarray_in);
+    assert_int(asdf_ndarray_storage(ndarray_in), ==, storage);
+
+    size_t size = 0;
+    const void *raw = asdf_ndarray_data_raw(ndarray_in, &size);
+    assert_not_null(raw);
+    assert_size(size, ==, 4);
+    for (int idx = 0; idx < 4; idx++)
+        assert_int(((const uint8_t *)raw)[idx], ==, idx + 1);
+
+    asdf_ndarray_destroy(ndarray_in);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     ndarray,
     MU_RUN_TEST(ndarray_read_1d_tile_contiguous),
@@ -844,6 +911,7 @@ MU_TEST_SUITE(
     MU_RUN_TEST(ndarray_write_empty_inline_data),
     MU_RUN_TEST(ndarray_write_inline_data),
     MU_RUN_TEST(ndarray_inline_warning_thresh),
+    MU_RUN_TEST(ndarray_array_storage_override, ndarray_array_storage_params),
     MU_RUN_TEST(heap_use_after_free_issue_63)
 );
 
