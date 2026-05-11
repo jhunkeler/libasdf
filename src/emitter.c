@@ -102,67 +102,56 @@ static bool asdf_emitter_should_emit(asdf_emitter_t *emitter) {
 }
 
 
+int asdf_emitter_set_output(asdf_emitter_t *emitter, asdf_stream_t *stream) {
+    assert(emitter);
+    if (emitter->stream)
+        asdf_stream_close(emitter->stream);
+    emitter->stream = stream;
+    return 0;
+}
+
+
 int asdf_emitter_set_output_file(asdf_emitter_t *emitter, const char *filename) {
     assert(emitter);
-    emitter->stream = asdf_stream_from_file(emitter->base.ctx, filename, true);
-
-    if (!emitter->stream) {
-        // TODO: Better error handling for file opening errors
-        // For now just use this generic error
+    asdf_stream_t *stream = asdf_stream_from_file(emitter->base.ctx, filename, true);
+    if (!stream) {
         ASDF_ERROR_COMMON(emitter, ASDF_ERR_STREAM_INIT_FAILED);
         return -1;
     }
-
-    emitter->state = ASDF_EMITTER_STATE_INITIAL;
-    return 0;
+    return asdf_emitter_set_output(emitter, stream);
 }
 
 
 int asdf_emitter_set_output_fp(asdf_emitter_t *emitter, FILE *fp) {
     assert(emitter);
-    emitter->stream = asdf_stream_from_fp(emitter->base.ctx, fp, NULL, true);
-
-    if (!emitter->stream) {
-        // TODO: Better error handling for file opening errors
-        // For now just use this generic error
+    asdf_stream_t *stream = asdf_stream_from_fp(emitter->base.ctx, fp, NULL, true);
+    if (!stream) {
         ASDF_ERROR_COMMON(emitter, ASDF_ERR_STREAM_INIT_FAILED);
         return -1;
     }
-
-    emitter->state = ASDF_EMITTER_STATE_INITIAL;
-    return 0;
+    return asdf_emitter_set_output(emitter, stream);
 }
 
 
 int asdf_emitter_set_output_mem(asdf_emitter_t *emitter, const void *buf, size_t size) {
     assert(emitter);
-    emitter->stream = asdf_stream_from_memory(emitter->base.ctx, buf, size);
-
-    if (!emitter->stream) {
-        // TODO: Better error handling for file opening errors
-        // For now just use this generic error
+    asdf_stream_t *stream = asdf_stream_from_memory(emitter->base.ctx, buf, size);
+    if (!stream) {
         ASDF_ERROR_COMMON(emitter, ASDF_ERR_STREAM_INIT_FAILED);
         return -1;
     }
-
-    emitter->state = ASDF_EMITTER_STATE_INITIAL;
-    return 0;
+    return asdf_emitter_set_output(emitter, stream);
 }
 
 
-int asdf_emitter_set_output_malloc(asdf_emitter_t *emitter, const void *buf, size_t size) {
+int asdf_emitter_set_output_malloc(asdf_emitter_t *emitter, void **buf, size_t *size) {
     assert(emitter);
-    emitter->stream = asdf_stream_from_malloc(emitter->base.ctx, buf, size);
-
-    if (!emitter->stream) {
-        // TODO: Better error handling for file opening errors
-        // For now just use this generic error
+    asdf_stream_t *stream = asdf_stream_from_malloc(emitter->base.ctx, buf, size);
+    if (!stream) {
         ASDF_ERROR_COMMON(emitter, ASDF_ERR_STREAM_INIT_FAILED);
         return -1;
     }
-
-    emitter->state = ASDF_EMITTER_STATE_INITIAL;
-    return 0;
+    return asdf_emitter_set_output(emitter, stream);
 }
 
 
