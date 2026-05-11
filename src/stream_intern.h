@@ -42,4 +42,8 @@ typedef struct {
     size_t size;
     size_t pos;
     bool is_resizeable;
+    /* When non-NULL, kept in sync with buf/size after every internal realloc.
+     * Set by asdf_stream_from_malloc so the caller's pointer stays valid. */
+    uint8_t **out_buf;
+    size_t *out_size;
 } mem_userdata_t;

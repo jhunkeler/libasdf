@@ -360,6 +360,8 @@ static size_t asdf_file_estimate_blocks_size(asdf_file_t *file) {
 
     for (isize idx = 0; idx < n_blocks; idx++) {
         const asdf_block_info_t *block_info = asdf_block_info_vec_at(&file->blocks, idx);
+        if (block_info->write_compressor != NULL)
+            continue; /* compressed size unknown upfront; stream handles reallocs */
         n_bytes += block_info->header.allocated_size + ASDF_BLOCK_MAGIC_SIZE + 2;
     }
 
@@ -400,12 +402,9 @@ int asdf_write_to_mem(asdf_file_t *file, void **buf, size_t *size) {
          * Then we write up through the tree--that will give us some idea
          * of how much we really need and immediately reallocate if needed
          *
-         * TODO: In order to reasonably estimate the size to reserve for each
-         * block we also need to know it's *compressed* size if compression is
-         * enabled on that block.  We haven't implemented compressed writing
-         * yet so fix that later.  Probably we'll need to compress each block
-         * individually first in order to do that; lots of refactoring
-         * involved...
+         * TODO: In the case of compressed blocks we don't currently make any estimate;
+         * that could be fixed later, maybe, within the emitter, especially if we
+         * gave it more information about what stream type it's using.
          */
         bool emit_block_index = (file->config->emitter.flags & ASDF_EMITTER_OPT_NO_BLOCK_INDEX) !=
                                 ASDF_EMITTER_OPT_NO_BLOCK_INDEX;
@@ -422,16 +421,16 @@ int asdf_write_to_mem(asdf_file_t *file, void **buf, size_t *size) {
     }
 
     if (do_alloc) {
-        ret = asdf_emitter_set_output_malloc(emitter, alloc_buf, alloc_size);
+        /* alloc_buf and alloc_size are kept in sync by the malloc stream on
+         * every internal realloc, so they always reflect the live buffer */
+        ret = asdf_emitter_set_output_malloc(emitter, &alloc_buf, &alloc_size);
         if (asdf_emitter_emit_until(emitter, ASDF_EMITTER_STATE_BLOCKS) ==
             ASDF_EMITTER_STATE_BLOCKS) {
             off_t offset = asdf_stream_tell(emitter->stream);
             // How much did we really write?
             if (offset >= 0 && (alloc_size - (size_t)offset) < blocks_size) {
                 // Go ahead and realloc again with enough additional space for the blocks
-                // TODO: We should also take into account the block index here; ideally have
-                // a separate routine for just pre-rendering the block index to a buffer
-                size_t new_size = alloc_size + blocks_size - offset;
+                size_t new_size = alloc_size + blocks_size - (size_t)offset;
                 void *new_buf = realloc(alloc_buf, new_size);
 
                 if (!new_buf) {
@@ -442,7 +441,11 @@ int asdf_write_to_mem(asdf_file_t *file, void **buf, size_t *size) {
 
                 alloc_buf = new_buf;
                 alloc_size = new_size;
-                ret = asdf_emitter_set_output_malloc(emitter, alloc_buf, alloc_size);
+                ret = asdf_emitter_set_output_malloc(emitter, &alloc_buf, &alloc_size);
+                /* Seek to offset so blocks are appended after the already-written YAML
+                 * rather than overwriting it from position 0 */
+                if (ret == 0)
+                    ret = asdf_stream_seek(emitter->stream, offset, SEEK_SET);
             }
         }
     } else {
@@ -462,7 +465,7 @@ int asdf_write_to_mem(asdf_file_t *file, void **buf, size_t *size) {
     off_t offset = asdf_stream_tell(emitter->stream);
 
     if (offset >= 0 && (size_t)offset < alloc_size)
-        memset(alloc_buf + offset, 0, alloc_size - offset);
+        memset((uint8_t *)alloc_buf + offset, 0, alloc_size - offset);
 
     ret = 0;
 

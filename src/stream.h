@@ -173,8 +173,7 @@ ASDF_LOCAL asdf_stream_t *asdf_stream_from_fp(
     asdf_context_t *ctx, FILE *file, const char *filename, bool is_writeable);
 ASDF_LOCAL asdf_stream_t *asdf_stream_from_memory(
     asdf_context_t *ctx, const void *buf, size_t size);
-ASDF_LOCAL asdf_stream_t *asdf_stream_from_malloc(
-    asdf_context_t *ctx, const void *buf, size_t size);
+ASDF_LOCAL asdf_stream_t *asdf_stream_from_malloc(asdf_context_t *ctx, void **buf, size_t *size);
 
 ASDF_LOCAL void asdf_stream_set_capture(
     asdf_stream_t *stream, uint8_t **buf, size_t *size, size_t capacity);

@@ -68,11 +68,11 @@ ASDF_LOCAL void asdf_emitter_destroy(asdf_emitter_t *emitter);
 ASDF_LOCAL asdf_emitter_state_t asdf_emitter_emit(asdf_emitter_t *emit);
 ASDF_LOCAL asdf_emitter_state_t
 asdf_emitter_emit_until(asdf_emitter_t *emit, asdf_emitter_state_t state);
+ASDF_LOCAL int asdf_emitter_set_output(asdf_emitter_t *emitter, asdf_stream_t *stream);
 ASDF_LOCAL int asdf_emitter_set_output_file(asdf_emitter_t *emitter, const char *filename);
 ASDF_LOCAL int asdf_emitter_set_output_fp(asdf_emitter_t *emitter, FILE *fp);
 ASDF_LOCAL int asdf_emitter_set_output_mem(asdf_emitter_t *emitter, const void *buf, size_t size);
-ASDF_LOCAL int asdf_emitter_set_output_malloc(
-    asdf_emitter_t *emitter, const void *buf, size_t size);
+ASDF_LOCAL int asdf_emitter_set_output_malloc(asdf_emitter_t *emitter, void **buf, size_t *size);
 
 
 // Mouthful but coherent...

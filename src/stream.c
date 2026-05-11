@@ -832,6 +832,12 @@ static size_t mem_write(asdf_stream_t *stream, const void *buf, size_t count) {
 
         data->buf = new_buf;
         data->size = data->size + count;
+
+        if (data->out_buf)
+            *data->out_buf = (uint8_t *)new_buf;
+
+        if (data->out_size)
+            *data->out_size = data->size;
     }
 
     size_t avail = data->size - data->pos;
@@ -924,6 +930,9 @@ asdf_stream_t *asdf_stream_from_memory(asdf_context_t *ctx, const void *buf, siz
     data->buf = buf;
     data->size = size;
     data->pos = 0;
+    data->is_resizeable = false;
+    data->out_buf = NULL;
+    data->out_size = NULL;
 
     asdf_stream_t *stream = malloc(sizeof(asdf_stream_t));
 
@@ -973,13 +982,20 @@ asdf_stream_t *asdf_stream_from_memory(asdf_context_t *ctx, const void *buf, siz
 }
 
 
-asdf_stream_t *asdf_stream_from_malloc(asdf_context_t *ctx, const void *buf, size_t size) {
-    asdf_stream_t *stream = asdf_stream_from_memory(ctx, buf, size);
+/*
+ * buf and size are kept in sync with the stream's internal buffer on every
+ * realloc, so the caller's pointers remain valid even after writes that grow
+ * the buffer.  Both must remain valid for the lifetime of the stream.
+ */
+asdf_stream_t *asdf_stream_from_malloc(asdf_context_t *ctx, void **buf, size_t *size) {
+    asdf_stream_t *stream = asdf_stream_from_memory(ctx, *buf, *size);
 
     if (UNLIKELY(!stream))
         return stream;
 
     mem_userdata_t *userdata = stream->userdata;
     userdata->is_resizeable = true;
+    userdata->out_buf = (uint8_t **)buf;
+    userdata->out_size = size;
     return stream;
 }

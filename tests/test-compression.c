@@ -832,6 +832,161 @@ MU_TEST(verify_checksum) {
 }
 
 
+/**
+ * Write a compressed ndarray to a memory buffer and verify the round-trip
+ */
+MU_TEST(write_compressed_to_mem) {
+    const char *comp = munit_parameters_get(params, "comp");
+    const size_t n = 4096;
+
+    uint8_t *ref = malloc(n);
+    if (!ref)
+        return MUNIT_ERROR;
+    for (size_t idx = 0; idx < n; idx++)
+        ref[idx] = (uint8_t)(idx % 4);
+
+    const uint64_t shape[] = {n};
+    asdf_ndarray_t ndarray = {
+        .datatype = (asdf_datatype_t){.type = ASDF_DATATYPE_UINT8},
+        .byteorder = ASDF_BYTEORDER_BIG,
+        .ndim = 1,
+        .shape = shape,
+    };
+    uint8_t *data = asdf_ndarray_data_alloc(&ndarray);
+
+    if (!data) {
+        free(ref);
+        return MUNIT_ERROR;
+    }
+
+    memcpy(data, ref, n);
+    assert_int(asdf_ndarray_compression_set(&ndarray, comp), ==, 0);
+
+    asdf_file_t *file = asdf_open(NULL);
+    assert_not_null(file);
+    asdf_value_t *value = asdf_value_of_ndarray(file, &ndarray);
+    assert_not_null(value);
+    assert_int(asdf_set_value(file, "data", value), ==, ASDF_VALUE_OK);
+
+    void *buf = NULL;
+    size_t size = 0;
+    assert_int(asdf_write_to(file, &buf, &size), ==, 0);
+    asdf_close(file);
+    asdf_ndarray_data_dealloc(&ndarray);
+
+    assert_not_null(buf);
+    assert_size(size, >, 0);
+
+    asdf_file_t *rfile = asdf_open_mem_ex(buf, size, NULL);
+    assert_not_null(rfile);
+    const char *error = asdf_error(rfile);
+    if (error)
+        munit_logf(MUNIT_LOG_ERROR, "error opening file from buffer: %s", error);
+    assert_null(error);
+    asdf_ndarray_t *rndarray = NULL;
+    assert_int(asdf_get_ndarray(rfile, "data", &rndarray), ==, ASDF_VALUE_OK);
+    assert_not_null(rndarray);
+    size_t rsize = 0;
+    const uint8_t *rdata = asdf_ndarray_data_raw(rndarray, &rsize);
+    assert_not_null(rdata);
+    assert_size(rsize, ==, n);
+    assert_memory_equal(n, rdata, ref);
+    asdf_ndarray_destroy(rndarray);
+    asdf_close(rfile);
+    free(buf);
+    free(ref);
+    return MUNIT_OK;
+}
+
+
+/**
+ * Regression test for the asdf_write_to_mem stream-switch + realloc optimization (issue #187)
+ *
+ * A large YAML tree (> 2 * _SC_PAGE_SIZE, i.e. > 8 KiB) combined with a
+ * non-compressed block that makes blocks_size > 0 will trigger the code path in
+ * asdf_write_to_mem that reallocates the buffer and switches the emitter stream
+ * mid-emission.  Before the fix the emitter state was reset to INITIAL causing
+ * the blocks to overwrite the YAML in the buffer, producing a corrupt file.
+ */
+MU_TEST(write_to_mem_large_tree_realloc) {
+    /* 16 KiB uncompressed block so blocks_size > 0, which is needed for the
+     * realloc optimisation to trigger.  Initial allocation will be
+     * 2*PAGE (8 KiB) + blocks_size (~16 KiB) = ~24 KiB.  The YAML tree
+     * of ~14 KiB fits within the initial allocation, but the remaining space
+     * after writing the tree (~10 KiB) is less than blocks_size (~16 KiB),
+     * so the realloc path is taken. */
+    const size_t n = 16384;
+    const uint64_t shape[] = {n};
+
+    uint8_t *ref = malloc(n);
+    if (!ref)
+        return MUNIT_ERROR;
+    for (size_t idx = 0; idx < n; idx++)
+        ref[idx] = (uint8_t)(idx % 251);
+
+    asdf_ndarray_t ndarray = {
+        .datatype = (asdf_datatype_t){.type = ASDF_DATATYPE_UINT8},
+        .byteorder = ASDF_BYTEORDER_BIG,
+        .ndim = 1,
+        .shape = shape,
+    };
+    uint8_t *data = asdf_ndarray_data_alloc(&ndarray);
+
+    if (!data) {
+        free(ref);
+        return MUNIT_ERROR;
+    }
+
+    memcpy(data, ref, n);
+
+    asdf_file_t *file = asdf_open(NULL);
+    assert_not_null(file);
+    asdf_value_t *value = asdf_value_of_ndarray(file, &ndarray);
+    assert_not_null(value);
+    assert_int(asdf_set_value(file, "rawdata", value), ==, ASDF_VALUE_OK);
+
+    /* Add 100 padding entries of 127 bytes each to push YAML past 2 * PAGE (8 KiB) */
+    char key[32];
+    char val[128];
+    memset(val, 'x', sizeof(val) - 1);
+    val[sizeof(val) - 1] = '\0';
+
+    for (int idx = 0; idx < 100; idx++) {
+        snprintf(key, sizeof(key), "padding_%03d", idx);
+        assert_int(asdf_set_string0(file, key, val), ==, ASDF_VALUE_OK);
+    }
+
+    void *buf = NULL;
+    size_t size = 0;
+    assert_int(asdf_write_to(file, &buf, &size), ==, 0);
+    asdf_ndarray_data_dealloc(&ndarray);
+    asdf_close(file);
+
+    assert_not_null(buf);
+    assert_size(size, >, 0);
+
+    asdf_file_t *rfile = asdf_open_mem_ex(buf, size, NULL);
+    assert_not_null(rfile);
+    const char *error = asdf_error(rfile);
+    if (error)
+        munit_logf(MUNIT_LOG_ERROR, "error opening file from buffer: %s", error);
+    assert_null(error);
+    asdf_ndarray_t *rndarray = NULL;
+    assert_int(asdf_get_ndarray(rfile, "rawdata", &rndarray), ==, ASDF_VALUE_OK);
+    assert_not_null(rndarray);
+    size_t rsize = 0;
+    const uint8_t *rdata = asdf_ndarray_data_raw(rndarray, &rsize);
+    assert_not_null(rdata);
+    assert_size(rsize, ==, n);
+    assert_memory_equal(n, rdata, ref);
+    asdf_ndarray_destroy(rndarray);
+    asdf_close(rfile);
+    free(buf);
+    free(ref);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     compression,
     MU_RUN_TEST(write_compressed_ndarray, comp_test_params),
@@ -844,7 +999,9 @@ MU_TEST_SUITE(
     MU_RUN_TEST(compressed_block_no_hang_on_segfault, comp_mode_test_params),
     MU_RUN_TEST(reemit_compressed_verbatim, comp_test_params),
     MU_RUN_TEST(recompress_block),
-    MU_RUN_TEST(access_then_write, comp_test_params)
+    MU_RUN_TEST(access_then_write, comp_test_params),
+    MU_RUN_TEST(write_compressed_to_mem, comp_test_params),
+    MU_RUN_TEST(write_to_mem_large_tree_realloc)
 );
 
 
