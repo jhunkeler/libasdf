@@ -899,6 +899,61 @@ MU_TEST(ndarray_array_storage_override) {
 }
 
 
+/* Regression test for the bug where asdf_ndarray_data_alloc_temp leaked the
+ * asdf_ndarray_internal_t created by a prior asdf_ndarray_storage_set call
+ * (and silently dropped the array_storage setting). */
+MU_TEST(ndarray_data_alloc_temp_storage_set_ordering) {
+    uint64_t shape[1] = {4};
+    asdf_ndarray_t nd = {
+        .datatype = {.type = ASDF_DATATYPE_UINT8, .size = 1},
+        .byteorder = ASDF_BYTEORDER_LITTLE,
+        .ndim = 1,
+        .shape = shape,
+    };
+
+    asdf_file_t *file = asdf_open(NULL);
+    assert_not_null(file);
+
+    /* Call storage_set BEFORE data_alloc_temp -- the natural authoring order.
+     * Prior to the fix, data_alloc_temp would leak the internal created here
+     * and discard the array_storage setting. */
+    asdf_ndarray_storage_set(&nd, ASDF_ARRAY_STORAGE_INLINE);
+    uint8_t *data = asdf_ndarray_data_alloc_temp(file, &nd);
+    assert_not_null(data);
+    for (int idx = 0; idx < 4; idx++)
+        data[idx] = (uint8_t)(idx + 1);
+
+    assert_int(asdf_ndarray_storage(&nd), ==, ASDF_ARRAY_STORAGE_INLINE);
+
+    const char *out_path = get_temp_file_path(fixture->tempfile_prefix, ".asdf");
+    asdf_value_t *val = asdf_value_of_ndarray(file, &nd);
+    assert_not_null(val);
+    assert_int(asdf_set_value(file, "arr", val), ==, ASDF_VALUE_OK);
+    assert_int(asdf_write_to(file, out_path), ==, 0);
+    asdf_close(file);
+
+    file = asdf_open(out_path, "r");
+    assert_not_null(file);
+    assert_size(asdf_block_count(file), ==, 0);
+
+    asdf_ndarray_t *nd_in = NULL;
+    assert_int(asdf_get_ndarray(file, "arr", &nd_in), ==, ASDF_VALUE_OK);
+    assert_not_null(nd_in);
+    assert_int(asdf_ndarray_storage(nd_in), ==, ASDF_ARRAY_STORAGE_INLINE);
+
+    size_t size = 0;
+    const void *raw = asdf_ndarray_data_raw(nd_in, &size);
+    assert_not_null(raw);
+    assert_size(size, ==, 4);
+    for (int idx = 0; idx < 4; idx++)
+        assert_int(((const uint8_t *)raw)[idx], ==, idx + 1);
+
+    asdf_ndarray_destroy(nd_in);
+    asdf_close(file);
+    return MUNIT_OK;
+}
+
+
 MU_TEST_SUITE(
     ndarray,
     MU_RUN_TEST(ndarray_read_1d_tile_contiguous),
@@ -912,7 +967,8 @@ MU_TEST_SUITE(
     MU_RUN_TEST(ndarray_write_inline_data),
     MU_RUN_TEST(ndarray_inline_warning_thresh),
     MU_RUN_TEST(ndarray_array_storage_override, ndarray_array_storage_params),
-    MU_RUN_TEST(heap_use_after_free_issue_63)
+    MU_RUN_TEST(heap_use_after_free_issue_63),
+    MU_RUN_TEST(ndarray_data_alloc_temp_storage_set_ordering)
 );
 
 
